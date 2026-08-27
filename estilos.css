@@ -22,8 +22,6 @@ canvas#vista { width: 100%; height: 100%; display: block; background: #000; curs
 }
 .barra { width: 190px; height: 11px; border: 1px solid #5c2626; background: #1a0808; margin-top: 5px; border-radius: 6px; overflow: hidden; }
 .barra > div { height: 100%; background: linear-gradient(#c94a4a, #8f2b2b); transition: width .12s linear; }
-.barra.exp { border-color: #2f4a5c; background: #08141a; height: 6px; width: 190px; }
-.barra.exp > div { background: linear-gradient(#4a90c9, #2b6a8f); }
 .barra.dash { border-color: #3a3f55; background: #0c0e16; height: 4px; width: 190px; margin-top: 4px; }
 .barra.dash > div { background: linear-gradient(#7d8db5, #4f5c7e); }
 .barra.dash.lista > div { background: linear-gradient(#cfe0ff, #8fa8d8); }

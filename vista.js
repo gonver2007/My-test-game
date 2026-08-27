@@ -7,7 +7,11 @@ const ctx = lienzo.getContext('2d');
 const AN = lienzo.width, AL = lienzo.height;
 
 const TILE = 34;              // píxeles por casilla
-const RADIO_LUZ = 9;          // en casillas
+const ALCANCE_LUZ = 11;       // hasta dónde llega la antorcha, en casillas
+const RAYOS_LUZ = 320;        // rayos con que se recorta la silueta iluminada
+const MORDIDA_PARED = 0.7;    // cuánto entra el rayo en la roca, para verle la cara
+const OSCURIDAD = 0.94;       // lo negro que queda lo que no alcanza la luz
+const MARGEN_SOMBRA = 14;     // sobra alrededor, para que el temblor no descubra bordes
 const SPR = 46;               // lado del lienzo de cada sprite
 const ESCALA_SPR = 1.35;      // las figuras se dibujan algo mayores que su lienzo
 
@@ -53,77 +57,62 @@ let lienzoNivel = null;
 
 function construirLienzoNivel() {
     const W = ANCHO * TILE, H = ALTO * TILE;
-    const ESC = 0.5;                                  // la máscara se calcula a mitad de resolución
-    const w = Math.round(W * ESC), h = Math.round(H * ESC);
 
-    // 1) Silueta del suelo, en blanco sobre negro
-    const masc = lienzoOculto(w, h), mg = masc.getContext('2d');
-    mg.fillStyle = '#000';
-    mg.fillRect(0, 0, w, h);
-    mg.fillStyle = '#fff';
-    const t = TILE * ESC;
+    // 1) Silueta del suelo: los rectángulos tal cual, con el filo intacto.
+    //    Nada de desenfocar ni de forzar contraste; las esquinas se quedan
+    //    en ángulo recto y los chaflanes, en diagonal limpia.
+    const silueta = lienzoOculto(W, H), sg = silueta.getContext('2d');
+    sg.fillStyle = '#fff';
     for (let y = 0; y < ALTO; y++)
         for (let x = 0; x < ANCHO; x++)
-            if (J.mapa[y][x] === 0) mg.fillRect(x * t - 0.5, y * t - 0.5, t + 1, t + 1);
+            if (J.mapa[y][x] === 0) sg.fillRect(x * TILE, y * TILE, TILE, TILE);
 
-    // 2) Desenfocar y subir el contraste: las esquinas rectas se redondean
-    //    y el contorno queda irregular, como roca excavada.
-    const suave = lienzoOculto(w, h), sg = suave.getContext('2d');
-    sg.filter = `blur(${Math.round(TILE * ESC * 0.42)}px) contrast(22)`;
-    sg.drawImage(masc, 0, 0);
-    sg.filter = 'none';
-
-    // 3) Pasar ese blanco/negro a transparencia (la silueta ya redondeada)
-    const d = sg.getImageData(0, 0, w, h);
-    const px = d.data;
-    for (let i = 0; i < px.length; i += 4) {
-        px[i + 3] = px[i];                              // el rojo hace de alfa
-        px[i] = px[i + 1] = px[i + 2] = 255;
-    }
-    sg.putImageData(d, 0, 0);
-
-    // 4) Montar el nivel: roca de fondo, sombra del borde y suelo recortado
+    // 2) Montar el nivel: primero la roca, que es el fondo de todo
     const nivel = lienzoOculto(W, H), ng = nivel.getContext('2d');
     ng.fillStyle = ng.createPattern(tileRuido(34, 14, 90), 'repeat');
     ng.fillRect(0, 0, W, H);
 
-    // la silueta proyecta sombra sobre la roca: da sensación de profundidad
+    // la roca proyecta sombra hacia dentro del suelo: da profundidad sin
+    // tocar el contorno, que sigue siendo recto
     ng.save();
-    ng.shadowColor = 'rgba(0,0,0,0.85)';
-    ng.shadowBlur = 26;
-    for (let i = 0; i < 3; i++) ng.drawImage(suave, 0, 0, W, H);
+    ng.shadowColor = 'rgba(0, 0, 0, 0.9)';
+    ng.shadowBlur = 18;
+    for (let i = 0; i < 3; i++) ng.drawImage(silueta, 0, 0);
     ng.restore();
 
-    // el suelo, recortado con la misma silueta
+    // 3) El suelo, recortado con la misma silueta
     const suelo = lienzoOculto(W, H), fg = suelo.getContext('2d');
     fg.fillStyle = fg.createPattern(tileRuido(112, 22, 140), 'repeat');
     fg.fillRect(0, 0, W, H);
     fg.globalCompositeOperation = 'destination-in';
-    fg.drawImage(suave, 0, 0, W, H);
+    fg.drawImage(silueta, 0, 0);
     ng.drawImage(suelo, 0, 0);
 
-    // borde interior oscuro, para que la pared "muerda" el suelo
+    // 4) Zócalo y remate: franjas rectas pegadas al pie de cada muro. Se traza
+    //    el mismo camino dos veces, ancho y suave primero, fino y duro después.
+    const bordes = new Path2D();
+    for (let y = 0; y < ALTO; y++)
+        for (let x = 0; x < ANCHO; x++) {
+            if (J.mapa[y][x] !== 0) continue;
+            const px = x * TILE, py = y * TILE;
+            if (esMuro(x, y - 1)) { bordes.moveTo(px, py); bordes.lineTo(px + TILE, py); }
+            if (esMuro(x, y + 1)) { bordes.moveTo(px, py + TILE); bordes.lineTo(px + TILE, py + TILE); }
+            if (esMuro(x - 1, y)) { bordes.moveTo(px, py); bordes.lineTo(px, py + TILE); }
+            if (esMuro(x + 1, y)) { bordes.moveTo(px + TILE, py); bordes.lineTo(px + TILE, py + TILE); }
+        }
+
     ng.save();
-    ng.globalCompositeOperation = 'multiply';
-    ng.globalAlpha = 0.55;
-    ng.filter = 'blur(6px)';
-    ng.drawImage(recortarBorde(suave, W, H), 0, 0);
+    ng.lineCap = 'square';
+    ng.strokeStyle = 'rgba(16, 16, 22, 0.45)';
+    ng.lineWidth = 11;
+    ng.stroke(bordes);
+    ng.strokeStyle = 'rgba(10, 10, 14, 0.9)';
+    ng.lineWidth = 2;
+    ng.stroke(bordes);
     ng.restore();
 
     lienzoNivel = nivel;
     prepararMinimapa();
-}
-
-// Anillo oscuro justo por dentro del contorno del suelo
-function recortarBorde(silueta, W, H) {
-    const c = lienzoOculto(W, H), g = c.getContext('2d');
-    g.fillStyle = '#404048';
-    g.fillRect(0, 0, W, H);
-    g.globalCompositeOperation = 'destination-in';
-    g.drawImage(silueta, 0, 0, W, H);
-    g.globalCompositeOperation = 'destination-out';
-    g.drawImage(silueta, -5, -5, W + 10, H + 10);     // vaciar el centro
-    return c;
 }
 
 // ============================================================
@@ -327,7 +316,7 @@ function pintar() {
 
     dibujarHeroe(j);
     dibujarEfectos();
-    luzDeAntorcha(aPantallaX(j.x), aPantallaY(j.y));
+    sombrasDeGeometria(j);
 
     if (flash > 0) {
         ctx.fillStyle = `rgba(160, 20, 20, ${flash * 0.4})`;
@@ -451,21 +440,86 @@ function dibujarEfectos() {
     ctx.globalAlpha = 1;
 }
 
-function luzDeAntorcha(cx, cy) {
-    const r = RADIO_LUZ * TILE;
-    const g = ctx.createRadialGradient(cx, cy, r * 0.32, cx, cy, r);
-    g.addColorStop(0, 'rgba(0,0,0,0)');
-    g.addColorStop(0.62, 'rgba(0,0,0,0.25)');
-    g.addColorStop(1, 'rgba(0,0,0,0.93)');
-    ctx.fillStyle = g;
-    ctx.fillRect(-10, -10, AN + 20, AL + 20);
+// ============================================================
+//  Sombras proyectadas: lo que tapa una pared, no se ve
+// ============================================================
+// Recorre la rejilla casilla a casilla en la dirección dada (el mismo paseo
+// que usan los motores de raycasting) y devuelve a qué distancia topa con
+// roca. Barato: avanza de borde en borde, no muestreando el trayecto.
+function distanciaHastaRoca(ox, oy, dx, dy, tope) {
+    let cx = Math.floor(ox), cy = Math.floor(oy);
+    const pasoX = dx > 0 ? 1 : -1, pasoY = dy > 0 ? 1 : -1;
+    const saltoX = Math.abs(1 / (dx || 1e-9)), saltoY = Math.abs(1 / (dy || 1e-9));
+    let bordeX = (dx > 0 ? cx + 1 - ox : ox - cx) * saltoX;
+    let bordeY = (dy > 0 ? cy + 1 - oy : oy - cy) * saltoY;
+
+    let t = 0;
+    while (t < tope) {
+        if (bordeX < bordeY) { t = bordeX; bordeX += saltoX; cx += pasoX; }
+        else { t = bordeY; bordeY += saltoY; cy += pasoY; }
+        // el rayo entra un poco en la roca: así la cara de la pared queda
+        // iluminada en vez de quedarse en el filo de la sombra
+        if (esMuro(cx, cy)) return Math.min(t + MORDIDA_PARED, tope);
+    }
+    return tope;
+}
+
+// Silueta de todo lo que el héroe alcanza a ver desde donde está
+function siluetaVisible(ox, oy) {
+    const puntos = [];
+    for (let i = 0; i < RAYOS_LUZ; i++) {
+        const a = (i / RAYOS_LUZ) * Math.PI * 2;
+        const dx = Math.cos(a), dy = Math.sin(a);
+        const d = distanciaHastaRoca(ox, oy, dx, dy, ALCANCE_LUZ);
+        puntos.push(aPantallaX(ox + dx * d), aPantallaY(oy + dy * d));
+    }
+    return puntos;
+}
+
+// El manto de oscuridad se compone aparte y luego se posa encima de la escena.
+// Hacerlo directamente sobre el lienzo principal no vale: al recortar la
+// silueta con destination-out se borraría también la cueva que hay debajo.
+let lienzoSombra = null, sctx = null;
+
+function sombrasDeGeometria(j) {
+    if (!lienzoSombra) {
+        lienzoSombra = lienzoOculto(AN + MARGEN_SOMBRA * 2, AL + MARGEN_SOMBRA * 2);
+        sctx = lienzoSombra.getContext('2d');
+        // se trabaja en coordenadas de pantalla; el margen absorbe el temblor
+        sctx.setTransform(1, 0, 0, 1, MARGEN_SOMBRA, MARGEN_SOMBRA);
+    }
+    const puntos = siluetaVisible(j.x, j.y);
+    const px = aPantallaX(j.x), py = aPantallaY(j.y);
+    const m = MARGEN_SOMBRA;
+
+    sctx.globalCompositeOperation = 'source-over';
+    sctx.clearRect(-m, -m, AN + m * 2, AL + m * 2);
+    sctx.fillStyle = `rgba(0, 0, 0, ${OSCURIDAD})`;
+    sctx.fillRect(-m, -m, AN + m * 2, AL + m * 2);
+
+    // destination-out abre el hueco según el alfa: el degradado solo sirve para
+    // que la antorcha se apague en su último tramo y no corte en círculo
+    sctx.globalCompositeOperation = 'destination-out';
+    const r = ALCANCE_LUZ * TILE;
+    const g = sctx.createRadialGradient(px, py, r * 0.55, px, py, r);
+    g.addColorStop(0, 'rgba(0, 0, 0, 1)');
+    g.addColorStop(0.78, 'rgba(0, 0, 0, 0.94)');
+    g.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    sctx.fillStyle = g;
+
+    sctx.beginPath();
+    sctx.moveTo(puntos[0], puntos[1]);
+    for (let i = 2; i < puntos.length; i += 2) sctx.lineTo(puntos[i], puntos[i + 1]);
+    sctx.closePath();
+    sctx.fill();
+
+    ctx.drawImage(lienzoSombra, -m, -m);
 }
 
 function pintarHud() {
     const p = J.jugador;
     document.getElementById('estadoPv').textContent = `PV ${Math.ceil(p.hp)}/${p.hpMax}`;
     document.getElementById('vida').style.width = Math.max(0, (p.hp / p.hpMax) * 100) + '%';
-    document.getElementById('exp').style.width = (p.exp / (p.nivel * 25)) * 100 + '%';
 
     const carga = Math.min(1, 1 - Math.max(0, p.cdDash) / ESPERA_DASH);
     const dash = document.getElementById('dash');
@@ -473,7 +527,7 @@ function pintarHud() {
     dash.parentElement.classList.toggle('lista', carga >= 1);
 
     document.getElementById('estadoNivel').textContent =
-        `Cueva ${J.nivel}   ·   Nivel ${p.nivel}   ·   Enemigos ${J.enemigos.length}`;
+        `Cueva ${J.nivel}   ·   Enemigos ${J.enemigos.length}`;
     document.getElementById('mensajes').innerHTML =
         J.log.slice(-5).map(t => `<div>${t}</div>`).join('');
     document.getElementById('muerte').style.display = J.muerto ? 'flex' : 'none';

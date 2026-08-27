@@ -1,11 +1,18 @@
 // ============================================================
 //  mazmorra.js - lógica del juego en tiempo real (sin dibujado)
-//  Las cuevas se generan con un autómata celular: nada de salas
-//  rectangulares. Las entidades se mueven en coordenadas
-//  continuas (casillas con decimales), no de casilla en casilla.
+//  Las plantas se trazan con dos o tres salas amplias apiladas,
+//  unidas por corredores rectos. Las entidades se mueven en
+//  coordenadas continuas (casillas con decimales), no a saltos.
 // ============================================================
 
-const ANCHO = 64, ALTO = 48;
+const ANCHO = 36, ALTO = 44;
+
+// Trazado de la planta: dos o tres salas amplias, apiladas de abajo arriba.
+// Se entra siempre por la de abajo y se sale por la puerta de la de arriba.
+const SALAS_MIN = 2, SALAS_MAX = 3;
+const SALA_ANCHO_MIN = 15, SALA_ANCHO_MAX = 26;
+const SALA_ALTO_MIN = 9, SALA_ALTO_MAX = 13;
+const ANCHO_PASILLO = 3;          // casillas de ancho de los corredores
 
 // Maniobras del héroe
 const FACTOR_CARRERA = 1.55;      // lo que acelera Shift
@@ -21,6 +28,12 @@ const DURACION_DASH = 0.18;
 const RADIO_VISION = 8.5;
 
 const VEL_PUERTA = 1.4;           // lo que tardan en separarse las hojas
+
+// Cuánta compaña hay en cada cueva. Como la puerta no se abre hasta que no
+// queda nadie, este número es también lo larga que se hace la planta.
+const ENEMIGOS_BASE = 12;         // los de la primera cueva
+const ENEMIGOS_POR_NIVEL = 5;     // los que se suman por cada una que se baja
+const ENEMIGOS_TOPE = 45;         // más no caben con holgura en el mapa
 
 const J = {
     mapa: [],            // 1 = roca, 0 = suelo
@@ -77,58 +90,111 @@ function descubrir() {
 }
 
 // ============================================================
-//  Generación de cuevas
+//  Generación de plantas: dos o tres salas amplias unidas por
+//  corredores en ángulo recto. Nada de contornos orgánicos: aquí
+//  todo son rectas, y las esquinas achaflanadas dan las diagonales.
 // ============================================================
-function generarCueva() {
-    for (let intento = 0; intento < 12; intento++) {
-        let m = [];
-        for (let y = 0; y < ALTO; y++) {
-            const fila = [];
-            for (let x = 0; x < ANCHO; x++) {
-                const borde = x < 2 || y < 2 || x >= ANCHO - 2 || y >= ALTO - 2;
-                fila.push(borde || Math.random() < 0.45 ? 1 : 0);
-            }
-            m.push(fila);
-        }
+function generarSalas() {
+    const m = [];
+    for (let y = 0; y < ALTO; y++) m.push(new Array(ANCHO).fill(1));
+    J.mapa = m;
 
-        for (let paso = 0; paso < 5; paso++) m = suavizarCueva(m);
+    // El mapa se reparte en franjas horizontales, una por sala. La franja 0 es
+    // la de abajo, donde se aparece; la última, arriba, es la de la puerta.
+    const cuantas = azarEnt(SALAS_MIN, SALAS_MAX);
+    const franja = Math.floor((ALTO - 4) / cuantas);
 
-        J.mapa = m;
-        const region = mayorRegion(m);
-        if (region.length > ANCHO * ALTO * 0.18) {
-            // todo lo que no sea la cueva principal pasa a ser roca maciza
-            const dentro = new Set(region.map(([x, y]) => y * ANCHO + x));
-            for (let y = 0; y < ALTO; y++)
-                for (let x = 0; x < ANCHO; x++)
-                    if (!dentro.has(y * ANCHO + x)) m[y][x] = 1;
-            J.mapa = m;
-            return region;
-        }
+    const salas = [];
+    for (let i = 0; i < cuantas; i++) {
+        const w = azarEnt(SALA_ANCHO_MIN, Math.min(SALA_ANCHO_MAX, ANCHO - 6));
+        const h = azarEnt(SALA_ALTO_MIN, Math.min(SALA_ALTO_MAX, franja - 3));
+        const pie = ALTO - 2 - i * franja;                  // borde bajo de la franja
+        const hueco = Math.max(1, franja - h - 1);          // aire que sobra dentro
+        const sala = {
+            x: azarEnt(2, ANCHO - w - 3),
+            y: pie - h - azarEnt(1, hueco),
+            w, h
+        };
+        excavarSala(sala);
+        if (Math.random() < 0.6) achaflanar(sala);
+        salas.push(sala);
     }
-    return mayorRegion(J.mapa);   // salida de emergencia: lo mejor que haya
+
+    // Un corredor entre cada dos salas seguidas...
+    for (let i = 1; i < salas.length; i++)
+        unirSalas(centro(salas[i - 1]), centro(salas[i]));
+
+    // ...y uno más, por un costado, para que haya dos caminos y no un embudo
+    const par = azarEnt(0, salas.length - 2);
+    unirSalas(puntoLateral(salas[par], -1), puntoLateral(salas[par + 1], 1));
+
+    // lo que no cuelgue de la zona principal se vuelve roca maciza
+    const region = mayorRegion(m);
+    const dentro = new Set(region.map(([x, y]) => y * ANCHO + x));
+    for (let y = 0; y < ALTO; y++)
+        for (let x = 0; x < ANCHO; x++)
+            if (!dentro.has(y * ANCHO + x)) m[y][x] = 1;
+
+    J.mapa = m;
+    return { region, salas };
 }
 
-// Regla clásica: la roca crece donde hay roca alrededor, y se disuelve donde no.
-function suavizarCueva(m) {
-    const n = [];
-    for (let y = 0; y < ALTO; y++) {
-        const fila = [];
-        for (let x = 0; x < ANCHO; x++) {
-            let vecinos = 0;
-            for (let dy = -1; dy <= 1; dy++)
-                for (let dx = -1; dx <= 1; dx++) {
-                    if (dx === 0 && dy === 0) continue;
-                    const nx = x + dx, ny = y + dy;
-                    if (nx < 0 || ny < 0 || nx >= ANCHO || ny >= ALTO) { vecinos++; continue; }
-                    vecinos += m[ny][nx];
-                }
-            const borde = x < 2 || y < 2 || x >= ANCHO - 2 || y >= ALTO - 2;
-            fila.push(borde ? 1 : (vecinos > 4 ? 1 : (vecinos < 4 ? 0 : m[y][x])));
-        }
-        n.push(fila);
-    }
-    return n;
+// Punto a un costado de la sala: sirve para abrir el segundo corredor lejos
+// del primero, que sale del centro
+const puntoLateral = (s, lado) => ({
+    x: Math.floor(s.x + (lado < 0 ? s.w * 0.2 : s.w * 0.8)),
+    y: Math.floor(s.y + s.h / 2)
+});
+
+const centro = s => ({ x: Math.floor(s.x + s.w / 2), y: Math.floor(s.y + s.h / 2) });
+
+function excavarSala(s) {
+    for (let y = s.y; y < s.y + s.h; y++)
+        for (let x = s.x; x < s.x + s.w; x++)
+            J.mapa[y][x] = 0;
 }
+
+// Recorta en diagonal una o dos esquinas: es lo único que rompe el ángulo recto
+function achaflanar(s) {
+    const esquinas = [[1, 1], [-1, 1], [1, -1], [-1, -1]];
+    const cuantas = azarEnt(1, 2);
+    for (let k = 0; k < cuantas; k++) {
+        const [sx, sy] = esquinas.splice(azarEnt(0, esquinas.length - 1), 1)[0];
+        const corte = azarEnt(2, Math.min(3, Math.min(s.w, s.h) - 2));
+        const ox = sx > 0 ? s.x : s.x + s.w - 1;
+        const oy = sy > 0 ? s.y : s.y + s.h - 1;
+        for (let i = 0; i < corte; i++)
+            for (let j = 0; j < corte - i; j++)
+                J.mapa[oy + sy * i][ox + sx * j] = 1;
+    }
+}
+
+// Pasillo en L: primero un tramo, luego el otro. Siempre en ángulo recto.
+function unirSalas(a, b) {
+    if (Math.random() < 0.5) {
+        excavarH(a.x, b.x, a.y);
+        excavarV(a.y, b.y, b.x);
+    } else {
+        excavarV(a.y, b.y, a.x);
+        excavarH(a.x, b.x, b.y);
+    }
+}
+
+// Los pasillos se abren de ANCHO_PASILLO casillas: de una sola no se puede
+// esquivar ni usar el impulso, y el trol apenas cabe.
+function excavarH(x1, x2, y) {
+    for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
+        for (let k = 0; k < ANCHO_PASILLO; k++)
+            if (dentroDelBorde(x, y + k)) J.mapa[y + k][x] = 0;
+}
+
+function excavarV(y1, y2, x) {
+    for (let y = Math.min(y1, y2); y <= Math.max(y1, y2); y++)
+        for (let k = 0; k < ANCHO_PASILLO; k++)
+            if (dentroDelBorde(x + k, y)) J.mapa[y][x + k] = 0;
+}
+
+const dentroDelBorde = (x, y) => x >= 2 && y >= 2 && x < ANCHO - 2 && y < ALTO - 2;
 
 // Zona abierta más grande, para garantizar que todo es alcanzable
 function mayorRegion(m) {
@@ -178,22 +244,20 @@ function distanciasDesde(ox, oy) {
 //  Creación de un nivel
 // ============================================================
 function nuevoNivel() {
-    const region = generarCueva();
+    const { region, salas } = generarSalas();
 
-    // el héroe empieza en un hueco amplio, no pegado a la roca
-    const holgadas = region.filter(([x, y]) => libre(x + 0.5, y + 0.5, 0.75));
-    const [ix, iy] = (holgadas.length ? holgadas : region)[azarEnt(0, (holgadas.length ? holgadas : region).length - 1)];
-    J.jugador.x = ix + 0.5;
-    J.jugador.y = iy + 0.5;
+    // Se entra siempre por la sala de abajo, pegado a su pared del fondo...
+    const entrada = salas[0];
+    const inicio = casillaLibreCercaDe(region,
+        entrada.x + entrada.w / 2, entrada.y + entrada.h - 1.5, 0.75);
+    J.jugador.x = inicio[0];
+    J.jugador.y = inicio[1];
 
-    // la puerta, en el punto más lejano por recorrido
-    const dist = distanciasDesde(ix, iy);
-    let lejos = [ix, iy], maxD = 0;
-    for (const [x, y] of region) {
-        const d = dist[y * ANCHO + x];
-        if (d > maxD) { maxD = d; lejos = [x, y]; }
-    }
-    J.puerta = { x: lejos[0] + 0.5, y: lejos[1] + 0.5, apertura: 0 };
+    // ...y se sale por arriba: la puerta preside la última sala
+    const salida = salas[salas.length - 1];
+    const vano = casillaLibreCercaDe(region,
+        salida.x + salida.w / 2, salida.y + 1.5, 0.6);
+    J.puerta = { x: vano[0], y: vano[1], apertura: 0 };
 
     J.enemigos = [];
     J.objetos = [];
@@ -201,27 +265,43 @@ function nuevoNivel() {
     J.explorado = new Uint8Array(ANCHO * ALTO);
     descubrir();
 
-    // ni bichos ni pociones encima de la puerta: hay que poder verla y cruzarla
+    // ni bichos ni pociones encima de la puerta, ni en las narices del héroe
+    const dist = distanciasDesde(Math.floor(J.jugador.x), Math.floor(J.jugador.y));
     const candidatas = region.filter(([x, y]) => {
         const d = dist[y * ANCHO + x];
-        return d > 10 && libre(x + 0.5, y + 0.5, 0.6) &&
+        return d > 7 && libre(x + 0.5, y + 0.5, 0.6) &&
                Math.hypot(x + 0.5 - J.puerta.x, y + 0.5 - J.puerta.y) > 2;
     });
     const coger = () => candidatas.length
         ? candidatas.splice(azarEnt(0, candidatas.length - 1), 1)[0]
         : null;
 
-    const cuantos = 6 + J.nivel * 2;
-    for (let i = 0; i < cuantos; i++) {
-        const p = coger();
-        if (p) J.enemigos.push(crearEnemigo(p[0] + 0.5, p[1] + 0.5));
-    }
+    // las pociones se reparten antes: con la cueva llena de bichos, si no se
+    // reservan su sitio se quedarían sin hueco donde caer
     for (let i = 0; i < 3; i++) {
         const p = coger();
         if (p) J.objetos.push({ x: p[0] + 0.5, y: p[1] + 0.5, tipo: 'pocion', r: 0.35, giro: azar(0, 6.28) });
     }
 
+    const cuantos = Math.min(ENEMIGOS_TOPE, ENEMIGOS_BASE + (J.nivel - 1) * ENEMIGOS_POR_NIVEL);
+    for (let i = 0; i < cuantos; i++) {
+        const p = coger();
+        if (p) J.enemigos.push(crearEnemigo(p[0] + 0.5, p[1] + 0.5));
+    }
+
     mensaje(`--- Nivel ${J.nivel} de la mazmorra ---`);
+}
+
+// La casilla transitable más próxima al punto pedido: así ni la entrada ni la
+// puerta acaban dentro de la roca por culpa de un chaflán
+function casillaLibreCercaDe(region, px, py, r) {
+    let mejor = null, mejorD = Infinity;
+    for (const [x, y] of region) {
+        if (!libre(x + 0.5, y + 0.5, r)) continue;
+        const d = Math.hypot(x + 0.5 - px, y + 0.5 - py);
+        if (d < mejorD) { mejorD = d; mejor = [x + 0.5, y + 0.5]; }
+    }
+    return mejor || [px, py];
 }
 
 function crearEnemigo(x, y) {
@@ -229,9 +309,9 @@ function crearEnemigo(x, y) {
     const base = { x, y, ex: 0, ey: 0, cd: azar(0, 1), herido: 0, mira: 0 };
     return duro
         ? { ...base, tipo: 'trol', art: 'el', nombre: 'trol', r: 0.38, vel: 2.1,
-            hp: 16, hpMax: 16, dano: 7, alcance: 0.85, cadencia: 1.3, exp: 14 }
+            hp: 16, hpMax: 16, dano: 15, alcance: 0.85, cadencia: 1.3 }
         : { ...base, tipo: 'rata', art: 'la', nombre: 'rata', r: 0.26, vel: 3.3,
-            hp: 6, hpMax: 6, dano: 3, alcance: 0.6, cadencia: 0.9, exp: 5 };
+            hp: 6, hpMax: 6, dano: 5, alcance: 0.6, cadencia: 0.9 };
 }
 
 // ============================================================
@@ -362,8 +442,6 @@ function golpear() {
             J.enemigos = J.enemigos.filter(o => o !== e);
             chispas(e.x, e.y, '#803030', 14);
             mensaje(`${sujeto(e)} muere.`);
-            j.exp += e.exp;
-            subirNivelSiToca();
         }
     }
 }
@@ -383,7 +461,9 @@ function danarJugador(e) {
     const j = J.jugador;
     if (j.invulnerable > 0) return;
 
-    let dano = azarEnt(1, e.dano);
+    // el golpe quita lo que dice la ficha del bicho, sin sorteo: así se sabe
+    // cuántos aguanta uno y cuántos más si se cubre
+    let dano = e.dano;
     // el escudo solo para lo que viene de frente
     const deFrente = Math.abs(difAngulo(Math.atan2(e.y - j.y, e.x - j.x), j.mira)) < ARCO_GUARDIA;
     const parado = j.cubriendo && deFrente;
@@ -408,19 +488,6 @@ function danarJugador(e) {
         J.muerto = true;
         mensaje('Has muerto. Pulsa R para empezar de nuevo.');
     }
-}
-
-function subirNivelSiToca() {
-    const j = J.jugador;
-    const necesaria = j.nivel * 25;
-    if (j.exp < necesaria) return;
-    j.exp -= necesaria;
-    j.nivel++;
-    j.hpMax += 8;
-    j.hp = j.hpMax;
-    j.dano += 2;
-    mensaje(`¡Subes al nivel ${j.nivel}! Te sientes más fuerte.`);
-    chispas(j.x, j.y, '#e0d070', 20);
 }
 
 // diferencia entre dos ángulos, siempre en [-PI, PI]
@@ -478,7 +545,7 @@ function actualizarEfectos(dt) {
 function iniciarPartida() {
     J.jugador = {
         x: 0, y: 0, r: 0.30, vel: 4.6,
-        hp: 30, hpMax: 30, dano: 7, nivel: 1, exp: 0,
+        hp: 50, hpMax: 50, dano: 7,
         alcance: 1.25, arco: 1.0, cadencia: 0.40,
         cdAtaque: 0, golpe: 0, invulnerable: 0,
         cubriendo: false, corriendo: false, dash: 0, cdDash: 0,
