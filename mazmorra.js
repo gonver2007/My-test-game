@@ -7,13 +7,29 @@
 
 const ANCHO = 64, ALTO = 48;
 
+// Maniobras del héroe
+const FACTOR_CARRERA = 1.55;      // lo que acelera Shift
+const FACTOR_GUARDIA = 0.45;      // lo que frena ir cubierto
+const REDUCCION_GUARDIA = 0.5;    // mitad de daño al parar de frente
+const ARCO_GUARDIA = 1.3;         // radianes a cada lado que abarca el escudo
+const FUERZA_DASH = 19;           // impulso del salto lateral
+const ESPERA_DASH = 0.9;          // segundos hasta poder repetirlo
+const DURACION_DASH = 0.18;
+
+// Lo que el héroe alcanza a ver y recuerda. Algo menos que RADIO_LUZ, la
+// antorcha que dibuja la vista, para que el minimapa no se adelante a los ojos.
+const RADIO_VISION = 8.5;
+
+const VEL_PUERTA = 1.4;           // lo que tardan en separarse las hojas
+
 const J = {
   mapa: [],            // 1 = roca, 0 = suelo
   jugador: null,
   enemigos: [],
   objetos: [],
   efectos: [],         // chispas y números de daño, solo decorativos
-  escalera: { x: 0, y: 0 },
+  explorado: null,     // 1 = casilla ya vista; lo que recuerda el minimapa
+  puerta: { x: 0, y: 0, apertura: 0 },   // apertura: 0 cerrada, 1 abierta del todo
   nivel: 1,
   log: [],
   muerto: false,
@@ -29,7 +45,6 @@ function mensaje(texto) {
 }
 
 const sujeto = e => `${e.art === 'el' ? 'El' : 'La'} ${e.nombre}`;
-const complemento = e => `${e.art === 'el' ? 'al' : 'a la'} ${e.nombre}`;
 
 const esMuro = (cx, cy) =>
   cx < 0 || cy < 0 || cx >= ANCHO || cy >= ALTO || J.mapa[cy][cx] === 1;
@@ -46,6 +61,19 @@ function libre(x, y, r) {
 function moverEntidad(e, dx, dy) {
   if (dx && libre(e.x + dx, e.y, e.r)) e.x += dx;
   if (dy && libre(e.x, e.y + dy, e.r)) e.y += dy;
+}
+
+// Marca como vista la redonda de casillas alrededor del héroe. No hay línea
+// de visión: lo que queda cerca se da por conocido, aunque medie una pared.
+function descubrir() {
+  const j = J.jugador;
+  const r = Math.ceil(RADIO_VISION);
+  const y0 = Math.max(0, Math.floor(j.y - r)), y1 = Math.min(ALTO - 1, Math.floor(j.y + r));
+  const x0 = Math.max(0, Math.floor(j.x - r)), x1 = Math.min(ANCHO - 1, Math.floor(j.x + r));
+  for (let cy = y0; cy <= y1; cy++)
+    for (let cx = x0; cx <= x1; cx++)
+      if (Math.hypot(cx + 0.5 - j.x, cy + 0.5 - j.y) <= RADIO_VISION)
+        J.explorado[cy * ANCHO + cx] = 1;
 }
 
 // ============================================================
@@ -128,7 +156,7 @@ function mayorRegion(m) {
   return mejor;
 }
 
-// Distancias por pasillos desde un origen: sirve para poner la escalera lejos
+// Distancias por pasillos desde un origen: sirve para poner la puerta lejos
 function distanciasDesde(ox, oy) {
   const dist = new Int32Array(ANCHO * ALTO).fill(-1);
   dist[oy * ANCHO + ox] = 0;
@@ -158,22 +186,26 @@ function nuevoNivel() {
   J.jugador.x = ix + 0.5;
   J.jugador.y = iy + 0.5;
 
-  // la escalera, en el punto más lejano por recorrido
+  // la puerta, en el punto más lejano por recorrido
   const dist = distanciasDesde(ix, iy);
   let lejos = [ix, iy], maxD = 0;
   for (const [x, y] of region) {
     const d = dist[y * ANCHO + x];
     if (d > maxD) { maxD = d; lejos = [x, y]; }
   }
-  J.escalera = { x: lejos[0] + 0.5, y: lejos[1] + 0.5 };
+  J.puerta = { x: lejos[0] + 0.5, y: lejos[1] + 0.5, apertura: 0 };
 
   J.enemigos = [];
   J.objetos = [];
   J.efectos = [];
+  J.explorado = new Uint8Array(ANCHO * ALTO);
+  descubrir();
 
+  // ni bichos ni pociones encima de la puerta: hay que poder verla y cruzarla
   const candidatas = region.filter(([x, y]) => {
     const d = dist[y * ANCHO + x];
-    return d > 10 && libre(x + 0.5, y + 0.5, 0.6);
+    return d > 10 && libre(x + 0.5, y + 0.5, 0.6) &&
+           Math.hypot(x + 0.5 - J.puerta.x, y + 0.5 - J.puerta.y) > 2;
   });
   const coger = () => candidatas.length
     ? candidatas.splice(azarEnt(0, candidatas.length - 1), 1)[0]
@@ -205,7 +237,7 @@ function crearEnemigo(x, y) {
 // ============================================================
 //  Bucle de juego
 // ============================================================
-// entrada: { dx, dy, mira (radianes), atacar (bool) }
+// entrada: { dx, dy, mira (radianes), atacar, cubrir, correr, dash }
 function actualizar(dt, entrada) {
   J.tiempo += dt;
   actualizarEfectos(dt);
@@ -216,20 +248,31 @@ function actualizar(dt, entrada) {
   j.cdAtaque -= dt;
   j.golpe -= dt;
   j.invulnerable -= dt;
+  j.cdDash -= dt;
+  j.dash -= dt;
+
+  // Cubrirse ocupa las manos: ni se ataca ni se corre, y se anda despacio.
+  // Durante el impulso no hay guardia que valga.
+  j.cubriendo = entrada.cubrir && j.dash <= 0;
 
   // --- movimiento del héroe ---
   let dx = entrada.dx, dy = entrada.dy;
   const n = Math.hypot(dx, dy);
   if (n > 0) {
     dx /= n; dy /= n;
-    moverEntidad(j, dx * j.vel * dt, dy * j.vel * dt);
+    j.corriendo = entrada.correr && !j.cubriendo;
+    const vel = j.vel * (j.cubriendo ? FACTOR_GUARDIA : j.corriendo ? FACTOR_CARRERA : 1);
+    moverEntidad(j, dx * vel * dt, dy * vel * dt);
     j.andando = true;
   } else {
     j.andando = false;
+    j.corriendo = false;
   }
   aplicarEmpuje(j, dt);
+  descubrir();
 
-  if (entrada.atacar && j.cdAtaque <= 0) golpear();
+  if (entrada.dash && j.cdDash <= 0) impulsar();
+  if (entrada.atacar && !j.cubriendo && j.cdAtaque <= 0) golpear();
 
   // --- enemigos ---
   for (const e of J.enemigos) {
@@ -268,6 +311,21 @@ function actualizar(dt, entrada) {
     mensaje(`Bebes una poción y recuperas ${cura} PV.`);
     chispas(o.x, o.y, '#e06060', 10);
   }
+
+  abrirPuertaSiToca(dt);
+}
+
+// El cerrojo cede cuando no queda nada vivo en la cueva. Las hojas tardan un
+// momento en separarse: hasta que no acaban, la puerta no deja pasar.
+function abrirPuertaSiToca(dt) {
+  if (J.enemigos.length) return;
+  if (J.puerta.apertura === 0) {
+    mensaje('Cae el último enemigo: el cerrojo cede y la puerta se abre.');
+    mensaje('Sin nada que temer, reconoces la cueva entera.');
+    chispas(J.puerta.x, J.puerta.y, '#9ec8f0', 18);
+    J.explorado.fill(1);     // ya no hay peligro: se levanta la niebla del mapa
+  }
+  J.puerta.apertura = Math.min(1, J.puerta.apertura + dt * VEL_PUERTA);
 }
 
 function aplicarEmpuje(e, dt) {
@@ -310,18 +368,43 @@ function golpear() {
   }
 }
 
+// Impulso hacia donde se mira: aprovecha el empuje, que ya frena y choca solo
+function impulsar() {
+  const j = J.jugador;
+  j.cdDash = ESPERA_DASH;
+  j.dash = DURACION_DASH;
+  j.invulnerable = Math.max(j.invulnerable, DURACION_DASH + 0.04);
+  j.ex += Math.cos(j.mira) * FUERZA_DASH;
+  j.ey += Math.sin(j.mira) * FUERZA_DASH;
+  chispas(j.x, j.y, '#8fa8d8', 8);
+}
+
 function danarJugador(e) {
   const j = J.jugador;
   if (j.invulnerable > 0) return;
-  const dano = azarEnt(1, e.dano);
+
+  let dano = azarEnt(1, e.dano);
+  // el escudo solo para lo que viene de frente
+  const deFrente = Math.abs(difAngulo(Math.atan2(e.y - j.y, e.x - j.x), j.mira)) < ARCO_GUARDIA;
+  const parado = j.cubriendo && deFrente;
+  if (parado) dano = Math.max(1, Math.round(dano * REDUCCION_GUARDIA));
+
   j.hp -= dano;
   j.invulnerable = 0.35;
   const dx = j.x - e.x, dy = j.y - e.y, d = Math.hypot(dx, dy) || 1;
-  j.ex += dx / d * 4;
-  j.ey += dy / d * 4;
-  numero(j.x, j.y, dano, '#ff8080');
+  const retroceso = parado ? 2 : 4;
+  j.ex += dx / d * retroceso;
+  j.ey += dy / d * retroceso;
+
+  if (parado) {
+    chispas(j.x + Math.cos(j.mira) * 0.4, j.y + Math.sin(j.mira) * 0.4, '#d8dcf0', 8);
+    numero(j.x, j.y, dano, '#c8ccdd');
+  } else {
+    numero(j.x, j.y, dano, '#ff8080');
+  }
   if (j.hp <= 0) {
     j.hp = 0;
+    j.cubriendo = j.corriendo = false;
     J.muerto = true;
     mensaje('Has muerto. Pulsa R para empezar de nuevo.');
   }
@@ -348,11 +431,20 @@ function difAngulo(a, b) {
   return d;
 }
 
-const cercaDeEscalera = () =>
-  Math.hypot(J.escalera.x - J.jugador.x, J.escalera.y - J.jugador.y) < 0.9;
+const cercaDePuerta = () =>
+  Math.hypot(J.puerta.x - J.jugador.x, J.puerta.y - J.jugador.y) < 0.9;
 
-function bajar() {
-  if (J.muerto || !cercaDeEscalera()) return false;
+const puertaAbierta = () => J.puerta.apertura >= 1;
+
+function cruzar() {
+  if (J.muerto || !cercaDePuerta()) return false;
+  if (!puertaAbierta()) {
+    const n = J.enemigos.length;
+    mensaje(n
+      ? `La puerta está atrancada. Aún ${n === 1 ? 'queda 1 enemigo' : `quedan ${n} enemigos`}.`
+      : 'La puerta todavía se está abriendo.');
+    return false;
+  }
   J.nivel++;
   nuevoNivel();
   return true;
@@ -389,6 +481,7 @@ function iniciarPartida() {
     hp: 30, hpMax: 30, dano: 7, nivel: 1, exp: 0,
     alcance: 1.25, arco: 1.0, cadencia: 0.40,
     cdAtaque: 0, golpe: 0, invulnerable: 0,
+    cubriendo: false, corriendo: false, dash: 0, cdDash: 0,
     ex: 0, ey: 0, mira: 0, andando: false, nombre: 'héroe'
   };
   J.nivel = 1;

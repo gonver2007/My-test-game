@@ -1,0 +1,64 @@
+/* ============================================================
+   estilos.css - presentación: escena, HUD y textos de ayuda
+   ============================================================ */
+html, body {
+  background: #07070a;
+  color: #b8b8c4;
+  font-family: Consolas, "Courier New", monospace;
+  margin: 0; height: 100%;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  user-select: none;
+}
+#escena { position: relative; width: 960px; height: 600px; box-shadow: 0 0 40px #000; }
+canvas#vista { width: 100%; height: 100%; display: block; background: #000; cursor: crosshair; }
+
+#hud {
+  position: absolute; left: 0; top: 0; right: 0;
+  display: flex; justify-content: space-between;
+  padding: 10px 14px; font-size: 14px;
+  text-shadow: 0 0 4px #000, 0 1px 2px #000;
+  pointer-events: none; white-space: pre-line;
+}
+.barra { width: 190px; height: 11px; border: 1px solid #5c2626; background: #1a0808; margin-top: 5px; border-radius: 6px; overflow: hidden; }
+.barra > div { height: 100%; background: linear-gradient(#c94a4a, #8f2b2b); transition: width .12s linear; }
+.barra.exp { border-color: #2f4a5c; background: #08141a; height: 6px; width: 190px; }
+.barra.exp > div { background: linear-gradient(#4a90c9, #2b6a8f); }
+.barra.dash { border-color: #3a3f55; background: #0c0e16; height: 4px; width: 190px; margin-top: 4px; }
+.barra.dash > div { background: linear-gradient(#7d8db5, #4f5c7e); }
+.barra.dash.lista > div { background: linear-gradient(#cfe0ff, #8fa8d8); }
+#estadoNivel { text-align: right; }
+
+/* el tamaño en píxeles lo fija vista.js, a partir de las casillas de la cueva */
+#minimapa {
+  position: absolute; right: 12px; bottom: 12px;
+  border: 1px solid #2e3040; border-radius: 3px;
+  background: rgba(6, 7, 11, 0.72);
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.8);
+  image-rendering: pixelated;
+  opacity: 0.88; pointer-events: none;
+}
+
+#mensajes {
+  position: absolute; left: 14px; bottom: 12px;
+  font-size: 13px; line-height: 1.5; color: #9a9aa8;
+  text-shadow: 0 0 4px #000, 0 1px 2px #000;
+  pointer-events: none; max-width: 60%;
+}
+#mensajes div:last-child { color: #e0e0ea; }
+#aviso {
+  position: absolute; left: 0; right: 0; bottom: 90px;
+  text-align: center; font-size: 15px; color: #e8dca0;
+  text-shadow: 0 0 6px #000; pointer-events: none; opacity: 0;
+  transition: opacity .2s;
+}
+#aviso.trabado { color: #d89088; }
+#muerte {
+  position: absolute; inset: 0; display: none;
+  align-items: center; justify-content: center; flex-direction: column;
+  background: rgba(50, 0, 0, 0.55); color: #f0d0d0;
+  font-size: 30px; letter-spacing: 3px;
+}
+#muerte small { font-size: 14px; letter-spacing: 1px; margin-top: 10px; color: #c09090; }
+.ayuda { font-size: 12px; color: #55555f; margin-top: 10px; }
+.ayuda b { color: #7a7a88; font-weight: normal; }
