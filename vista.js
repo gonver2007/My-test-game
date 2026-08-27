@@ -1062,8 +1062,8 @@ function visibilidadEnemigo(e, j) {
         // costado, en vez de esperar a que el centro salga del muro
         const ex = (-dy / d) * e.r, ey = (dx / d) * e.r;
         const visto = hayVision(j.x, j.y, e.x, e.y, 0)
-                   || hayVision(j.x, j.y, e.x + ex, e.y + ey, 0)
-                   || hayVision(j.x, j.y, e.x - ex, e.y - ey, 0);
+    || hayVision(j.x, j.y, e.x + ex, e.y + ey, 0)
+    || hayVision(j.x, j.y, e.x - ex, e.y - ey, 0);
         if (visto) meta = Math.min(1, (ALCANCE_LUZ - d) / 2);
     }
 

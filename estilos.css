@@ -1,7 +1,7 @@
 /* ============================================================
-   estilos.css - presentación: escena, HUD y textos de ayuda
-   Todo el marco imita una lámina de animación: tinta gruesa,
-   colores planos y ni un solo bisel gris.
+estilos.css - presentación: escena, HUD y textos de ayuda
+Todo el marco imita una lámina de animación: tinta gruesa,
+colores planos y ni un solo bisel gris.
    ============================================================ */
 :root {
     --tinta: #17132b;
