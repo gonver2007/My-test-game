@@ -29,9 +29,9 @@ const RADIO_VISION = 8.5;
 
 const VEL_PUERTA = 1.4;           // lo que tardan en separarse las hojas
 
-// Cuánta compaña hay en cada cueva. Como la puerta no se abre hasta que no
+// Cuánta compaña hay en cada patio. Como la puerta no se abre hasta que no
 // queda nadie, este número es también lo larga que se hace la planta.
-const ENEMIGOS_BASE = 12;         // los de la primera cueva
+const ENEMIGOS_BASE = 12;         // los del primer patio
 const ENEMIGOS_POR_NIVEL = 5;     // los que se suman por cada una que se baja
 const ENEMIGOS_TOPE = 45;         // más no caben con holgura en el mapa
 
@@ -181,7 +181,7 @@ function unirSalas(a, b) {
 }
 
 // Los pasillos se abren de ANCHO_PASILLO casillas: de una sola no se puede
-// esquivar ni usar el impulso, y el trol apenas cabe.
+// esquivar ni usar el impulso, y el oni apenas cabe.
 function excavarH(x1, x2, y) {
     for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
         for (let k = 0; k < ANCHO_PASILLO; k++)
@@ -265,7 +265,7 @@ function nuevoNivel() {
     J.explorado = new Uint8Array(ANCHO * ALTO);
     descubrir();
 
-    // ni bichos ni pociones encima de la puerta, ni en las narices del héroe
+    // ni enemigos ni elixires encima de la puerta, ni en las narices del héroe
     const dist = distanciasDesde(Math.floor(J.jugador.x), Math.floor(J.jugador.y));
     const candidatas = region.filter(([x, y]) => {
         const d = dist[y * ANCHO + x];
@@ -276,11 +276,11 @@ function nuevoNivel() {
         ? candidatas.splice(azarEnt(0, candidatas.length - 1), 1)[0]
         : null;
 
-    // las pociones se reparten antes: con la cueva llena de bichos, si no se
+    // los elixires se reparten antes: con el patio lleno de enemigos, si no se
     // reservan su sitio se quedarían sin hueco donde caer
     for (let i = 0; i < 3; i++) {
         const p = coger();
-        if (p) J.objetos.push({ x: p[0] + 0.5, y: p[1] + 0.5, tipo: 'pocion', r: 0.35, giro: azar(0, 6.28) });
+        if (p) J.objetos.push({ x: p[0] + 0.5, y: p[1] + 0.5, tipo: 'elixir', r: 0.35, giro: azar(0, 6.28) });
     }
 
     const cuantos = Math.min(ENEMIGOS_TOPE, ENEMIGOS_BASE + (J.nivel - 1) * ENEMIGOS_POR_NIVEL);
@@ -289,7 +289,7 @@ function nuevoNivel() {
         if (p) J.enemigos.push(crearEnemigo(p[0] + 0.5, p[1] + 0.5));
     }
 
-    mensaje(`--- Nivel ${J.nivel} de la mazmorra ---`);
+    mensaje(`--- Patio ${J.nivel} del santuario ---`);
 }
 
 // La casilla transitable más próxima al punto pedido: así ni la entrada ni la
@@ -308,9 +308,9 @@ function crearEnemigo(x, y) {
     const duro = Math.random() < Math.min(0.15 + J.nivel * 0.08, 0.6);
     const base = { x, y, ex: 0, ey: 0, cd: azar(0, 1), herido: 0, mira: 0 };
     return duro
-        ? { ...base, tipo: 'trol', art: 'el', nombre: 'trol', r: 0.38, vel: 2.1,
+        ? { ...base, tipo: 'oni', art: 'el', nombre: 'oni', r: 0.38, vel: 2.1,
             hp: 16, hpMax: 16, dano: 15, alcance: 0.85, cadencia: 1.3 }
-        : { ...base, tipo: 'rata', art: 'la', nombre: 'rata', r: 0.26, vel: 3.3,
+        : { ...base, tipo: 'ninja', art: 'el', nombre: 'ninja', r: 0.26, vel: 3.3,
             hp: 6, hpMax: 6, dano: 5, alcance: 0.6, cadencia: 0.9 };
 }
 
@@ -382,27 +382,27 @@ function actualizar(dt, entrada) {
         }
     }
 
-    // --- pociones: se recogen al pasar por encima ---
+    // --- elixires: se recogen al pasar por encima ---
     for (const o of J.objetos.slice()) {
         if (Math.hypot(o.x - j.x, o.y - j.y) > j.r + o.r) continue;
         J.objetos = J.objetos.filter(p => p !== o);
         const cura = Math.min(12, j.hpMax - j.hp);
         j.hp += cura;
-        mensaje(`Bebes una poción y recuperas ${cura} PV.`);
-        chispas(o.x, o.y, '#e06060', 10);
+        mensaje(`Bebes un elixir y recuperas ${cura} PV.`);
+        chispas(o.x, o.y, '#ff8fae', 10);
     }
 
     abrirPuertaSiToca(dt);
 }
 
-// El cerrojo cede cuando no queda nada vivo en la cueva. Las hojas tardan un
+// El sello cede cuando no queda nada vivo en el patio. Las hojas tardan un
 // momento en separarse: hasta que no acaban, la puerta no deja pasar.
 function abrirPuertaSiToca(dt) {
     if (J.enemigos.length) return;
     if (J.puerta.apertura === 0) {
-        mensaje('Cae el último enemigo: el cerrojo cede y la puerta se abre.');
-        mensaje('Sin nada que temer, reconoces la cueva entera.');
-        chispas(J.puerta.x, J.puerta.y, '#9ec8f0', 18);
+        mensaje('Cae el último enemigo: el sello se deshace y la puerta se abre.');
+        mensaje('Sin nada que temer, reconoces el patio entero.');
+        chispas(J.puerta.x, J.puerta.y, '#a8dcff', 18);
         J.explorado.fill(1);     // ya no hay peligro: se levanta la niebla del mapa
     }
     J.puerta.apertura = Math.min(1, J.puerta.apertura + dt * VEL_PUERTA);
@@ -508,7 +508,7 @@ function cruzar() {
     if (!puertaAbierta()) {
         const n = J.enemigos.length;
         mensaje(n
-            ? `La puerta está atrancada. Aún ${n === 1 ? 'queda 1 enemigo' : `quedan ${n} enemigos`}.`
+            ? `La puerta sigue sellada. Aún ${n === 1 ? 'queda 1 enemigo' : `quedan ${n} enemigos`}.`
             : 'La puerta todavía se está abriendo.');
         return false;
     }
@@ -558,6 +558,6 @@ function iniciarPartida() {
     J.objetos = [];
     J.efectos = [];
     J.tiempo = 0;
-    mensaje('Desciendes a la cueva.');
+    mensaje('Cruzas el portal del santuario.');
     nuevoNivel();
 }
