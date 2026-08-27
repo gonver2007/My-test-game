@@ -1,0 +1,530 @@
+/* ============================================================
+estilos.css - presentación: escena, HUD y textos de ayuda
+Todo el marco imita una lámina de animación: tinta gruesa,
+colores planos y ni un solo bisel gris.
+   ============================================================ */
+:root {
+    --tinta: #17132b;
+    --noche: #101c3a;
+    --papel: #f2ecdc;
+    --bermellon: #e0453f;
+    --cielo: #6fb6f0;
+    --oro: #ffd784;
+    --sakura: #f0a8c8;
+}
+
+html, body {
+    background:
+        radial-gradient(circle at 50% 32%, #23407a 0%, #14224a 45%, #0a1024 100%);
+    color: var(--papel);
+    font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    margin: 0; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    user-select: none;
+}
+
+/* franjas diagonales muy tenues detrás de todo, como el fondo de un opening */
+body::before {
+    content: '';
+    position: fixed; inset: -20%;
+    background: repeating-linear-gradient(115deg,
+        rgba(255, 255, 255, 0.035) 0 2px, transparent 2px 26px);
+    pointer-events: none;
+}
+
+#escena {
+    position: relative; width: 960px; height: 600px;
+    border: 5px solid var(--tinta);
+    border-radius: 4px;
+    box-shadow:
+        0 0 0 2px rgba(255, 255, 255, 0.12),
+        0 18px 46px rgba(0, 0, 0, 0.75),
+        0 0 70px rgba(80, 150, 230, 0.22);
+}
+
+/* la partida ocupa la ventana entera: sin marco ni margen que la encoja.
+   El lienzo lo redimensiona vista.js, aquí solo se le quita el encuadre */
+body.juego { overflow: hidden; }
+body.juego #escena {
+    width: 100vw; height: 100vh;
+    border: none; border-radius: 0; box-shadow: none;
+}
+canvas#vista {
+    width: 100%; height: 100%; display: block;
+    background: var(--noche); cursor: crosshair;
+}
+
+#hud {
+    position: absolute; left: 0; top: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: flex-start;
+    padding: 12px 16px; font-size: 15px; font-weight: bold;
+    letter-spacing: 0.5px;
+    text-shadow: 2px 2px 0 var(--tinta), -1px -1px 0 var(--tinta),
+                 1px -1px 0 var(--tinta), -1px 1px 0 var(--tinta);
+    pointer-events: none; white-space: pre-line;
+}
+#estadoPv { color: var(--papel); }
+
+/* barras: rectángulo entintado con relleno plano y un brillo recto encima */
+.barra {
+    width: 200px; height: 14px;
+    border: 2.5px solid var(--tinta);
+    background: rgba(15, 20, 45, 0.85);
+    margin-top: 6px; border-radius: 2px; overflow: hidden;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+.barra > div {
+    height: 100%;
+    background: var(--bermellon);
+    border-bottom: 3px solid rgba(120, 25, 25, 0.85);
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.35);
+    transition: width .12s linear;
+}
+.barra.dash {
+    height: 8px; width: 200px; margin-top: 5px;
+    background: rgba(15, 20, 45, 0.85);
+}
+.barra.dash > div {
+    background: #4a6fae;
+    border-bottom: none;
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.25);
+}
+.barra.dash.lista > div {
+    background: var(--cielo);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.6), 0 0 10px rgba(120, 200, 255, 0.9);
+}
+#estadoNivel { text-align: right; color: var(--oro); }
+
+/* contadores de jade y lapislázuli, en el rincón de abajo a la izquierda */
+#monedas {
+    position: absolute; left: 16px; bottom: 14px;
+    display: flex; gap: 18px;
+    font-weight: bold; letter-spacing: 0.5px;
+    text-shadow: 2px 2px 0 var(--tinta), -1px -1px 0 var(--tinta),
+                 1px -1px 0 var(--tinta), -1px 1px 0 var(--tinta);
+    pointer-events: none;
+}
+#jade, #lapis {
+    display: flex; align-items: center; gap: 3px;
+    font-size: 17px; transform-origin: left center;
+}
+#jade { color: #9fe6d6; }
+#lapis { color: #a8c4ff; }
+#jade .esquirla, #lapis .esquirla { margin-left: 0; }
+
+/* al ganar una, el contador da un brinco y se enciende un momento */
+#jade.gana { animation: brincoJade .7s ease-out; }
+@keyframes brincoJade {
+    0%   { transform: scale(1); color: #9fe6d6; }
+    22%  { transform: scale(1.45); color: #fff; }
+    60%  { transform: scale(1.05); }
+    100% { transform: scale(1); color: #9fe6d6; }
+}
+#lapis.gana { animation: brincoLapis .7s ease-out; }
+@keyframes brincoLapis {
+    0%   { transform: scale(1); color: #a8c4ff; }
+    22%  { transform: scale(1.45); color: #fff; }
+    60%  { transform: scale(1.05); }
+    100% { transform: scale(1); color: #a8c4ff; }
+}
+#jade.gana .esquirla { animation: fulgorJade .7s ease-out; }
+@keyframes fulgorJade {
+    0%   { filter: none; }
+    25%  { filter: drop-shadow(0 0 9px rgba(127, 214, 196, 0.95)); }
+    100% { filter: none; }
+}
+#lapis.gana .esquirla { animation: fulgorLapis .7s ease-out; }
+@keyframes fulgorLapis {
+    0%   { filter: none; }
+    25%  { filter: drop-shadow(0 0 9px rgba(107, 156, 242, 0.95)); }
+    100% { filter: none; }
+}
+
+/* el tamaño en píxeles lo fija vista.js, a partir de las casillas del patio */
+#minimapa {
+    position: absolute; right: 14px; bottom: 14px;
+    border: 3px solid var(--tinta);
+    border-radius: 3px;
+    background: rgba(10, 18, 40, 0.78);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 6px 16px rgba(0, 0, 0, 0.7);
+    image-rendering: pixelated;
+    opacity: 0.92; pointer-events: none;
+}
+
+
+#aviso {
+    position: absolute; left: 0; right: 0; bottom: 92px;
+    text-align: center; font-size: 17px; font-weight: bold;
+    letter-spacing: 1px; color: var(--oro);
+    text-shadow: 2px 2px 0 var(--tinta), -2px -2px 0 var(--tinta),
+                2px -2px 0 var(--tinta), -2px 2px 0 var(--tinta);
+    pointer-events: none; opacity: 0;
+    transition: opacity .2s;
+}
+#aviso.trabado { color: #ff8a7a; }
+
+#muerte {
+    position: absolute; inset: 0; display: none;
+    align-items: center; justify-content: center; flex-direction: column;
+    background: rgba(24, 8, 30, 0.6);
+    color: #fff;
+    font-size: 44px; font-weight: bold; letter-spacing: 8px;
+    text-shadow: 4px 4px 0 var(--bermellon), 6px 6px 0 var(--tinta);
+}
+#muerte small {
+    font-size: 15px; letter-spacing: 2px; margin-top: 18px;
+    color: var(--sakura); text-shadow: 2px 2px 0 var(--tinta);
+}
+
+/* Menú de Esc: una lámina pequeña en el centro. No cubre la escena entera
+   a propósito, porque la partida no se detiene mientras está abierto. */
+#menuJuego {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 300px; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px;
+    border: 4px solid var(--tinta);
+    border-radius: 4px;
+    background: rgba(16, 28, 58, 0.94);
+    box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.12), 0 14px 34px rgba(0, 0, 0, 0.75);
+}
+/* el display:flex de arriba ganaría al atributo hidden, así que se le recuerda */
+#menuJuego[hidden] { display: none; }
+
+/* los controles, que el botón CONTROLES despliega dentro del propio menú */
+#menuJuego .controles {
+    margin: 0; padding: 9px 12px; list-style: none;
+    border: 2px solid var(--tinta);
+    border-radius: 3px;
+    background: rgba(10, 18, 40, 0.75);
+    font-size: 12.5px; line-height: 1.9; color: #cdd8ee;
+    text-shadow: 1.5px 1.5px 0 var(--tinta);
+}
+#menuJuego .controles li { display: flex; justify-content: space-between; gap: 14px; }
+#menuJuego .controles b {
+    color: var(--oro); font-weight: bold;
+    padding: 0 5px; border-radius: 3px;
+    background: rgba(23, 19, 43, 0.65);
+}
+#menuJuego .boton {
+    width: 100%; padding: 11px 0;
+    font-size: 15px; letter-spacing: 2px;
+}
+#menuJuego #mjSalir { background: var(--bermellon); color: #fff5ea; }
+#menuJuego #mjSalir:hover { background: #ff6a56; }
+#mjNota {
+    margin: 2px 0 0; text-align: center;
+    font-size: 11.5px; line-height: 1.5; color: var(--sakura);
+    text-shadow: 1.5px 1.5px 0 var(--tinta);
+}
+
+.ayuda {
+    font-size: 12.5px; color: #8ea3c8; margin-top: 14px;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
+}
+.ayuda b {
+    color: var(--oro); font-weight: bold;
+    padding: 1px 5px; border-radius: 3px;
+    background: rgba(23, 19, 43, 0.65);
+}
+
+/* ============================================================
+   Portada (index.html): fondo pintado en canvas y botones al centro
+   ============================================================ */
+/* con la armería abierta la portada puede pasarse de alto: que baje, no que corte.
+   'safe center' evita que al desbordar se coma la parte de arriba */
+body.menu {
+    overflow-x: hidden; overflow-y: auto;
+    justify-content: safe center;
+    padding: 24px 0;
+    box-sizing: border-box;
+}
+
+#fondoMenu {
+    position: fixed; inset: 0;
+    width: 100%; height: 100%;
+    display: block; z-index: -2;
+}
+/* las franjas del opening también aquí, justo por encima del canvas */
+body.menu::before { z-index: -1; }
+
+#portada {
+    position: relative;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 26px 40px;
+}
+
+#portada h1 {
+    margin: 0;
+    font-size: 66px; line-height: 0.98;
+    letter-spacing: 10px; font-weight: bold;
+    color: var(--papel);
+    text-shadow: 5px 5px 0 var(--bermellon), 8px 8px 0 var(--tinta);
+}
+#portada h1 small {
+    display: block;
+    font-size: 20px; letter-spacing: 12px; font-weight: normal;
+    color: var(--oro); margin: 8px 0;
+    text-shadow: 3px 3px 0 var(--tinta);
+}
+.lema {
+    margin: 18px 0 30px;
+    font-size: 15px; letter-spacing: 1.5px; color: #b9c6e0;
+    text-shadow: 2px 2px 0 var(--tinta);
+}
+
+#botones { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+
+/* botón entintado: relleno plano, contorno grueso y un brillo recto arriba */
+.boton {
+    width: 300px; padding: 13px 0;
+    font-family: inherit;
+    font-size: 19px; font-weight: bold; letter-spacing: 4px;
+    color: var(--papel);
+    background: rgba(23, 34, 74, 0.92);
+    border: 4px solid var(--tinta);
+    border-radius: 4px;
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.16),
+                0 5px 0 rgba(0, 0, 0, 0.5);
+    text-shadow: 2px 2px 0 var(--tinta);
+    cursor: pointer;
+    transition: transform .08s, background .12s, color .12s;
+}
+.boton:hover { background: #2c4a8c; color: #fff; transform: translateY(-2px); }
+.boton:active {
+    transform: translateY(3px);
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.16);
+}
+.boton.principal {
+    background: var(--bermellon);
+    color: #fff5ea;
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.30),
+                0 5px 0 rgba(120, 25, 25, 0.85),
+                0 0 26px rgba(224, 69, 63, 0.35);
+}
+.boton.principal:hover { background: #ff6a56; }
+
+/* el hueco de controles y créditos: cerrado no ocupa ni marco ni fondo */
+.panel {
+    margin-top: 22px; max-width: 430px;
+    color: #cdd8ee; font-size: 14px; line-height: 1.7;
+    text-shadow: 1.5px 1.5px 0 var(--tinta);
+}
+.panel.abierto {
+    padding: 16px 26px;
+    border: 3px solid var(--tinta);
+    border-radius: 4px;
+    background: rgba(16, 28, 58, 0.88);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.10), 0 10px 26px rgba(0, 0, 0, 0.6);
+}
+.panel h2 {
+    margin: 0 0 10px;
+    font-size: 15px; letter-spacing: 4px; color: var(--oro);
+    text-shadow: 2px 2px 0 var(--tinta);
+}
+.panel ul { margin: 0; padding: 0; list-style: none; text-align: left; }
+.panel li { display: flex; justify-content: space-between; gap: 18px; }
+.panel li b, .panel p b {
+    color: var(--oro); font-weight: bold;
+    padding: 0 5px; border-radius: 3px;
+    background: rgba(23, 19, 43, 0.65);
+}
+.panel p { margin: 4px 0; }
+
+.ayuda.pie { position: absolute; bottom: 22px; }
+
+/* ---------- Ranuras de guardado (ranura.html) ---------- */
+.panel.ranuras {
+    width: 460px; max-width: 90vw;
+    margin-bottom: 22px;
+    padding: 18px 22px 16px;
+    border: 3px solid var(--tinta);
+    border-radius: 4px;
+    background: rgba(16, 28, 58, 0.9);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.10), 0 10px 26px rgba(0, 0, 0, 0.6);
+}
+.ranuras .lista { display: flex; flex-direction: column; gap: 8px; }
+.ranuras .nota { margin: 12px 0 0; font-size: 12px; color: #8ea3c8; }
+
+/* una lámina por ranura; la vacía se distingue por el trazo discontinuo */
+.ranura {
+    position: relative;
+    padding: 9px 12px; text-align: left; cursor: pointer;
+    border: 3px solid var(--tinta);
+    border-radius: 4px;
+    background: rgba(23, 34, 74, 0.92);
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.10);
+    transition: transform .08s, border-color .12s, background .12s;
+}
+.ranura:hover { transform: translateY(-2px); background: #24396e; border-color: var(--oro); }
+.ranura.vacia { background: rgba(15, 20, 45, 0.8); border-style: dashed; }
+.ranura h3 {
+    margin: 0 0 3px;
+    font-size: 12px; letter-spacing: 3px; color: var(--oro);
+    text-shadow: 2px 2px 0 var(--tinta);
+}
+.ranura .resumen { margin: 0; font-size: 14px; color: var(--papel); }
+.ranura.vacia .resumen { color: #7c8cb0; }
+.ranura .fecha { margin: 2px 0 0; font-size: 11.5px; color: #8ea3c8; }
+
+/* el borrado se queda en una esquina y pide dos clics */
+.ranura .borrar {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    font-family: inherit;
+    font-size: 10.5px; font-weight: bold; letter-spacing: 1.5px;
+    color: #cdd8ee; padding: 6px 9px;
+    background: rgba(15, 20, 45, 0.9);
+    border: 2px solid var(--tinta);
+    border-radius: 3px; cursor: pointer;
+}
+.ranura .borrar:hover { color: #fff; background: var(--bermellon); }
+.ranura .borrar.confirmar { color: #fff; background: var(--bermellon); }
+
+/* ---------- Armería (prev.html) ---------- */
+/* a diferencia de los paneles de la portada, este trae su marco de serie */
+.panel.armeria {
+    max-width: 780px;
+    padding: 18px 24px 20px;
+    border: 3px solid var(--tinta);
+    border-radius: 4px;
+    background: rgba(16, 28, 58, 0.9);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.10), 0 10px 26px rgba(0, 0, 0, 0.6);
+}
+.armeria .saldo { margin: 0 0 14px; letter-spacing: 1px; }
+.armeria .saldo b { color: var(--oro); }
+
+/* la esquirla acompaña siempre a una cifra: se escala con el texto de al lado */
+.esquirla {
+    width: 0.95em; height: 1.15em;
+    vertical-align: -0.2em; margin-left: 0.35em;
+    overflow: visible;
+}
+.armeria .saldo .esquirla { filter: drop-shadow(0 0 6px rgba(127, 214, 196, 0.55)); }
+.armeria .saldo .esquirla.lapis { filter: drop-shadow(0 0 6px rgba(107, 156, 242, 0.6)); }
+.mejorar:disabled .esquirla { opacity: 0.45; }
+
+/* las mejoras del personaje: mismas láminas que las armas, en azul de lapislázuli */
+.arma.mejora { width: 260px; cursor: default; }
+.arma.mejora:hover { transform: none; background: rgba(23, 34, 74, 0.92); }
+.arma.mejora .fichas dd { color: #a8c4ff; }
+.arma.mejora .pips { color: #6b9cf2; }
+.mejorar.lapislazuli { background: #24468f; }
+.mejorar.lapislazuli:hover:not(:disabled) { background: #3a6fd8; }
+.armeria .nota { margin: 14px 0 0; font-size: 12.5px; color: #8ea3c8; }
+
+.armeria .armas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
+
+/* cada arma es una lámina entintada; la elegida se ribetea en oro */
+.arma {
+    width: 226px; padding: 12px 14px 14px;
+    text-align: left; cursor: pointer;
+    border: 3px solid var(--tinta);
+    border-radius: 4px;
+    background: rgba(23, 34, 74, 0.92);
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.10);
+    transition: transform .08s, border-color .12s, background .12s;
+}
+.arma:hover { transform: translateY(-2px); background: #24396e; }
+.arma.elegida {
+    border-color: var(--oro);
+    background: #2c4a8c;
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.18), 0 0 20px rgba(255, 215, 132, 0.28);
+}
+.arma h3 {
+    margin: 0 0 6px;
+    font-size: 15px; letter-spacing: 2px; color: var(--papel);
+    text-shadow: 2px 2px 0 var(--tinta);
+    display: flex; align-items: center; gap: 8px;
+}
+.arma .marca {
+    font-size: 9.5px; letter-spacing: 1px; color: var(--tinta);
+    background: var(--oro); border-radius: 3px; padding: 2px 5px;
+    text-shadow: none;
+}
+
+/* el arma que aún no es tuya: apagada, sin el brinco del ratón encima */
+.arma.cerrada {
+    background: rgba(15, 20, 45, 0.85);
+    border-style: dashed;
+    cursor: default;
+}
+.arma.cerrada:hover { transform: none; background: rgba(15, 20, 45, 0.85); }
+.arma.cerrada h3, .arma.cerrada .pie { color: #8493b5; }
+.arma.cerrada .fichas dd { color: #6f86a8; }
+.arma .marca.cerrado { background: #7fd6c4; }
+.mejorar.comprar { background: #2f7a76; }
+.mejorar.comprar:hover:not(:disabled) { background: #4ea79c; }
+.arma .pie { margin: 0 0 10px; font-size: 12px; line-height: 1.5; color: #a8b8d8; min-height: 54px; }
+
+.arma .fichas { margin: 0 0 10px; display: flex; justify-content: space-between; }
+.arma .fichas dt { font-size: 10.5px; letter-spacing: 1px; color: #8ea3c8; }
+.arma .fichas dd { margin: 2px 0 0; font-size: 17px; font-weight: bold; color: var(--cielo); }
+
+.arma .forja { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.arma .pips { color: var(--oro); font-size: 14px; letter-spacing: 3px; }
+
+/* botón pequeño de forja: mismo entintado que los grandes, en miniatura */
+.mejorar {
+    font-family: inherit;
+    font-size: 11.5px; font-weight: bold; letter-spacing: 1.5px;
+    color: #fff5ea; padding: 7px 10px;
+    background: var(--bermellon);
+    border: 3px solid var(--tinta);
+    border-radius: 3px;
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.25);
+    cursor: pointer;
+}
+.mejorar:hover:not(:disabled) { background: #ff6a56; }
+.mejorar:disabled {
+    background: rgba(15, 20, 45, 0.9);
+    color: #6f7fa0; cursor: default;
+    box-shadow: none;
+}
+
+/* ---------- Consola de la portada (Alt+Intro) ---------- */
+/* fija al rincón de abajo a la izquierda, por encima de todo lo demás */
+#consola {
+    position: fixed; left: 16px; bottom: 16px; z-index: 20;
+    width: 440px; max-width: calc(100vw - 32px);
+    display: flex; flex-direction: column;
+    border: 3px solid var(--tinta);
+    border-radius: 4px;
+    background: rgba(8, 14, 32, 0.94);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.10), 0 10px 26px rgba(0, 0, 0, 0.7);
+    font-family: "Consolas", "Cascadia Mono", monospace;
+    font-size: 12.5px; line-height: 1.55;
+}
+#consola[hidden] { display: none; }
+
+#consola .salida {
+    height: 190px; overflow-y: auto;
+    padding: 9px 11px; color: #b9c6e0;
+    white-space: pre-wrap; word-break: break-word;
+}
+#consola .salida .eco  { color: #7f8fb3; }
+#consola .salida .bien { color: #7fd6c4; }
+#consola .salida .mal  { color: #ff8a7a; }
+
+#consola .entrada {
+    display: flex; align-items: center; gap: 7px;
+    padding: 7px 11px;
+    border-top: 2px solid rgba(255, 255, 255, 0.12);
+}
+#consola .signo { color: var(--oro); }
+#consola input {
+    flex: 1; min-width: 0;
+    font: inherit; color: var(--papel);
+    background: none; border: none; outline: none;
+    caret-color: var(--oro);
+}
+
+/* pantallas bajas: el título encoge para que los botones sigan cabiendo */
+@media (max-height: 660px) {
+    #portada h1 { font-size: 44px; letter-spacing: 6px; }
+    .lema { margin: 12px 0 20px; }
+    .boton { padding: 10px 0; font-size: 17px; }
+    .arma .pie { min-height: 0; }
+    #consola .salida { height: 130px; }
+}

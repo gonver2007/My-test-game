@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Sendas del Santuario</title>
+<link rel="stylesheet" href="../css/estilos.css">
+</head>
+<body class="menu" data-siguiente="prev.html" data-anterior="index.html">
+
+<canvas id="fondoMenu"></canvas>
+
+<div id="portada">
+    <h1>ELIGE<small>tu</small>RANURA</h1>
+    <p class="lema">Cinco senderos: cada uno recuerda el suyo.</p>
+
+    <!-- la lista la rellena partidas.js al cargar -->
+    <div id="ranuras" class="panel ranuras"></div>
+
+    <nav id="botones">
+        <button id="btVolver" class="boton">VOLVER</button>
+    </nav>
+</div>
+
+<script src="../js/armeria.js"></script>
+<script src="../js/personaje.js"></script>
+<script src="../js/partidas.js"></script>
+<script src="../js/menu.js"></script>
+</body>
+</html>

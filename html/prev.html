@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Sendas del Santuario</title>
+<link rel="stylesheet" href="../css/estilos.css">
+</head>
+<body class="menu" data-siguiente="game.html" data-anterior="ranura.html">
+
+<canvas id="fondoMenu"></canvas>
+
+<div id="portada">
+    <h1>ANTES<small>de</small>PARTIR</h1>
+    <p class="lema">El farolillo está encendido. Cruza cuando quieras.</p>
+
+    <nav id="botones">
+        <button id="btJugar" class="boton principal">ENTRAR AL SANTUARIO</button>
+        <button id="btArmeria" class="boton">ARMERÍA</button>
+        <button id="btPersonaje" class="boton">PERSONAJE</button>
+        <button id="btVolver" class="boton">VOLVER</button>
+    </nav>
+
+    <!-- los rellenan armeria.js y personaje.js al abrirlos, para que el saldo
+         mostrado sea siempre el del momento -->
+    <div id="armeria" class="panel armeria" hidden></div>
+    <div id="personaje" class="panel armeria" hidden></div>
+</div>
+
+<script src="../js/armeria.js"></script>
+<script src="../js/personaje.js"></script>
+<script src="../js/partidas.js"></script>
+<script src="../js/menu.js"></script>
+</body>
+</html>

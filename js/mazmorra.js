@@ -46,7 +46,13 @@ const J = {
     nivel: 1,
     log: [],
     muerto: false,
-    tiempo: 0
+    tiempo: 0,
+    arma: 'katana',      // nombre del acero equipado, solo para el HUD
+    esquirlas: 0,        // saldo de jade, copiado de la ranura al empezar
+    lapis: 0,            // y el de lapislázuli, que paga las mejoras
+    // lo juntado en el patio de ahora: no llega a la ranura hasta cruzar su
+    // puerta, y se pierde entero si el héroe cae antes
+    pendiente: { jade: 0, lapis: 0 }
 };
 
 const azar = (min, max) => Math.random() * (max - min) + min;
@@ -436,11 +442,13 @@ function golpear() {
         e.ex += dx / (d || 1) * 6;
         e.ey += dy / (d || 1) * 6;
         chispas(e.x, e.y, '#c04040', 6);
-        numero(e.x, e.y, dano, '#ffd0d0');
+        numero(e.x, e.y, dano, '#00e5ff');   // daño que hace el jugador: cian
 
         if (e.hp <= 0) {
             J.enemigos = J.enemigos.filter(o => o !== e);
             chispas(e.x, e.y, '#803030', 14);
+            // cada caído suelta su lapislázuli, sin más aviso que el contador
+            premiarLapis(1);
             mensaje(`${sujeto(e)} muere.`);
         }
     }
@@ -459,7 +467,8 @@ function impulsar() {
 
 function danarJugador(e) {
     const j = J.jugador;
-    if (j.invulnerable > 0) return;
+    // el modo inmortal de la consola: los golpes ni se sienten
+    if (j.inmortal || j.invulnerable > 0) return;
 
     // el golpe quita lo que dice la ficha del bicho, sin sorteo: así se sabe
     // cuántos aguanta uno y cuántos más si se cubre
@@ -478,14 +487,15 @@ function danarJugador(e) {
 
     if (parado) {
         chispas(j.x + Math.cos(j.mira) * 0.4, j.y + Math.sin(j.mira) * 0.4, '#d8dcf0', 8);
-        numero(j.x, j.y, dano, '#c8ccdd');
+        numero(j.x, j.y, dano, '#9aa0a6');   // parado con escudo: gris
     } else {
-        numero(j.x, j.y, dano, '#ff8080');
+        numero(j.x, j.y, dano, '#ff3b30');   // golpe enemigo directo: rojo
     }
     if (j.hp <= 0) {
         j.hp = 0;
         j.cubriendo = j.corriendo = false;
         J.muerto = true;
+        perderBotin();
         mensaje('Has muerto. Pulsa R para empezar de nuevo.');
     }
 }
@@ -513,7 +523,18 @@ function cruzar() {
         return false;
     }
     J.nivel++;
+    // el umbral paga a cara o cruz, y solo en jade: el lapislázuli lo dejan
+    // los enemigos al caer
+    const jade = Math.random() < 0.5;
+    if (jade) {
+        premiar(1);
+        mensaje('Una esquirla de jade se desprende del umbral.');
+    }
+    asentarBotin();
     nuevoNivel();
+    // el efecto va después de la mudanza: nuevoNivel lo limpia y planta al
+    // héroe en el patio siguiente, que es donde debe verse
+    if (jade) esquirlaGanada(J.jugador.x, J.jugador.y, 'jade');
     return true;
 }
 
@@ -524,6 +545,22 @@ function chispas(x, y, color, cuantas) {
         J.efectos.push({ tipo: 'chispa', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v,
                          vida: azar(0.25, 0.5), t: 0, color });
     }
+}
+
+// la esquirla ganada: sube girando delante del héroe mientras se apaga.
+// Solo la anuncia así el jade, que cae de uno en uno al cruzar el umbral; el
+// lapislázuli, que lo sueltan todos los enemigos, se ve solo en el contador.
+const COLORES_ESQUIRLA = {
+    jade:  { cara: '#2f7a76', luz: '#7fd6c4' },
+    lapis: { cara: '#24468f', luz: '#6b9cf2' }
+};
+
+function esquirlaGanada(x, y, clase) {
+    const tinte = COLORES_ESQUIRLA[clase] || COLORES_ESQUIRLA.jade;
+    J.efectos.push({ tipo: 'esquirla', x, y: y - 0.5, vy: -0.75, vida: 1.5, t: 0,
+                     giro: azar(-0.4, 0.4), cara: tinte.cara, luz: tinte.luz });
+    chispas(x, y - 0.5, tinte.luz, 10);
+    numero(x, y - 1.35, '+1', tinte.luz);
 }
 
 function numero(x, y, valor, color) {
@@ -542,6 +579,58 @@ function actualizarEfectos(dt) {
 }
 
 // ---------- Arranque ----------
+
+// La armería vive en prev.html; si se entra directo a la partida no está
+// cargada, y entonces el héroe sale con la katana de serie.
+
+// Lo que se junta se apunta primero en la cuenta del patio; el HUD lee de
+// aquí, no del almacén
+function premiar(esquirlas) {
+    J.esquirlas += esquirlas;
+    J.pendiente.jade += esquirlas;
+}
+
+function premiarLapis(esquirlas) {
+    J.lapis += esquirlas;
+    J.pendiente.lapis += esquirlas;
+}
+
+// cruzar la puerta es lo que hace tuyo el botín del patio: hasta entonces no
+// se escribe nada en la ranura
+function asentarBotin() {
+    if (typeof Forja !== 'undefined' && J.pendiente.jade) Forja.premiar(J.pendiente.jade);
+    if (typeof Personaje !== 'undefined' && J.pendiente.lapis) Personaje.premiar(J.pendiente.lapis);
+    J.pendiente.jade = J.pendiente.lapis = 0;
+}
+
+// y morir lo deja todo en el suelo del patio
+function perderBotin() {
+    const jade = J.pendiente.jade, lapis = J.pendiente.lapis;
+    J.esquirlas -= jade;
+    J.lapis -= lapis;
+    J.pendiente.jade = J.pendiente.lapis = 0;
+    if (jade || lapis) mensaje(`Se quedan en el patio ${jade} de jade y ${lapis} de lapislázuli.`);
+}
+
+function equiparArma(j) {
+    if (typeof Forja === 'undefined') { J.arma = 'katana'; return; }
+    const arma = Forja.equipada();
+    j.dano = arma.dano;
+    j.alcance = arma.alcance;
+    j.arco = arma.arco;
+    j.cadencia = arma.cadencia;
+    J.arma = arma.nombre + (arma.nivel ? ` +${arma.nivel}` : '');
+}
+
+// las mejoras del personaje van sobre el arma ya equipada: el filo suma al
+// daño que sea, y el vigor estira la vida antes de llenarla
+function aplicarMejoras(j) {
+    if (typeof Personaje === 'undefined') return;
+    j.hpMax += Personaje.vigor();
+    j.hp = j.hpMax;
+    j.dano += Personaje.filo();
+}
+
 function iniciarPartida() {
     J.jugador = {
         x: 0, y: 0, r: 0.30, vel: 4.6,
@@ -551,6 +640,15 @@ function iniciarPartida() {
         cubriendo: false, corriendo: false, dash: 0, cdDash: 0,
         ex: 0, ey: 0, mira: 0, andando: false, nombre: 'héroe'
     };
+    equiparArma(J.jugador);
+    aplicarMejoras(J.jugador);
+    J.esquirlas = (typeof Forja !== 'undefined') ? Forja.esquirlas() : 0;
+    J.lapis = (typeof Personaje !== 'undefined') ? Personaje.lapis() : 0;
+    J.pendiente = { jade: 0, lapis: 0 };
+    // la ranura puede venir marcada como inmortal desde la consola
+    J.jugador.inmortal = !!(typeof Partidas !== 'undefined' && Partidas.actual().god);
+    // la ranura guarda el acero y el jade, no el camino: siempre se entra por
+    // el primer patio
     J.nivel = 1;
     J.log = [];
     J.muerto = false;

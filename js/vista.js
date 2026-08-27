@@ -6,7 +6,7 @@
 // ============================================================
 const lienzo = document.getElementById('vista');
 const ctx = lienzo.getContext('2d');
-const AN = lienzo.width, AL = lienzo.height;
+let AN = lienzo.width, AL = lienzo.height;   // los fija la ventana, ver ajustarLienzo
 
 const TILE = 34;              // píxeles por casilla
 const ALCANCE_LUZ = 12;       // hasta dónde llega el farol del héroe, en casillas
@@ -770,10 +770,12 @@ const aPantallaY = y => y * TILE - cam.y;
 function pintar() {
     const j = J.jugador;
 
-    // cámara: sigue al héroe y se queda dentro de los límites del recinto
+    // cámara: sigue al héroe y se queda dentro de los límites del recinto. Si la
+    // ventana es más ancha que el propio recinto, este se planta en el centro
     const objX = j.x * TILE - AN / 2, objY = j.y * TILE - AL / 2;
-    cam.x = Math.max(0, Math.min(ANCHO * TILE - AN, objX));
-    cam.y = Math.max(0, Math.min(ALTO * TILE - AL, objY));
+    const topeX = ANCHO * TILE - AN, topeY = ALTO * TILE - AL;
+    cam.x = topeX > 0 ? Math.max(0, Math.min(topeX, objX)) : topeX / 2;
+    cam.y = topeY > 0 ? Math.max(0, Math.min(topeY, objY)) : topeY / 2;
 
     ctx.save();
     if (sacudida > 0) ctx.translate(azar(-sacudida, sacudida), azar(-sacudida, sacudida));
@@ -990,6 +992,51 @@ function barraEnemigo(e, px, py) {
     ctx.fillRect(x, y, w * (e.hp / e.hpMax), 3);
 }
 
+// La esquirla del umbral: un cristal de jade que gira y crece de golpe al
+// aparecer, con su resplandor y un destello en cruz encima
+function dibujarEsquirla(px, py, f, k) {
+    const brote = Math.min(1, f.t / 0.16);              // el estirón inicial
+    const s = (12 + 4 * Math.sin(f.t * 5)) * brote;
+    const giro = f.giro + f.t * 1.6;
+
+    ctx.save();
+    ctx.translate(px, py);
+
+    ctx.globalAlpha = 0.30 * k;
+    ctx.fillStyle = P.papel;
+    ctx.beginPath(); ctx.arc(0, 0, s * 2.1, 0, 6.2832); ctx.fill();
+
+    ctx.globalAlpha = k;
+    ctx.rotate(giro);
+    ctx.strokeStyle = P.tinta; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+    ctx.fillStyle = f.cara || '#2f7a76';
+    ctx.beginPath();
+    ctx.moveTo(0, -s);
+    ctx.lineTo(s * 0.72, -s * 0.28);
+    ctx.lineTo(s * 0.30, s);
+    ctx.lineTo(-s * 0.62, s * 0.42);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+
+    // la cara iluminada, plana como en las láminas
+    ctx.fillStyle = f.luz || '#7fd6c4';
+    ctx.beginPath();
+    ctx.moveTo(0, -s * 0.82);
+    ctx.lineTo(s * 0.34, -s * 0.06);
+    ctx.lineTo(-s * 0.30, s * 0.34);
+    ctx.closePath(); ctx.fill();
+
+    // destello en cruz, más vivo al principio
+    ctx.rotate(-giro);
+    const d = s * 2.4 * (1 - f.t / f.vida);
+    ctx.globalAlpha = k * k;
+    ctx.strokeStyle = P.papelLuz; ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-d, 0); ctx.lineTo(d, 0);
+    ctx.moveTo(0, -d); ctx.lineTo(0, d);
+    ctx.stroke();
+    ctx.restore();
+}
+
 function dibujarEfectos() {
     for (const f of J.efectos) {
         const k = 1 - f.t / f.vida;
@@ -1000,6 +1047,8 @@ function dibujarEfectos() {
             ctx.beginPath(); ctx.arc(px, py, 2.8 * k + 0.9, 0, 6.2832); ctx.fill();
             ctx.fillStyle = '#fff';
             ctx.beginPath(); ctx.arc(px, py, 1.2 * k, 0, 6.2832); ctx.fill();
+        } else if (f.tipo === 'esquirla') {
+            dibujarEsquirla(px, py, f, k);
         } else {
             ctx.globalAlpha = k;
             ctx.fillStyle = f.color;
@@ -1224,6 +1273,28 @@ function pintarLuces(j) {
     ctx.restore();
 }
 
+// los iconos de los contadores son los mismos dibujos de los paneles
+document.getElementById('jadeIcono').innerHTML =
+    (typeof ESQUIRLA_SVG !== 'undefined') ? ESQUIRLA_SVG : '';
+document.getElementById('lapisIcono').innerHTML =
+    (typeof LAPIS_SVG !== 'undefined') ? LAPIS_SVG : '';
+
+// saldos ya pintados, para saber cuándo hay que celebrar el cambio
+let jadeMostrado = -1, lapisMostrado = -1;
+
+// el contador solo se toca cuando cambia, y al subir da un brinco
+function contador(caja, cifra, valor, mostrado) {
+    if (valor === mostrado) return mostrado;
+    document.getElementById(cifra).textContent = valor;
+    if (valor > mostrado && mostrado >= 0) {
+        const c = document.getElementById(caja);
+        c.classList.remove('gana');
+        void c.offsetWidth;                 // reinicia la animación en seco
+        c.classList.add('gana');
+    }
+    return valor;
+}
+
 function pintarHud() {
     const p = J.jugador;
     document.getElementById('estadoPv').textContent = `PV ${Math.ceil(p.hp)}/${p.hpMax}`;
@@ -1234,10 +1305,11 @@ function pintarHud() {
     dash.style.width = carga * 100 + '%';
     dash.parentElement.classList.toggle('lista', carga >= 1);
 
+    jadeMostrado = contador('jade', 'jadeCifra', J.esquirlas, jadeMostrado);
+    lapisMostrado = contador('lapis', 'lapisCifra', J.lapis, lapisMostrado);
+
     document.getElementById('estadoNivel').textContent =
-        `Patio ${J.nivel}   ·   Enemigos ${J.enemigos.length}`;
-    document.getElementById('mensajes').innerHTML =
-        J.log.slice(-5).map(t => `<div>${t}</div>`).join('');
+        `Patio ${J.nivel}   ·   Enemigos ${J.enemigos.length}\n${J.arma}`;
     document.getElementById('muerte').style.display = J.muerto ? 'flex' : 'none';
 
     const aviso = document.getElementById('aviso');
@@ -1373,8 +1445,43 @@ const teclas = new Set();
 const raton = { x: AN / 2, y: AL / 2, izq: false, der: false };
 let dashPedido = false;          // el impulso se pide una vez por pulsación
 
+// ---------- Menú de Esc ----------
+// No detiene nada: el santuario sigue vivo detrás, así que abrirlo en mitad de
+// una pelea sale caro. Por eso ocupa solo el centro y deja ver el resto.
+const menuJuego = document.getElementById('menuJuego');
+
+function alternarMenu(abrir) {
+    menuJuego.hidden = abrir === undefined ? !menuJuego.hidden : !abrir;
+    // los controles se piden aparte: el menú siempre se abre recogido
+    document.getElementById('mjLista').hidden = true;
+    // el héroe no se queda corriendo ni cubriéndose por tener el menú delante
+    teclas.clear();
+    raton.izq = raton.der = false;
+}
+
+document.getElementById('mjCerrar').addEventListener('click', () => alternarMenu(false));
+
+document.getElementById('mjControles').addEventListener('click', () => {
+    const lista = document.getElementById('mjLista');
+    lista.hidden = !lista.hidden;
+});
+
+// no hay nada que anotar al salir: el arma y las esquirlas se guardan solas
+// en cuanto se ganan o se cambian
+document.getElementById('mjInicio').addEventListener('click', () => {
+    location.href = 'index.html';
+});
+
+document.getElementById('mjSalir').addEventListener('click', () => {
+    window.close();
+    // los navegadores solo cierran las pestañas que ellos abrieron: si seguimos
+    // aquí un instante después, se lo decimos al jugador en vez de callar
+    setTimeout(() => { document.getElementById('mjNota').hidden = false; }, 250);
+});
+
 addEventListener('keydown', ev => {
     const k = ev.key.toLowerCase();
+    if (k === 'escape') { alternarMenu(); return; }
     if (k === 'r') { comenzar(); return; }
     if (k === 'e') { if (!ev.repeat && cruzar()) construirLienzoNivel(); return; }
     if (k === ' ' && !ev.repeat) dashPedido = true;
@@ -1452,6 +1559,20 @@ function comenzar() {
     flash = 0; sacudida = 0;
 }
 
+// El lienzo ocupa la ventana entera y se rehace cuando esta cambia: las capas
+// que se guardan a medida (viñeta y sombra) se tiran para volver a nacer con
+// el tamaño nuevo, y el ambiente se resiembra para que no quede todo a un lado.
+function ajustarLienzo() {
+    AN = lienzo.width = Math.max(480, innerWidth);
+    AL = lienzo.height = Math.max(360, innerHeight);
+    capaVineta = null;
+    lienzoSombra = null; sctx = null;
+    raton.x = AN / 2; raton.y = AL / 2;
+    if (petalos.length) prepararAmbiente();
+}
+addEventListener('resize', ajustarLienzo);
+
 prepararSprites();
+ajustarLienzo();
 comenzar();
 requestAnimationFrame(bucle);

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Sendas del Santuario</title>
+<link rel="stylesheet" href="../css/estilos.css">
+</head>
+<body class="menu" data-siguiente="ranura.html">
+
+<canvas id="fondoMenu"></canvas>
+
+<div id="portada">
+    <h1>SENDAS<small>del</small>SANTUARIO</h1>
+    <p class="lema">Una katana, un farolillo y la noche entera por delante.</p>
+
+    <nav id="botones">
+        <button id="btJugar" class="boton principal">CONTINUAR</button>
+        <button id="btControles" class="boton">CONTROLES</button>
+        <button id="btCreditos" class="boton">CRÉDITOS</button>
+    </nav>
+
+    <div id="panel" class="panel">
+        <div id="panelControles" hidden>
+            <h2>CONTROLES</h2>
+            <ul>
+                <li><b>W A S D</b> Moverte</li>
+                <li><b>Shift</b> Correr</li>
+                <li><b>Ratón</b> Apuntar</li>
+                <li><b>Clic izq</b> Atacar</li>
+                <li><b>Clic der</b> Cubrirse con la guardia</li>
+                <li><b>Espacio</b> Impulso</li>
+                <li><b>E</b> Cruzar la puerta</li>
+                <li><b>R</b> Empezar de nuevo</li>
+            </ul>
+        </div>
+        <div id="panelCreditos" hidden>
+            <h2>CRÉDITOS</h2>
+            <p>Sendas del Santuario · Pre-Alfa</p>
+        </div>
+    </div>
+</div>
+
+<!-- consola de trastear: Alt+Intro la abre y la cierra, Esc también -->
+<div id="consola" hidden>
+    <div class="salida"></div>
+    <div class="entrada">
+        <span class="signo">&gt;</span>
+        <input type="text" autocomplete="off" spellcheck="false" aria-label="consola">
+    </div>
+</div>
+
+<script src="../js/armeria.js"></script>
+<script src="../js/personaje.js"></script>
+<script src="../js/partidas.js"></script>
+<script src="../js/consola.js"></script>
+<script src="../js/menu.js"></script>
+</body>
+</html>
