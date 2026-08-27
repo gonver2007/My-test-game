@@ -1,4 +1,4 @@
-// ============================================================ 
+// ============================================================  
 //  mazmorra.js - lógica del juego en tiempo real (sin dibujado)
 //  Las plantas se trazan con dos o tres salas amplias apiladas,
 //  unidas por corredores rectos. Las entidades se mueven en

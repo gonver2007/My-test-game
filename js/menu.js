@@ -1,4 +1,4 @@
-/* ============================================================
+/* ============================================================ 
 menu.js - portada: fondo animado y botones de entrada
 El fondo se pinta con la misma receta que la partida: colores
 planos, contorno de tinta y ni un degradado dentro de las siluetas.
