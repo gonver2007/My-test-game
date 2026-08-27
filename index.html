@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Mazmorra</title>
+<style>
+  html, body {
+    background: #07070a;
+    color: #b8b8c4;
+    font-family: Consolas, "Courier New", monospace;
+    margin: 0; height: 100%;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    user-select: none;
+  }
+  #escena { position: relative; width: 960px; height: 600px; box-shadow: 0 0 40px #000; }
+  canvas#vista { width: 100%; height: 100%; display: block; background: #000; cursor: crosshair; }
+
+  #hud {
+    position: absolute; left: 0; top: 0; right: 0;
+    display: flex; justify-content: space-between;
+    padding: 10px 14px; font-size: 14px;
+    text-shadow: 0 0 4px #000, 0 1px 2px #000;
+    pointer-events: none; white-space: pre-line;
+  }
+  .barra { width: 190px; height: 11px; border: 1px solid #5c2626; background: #1a0808; margin-top: 5px; border-radius: 6px; overflow: hidden; }
+  .barra > div { height: 100%; background: linear-gradient(#c94a4a, #8f2b2b); transition: width .12s linear; }
+  .barra.exp { border-color: #2f4a5c; background: #08141a; height: 6px; width: 190px; }
+  .barra.exp > div { background: linear-gradient(#4a90c9, #2b6a8f); }
+
+  #mensajes {
+    position: absolute; left: 14px; bottom: 12px;
+    font-size: 13px; line-height: 1.5; color: #9a9aa8;
+    text-shadow: 0 0 4px #000, 0 1px 2px #000;
+    pointer-events: none; max-width: 60%;
+  }
+  #mensajes div:last-child { color: #e0e0ea; }
+  #aviso {
+    position: absolute; left: 0; right: 0; bottom: 90px;
+    text-align: center; font-size: 15px; color: #e8dca0;
+    text-shadow: 0 0 6px #000; pointer-events: none; opacity: 0;
+    transition: opacity .2s;
+  }
+  #muerte {
+    position: absolute; inset: 0; display: none;
+    align-items: center; justify-content: center; flex-direction: column;
+    background: rgba(50, 0, 0, 0.55); color: #f0d0d0;
+    font-size: 30px; letter-spacing: 3px;
+  }
+  #muerte small { font-size: 14px; letter-spacing: 1px; margin-top: 10px; color: #c09090; }
+  .ayuda { font-size: 12px; color: #55555f; margin-top: 10px; }
+  .ayuda b { color: #7a7a88; font-weight: normal; }
+  .ayuda a { color: #6a6a80; }
+</style>
+</head>
+<body>
+
+<div id="escena">
+  <canvas id="vista" width="960" height="600"></canvas>
+  <div id="hud">
+    <div>
+      <span id="estadoPv"></span>
+      <div class="barra"><div id="vida"></div></div>
+      <div class="barra exp"><div id="exp"></div></div>
+    </div>
+    <div id="estadoNivel" style="text-align:right"></div>
+  </div>
+  <div id="mensajes"></div>
+  <div id="aviso"></div>
+  <div id="muerte">HAS MUERTO<small>Pulsa R para empezar de nuevo</small></div>
+</div>
+
+<div class="ayuda">
+  <b>WASD</b> moverte (libre) · <b>ratón</b> apuntar · <b>clic o espacio</b> atacar ·
+  <b>E</b> bajar por el pozo · <b>R</b> reiniciar ·
+  <a href="fps.html">primera persona</a> · <a href="ascii.html">ASCII</a>
+</div>
+
+<script src="mazmorra.js"></script>
+<script>
+// ============================================================
+//  Vista cenital en tiempo real
+// ============================================================
+const lienzo = document.getElementById('vista');
+const ctx = lienzo.getContext('2d');
+const AN = lienzo.width, AL = lienzo.height;
+
+const TILE = 34;              // píxeles por casilla
+const RADIO_LUZ = 9;          // en casillas
+const SPR = 46;               // lado del lienzo de cada sprite
+const ESCALA_SPR = 1.35;      // las figuras se dibujan algo mayores que su lienzo
+
+const cam = { x: 0, y: 0 };   // en píxeles de mundo
+let sacudida = 0;             // temblor de pantalla al recibir daño
+let flash = 0;
+
+function lienzoOculto(w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  return c;
+}
+
+// ============================================================
+//  Texturas de piedra: manchas irregulares, sin cuadrícula
+// ============================================================
+function tileRuido(base, variacion, manchas) {
+  const L = 96;
+  const c = lienzoOculto(L, L), g = c.getContext('2d');
+  g.fillStyle = `rgb(${base}, ${base - 5}, ${base - 12})`;
+  g.fillRect(0, 0, L, L);
+  for (let i = 0; i < manchas; i++) {
+    const t = Math.round(azar(-variacion, variacion));
+    g.fillStyle = `rgba(${base + t}, ${base + t - 5}, ${base + t - 12}, 0.55)`;
+    const cx = azar(0, L), cy = azar(0, L);
+    const rx = azar(4, 16), ry = azar(3, 11), giro = azar(0, 3.14);
+    // manchas ovaladas y giradas; se repiten en las 9 copias vecinas para que
+    // el patrón encaje consigo mismo y no se adivine la rejilla al repetirlo
+    for (let ox = -1; ox <= 1; ox++)
+      for (let oy = -1; oy <= 1; oy++) {
+        g.beginPath();
+        g.ellipse(cx + ox * L, cy + oy * L, rx, ry, giro, 0, 6.2832);
+        g.fill();
+      }
+  }
+  return c;
+}
+
+// ============================================================
+//  Composición del nivel: se hace una vez por cueva
+// ============================================================
+let lienzoNivel = null;
+
+function construirLienzoNivel() {
+  const W = ANCHO * TILE, H = ALTO * TILE;
+  const ESC = 0.5;                                  // la máscara se calcula a mitad de resolución
+  const w = Math.round(W * ESC), h = Math.round(H * ESC);
+
+  // 1) Silueta del suelo, en blanco sobre negro
+  const masc = lienzoOculto(w, h), mg = masc.getContext('2d');
+  mg.fillStyle = '#000';
+  mg.fillRect(0, 0, w, h);
+  mg.fillStyle = '#fff';
+  const t = TILE * ESC;
+  for (let y = 0; y < ALTO; y++)
+    for (let x = 0; x < ANCHO; x++)
+      if (J.mapa[y][x] === 0) mg.fillRect(x * t - 0.5, y * t - 0.5, t + 1, t + 1);
+
+  // 2) Desenfocar y subir el contraste: las esquinas rectas se redondean
+  //    y el contorno queda irregular, como roca excavada.
+  const suave = lienzoOculto(w, h), sg = suave.getContext('2d');
+  sg.filter = `blur(${Math.round(TILE * ESC * 0.42)}px) contrast(22)`;
+  sg.drawImage(masc, 0, 0);
+  sg.filter = 'none';
+
+  // 3) Pasar ese blanco/negro a transparencia (la silueta ya redondeada)
+  const d = sg.getImageData(0, 0, w, h);
+  const px = d.data;
+  for (let i = 0; i < px.length; i += 4) {
+    px[i + 3] = px[i];                              // el rojo hace de alfa
+    px[i] = px[i + 1] = px[i + 2] = 255;
+  }
+  sg.putImageData(d, 0, 0);
+
+  // 4) Montar el nivel: roca de fondo, sombra del borde y suelo recortado
+  const nivel = lienzoOculto(W, H), ng = nivel.getContext('2d');
+  ng.fillStyle = ng.createPattern(tileRuido(34, 14, 90), 'repeat');
+  ng.fillRect(0, 0, W, H);
+
+  // la silueta proyecta sombra sobre la roca: da sensación de profundidad
+  ng.save();
+  ng.shadowColor = 'rgba(0,0,0,0.85)';
+  ng.shadowBlur = 26;
+  for (let i = 0; i < 3; i++) ng.drawImage(suave, 0, 0, W, H);
+  ng.restore();
+
+  // el suelo, recortado con la misma silueta
+  const suelo = lienzoOculto(W, H), fg = suelo.getContext('2d');
+  fg.fillStyle = fg.createPattern(tileRuido(112, 22, 140), 'repeat');
+  fg.fillRect(0, 0, W, H);
+  fg.globalCompositeOperation = 'destination-in';
+  fg.drawImage(suave, 0, 0, W, H);
+  ng.drawImage(suelo, 0, 0);
+
+  // borde interior oscuro, para que la pared "muerda" el suelo
+  ng.save();
+  ng.globalCompositeOperation = 'multiply';
+  ng.globalAlpha = 0.55;
+  ng.filter = 'blur(6px)';
+  ng.drawImage(recortarBorde(suave, W, H), 0, 0);
+  ng.restore();
+
+  lienzoNivel = nivel;
+}
+
+// Anillo oscuro justo por dentro del contorno del suelo
+function recortarBorde(silueta, W, H) {
+  const c = lienzoOculto(W, H), g = c.getContext('2d');
+  g.fillStyle = '#404048';
+  g.fillRect(0, 0, W, H);
+  g.globalCompositeOperation = 'destination-in';
+  g.drawImage(silueta, 0, 0, W, H);
+  g.globalCompositeOperation = 'destination-out';
+  g.drawImage(silueta, -5, -5, W + 10, H + 10);     // vaciar el centro
+  return c;
+}
+
+// ============================================================
+//  Sprites: figuras redondeadas dibujadas por código
+// ============================================================
+let sprites;
+
+function nuevoSprite(pintar) {
+  const c = lienzoOculto(SPR, SPR);
+  pintar(c.getContext('2d'), SPR / 2);
+  return c;
+}
+
+function bulto(g, cx, cy, rx, ry, relleno, giro = 0) {
+  g.fillStyle = relleno;
+  g.strokeStyle = 'rgba(0,0,0,0.8)';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.ellipse(cx, cy, rx, ry, giro, 0, Math.PI * 2);
+  g.fill(); g.stroke();
+}
+
+function prepararSprites() {
+  sprites = {
+    // Todas las criaturas miran a la derecha; se rotan al dibujarlas.
+    rata: nuevoSprite((g, c) => {
+      g.strokeStyle = '#3b342e'; g.lineWidth = 2.5;
+      g.beginPath(); g.moveTo(c - 8, c); g.quadraticCurveTo(c - 20, c - 6, c - 16, c - 15); g.stroke();
+      bulto(g, c - 2, c, 11, 8, '#574d44');
+      bulto(g, c + 7, c - 5, 4.5, 4.5, '#463d36');
+      bulto(g, c + 7, c + 5, 4.5, 4.5, '#463d36');
+      bulto(g, c + 9, c, 7, 5.5, '#635850');
+      g.fillStyle = '#e05050';
+      g.beginPath(); g.arc(c + 12, c - 3, 1.7, 0, 6.3); g.fill();
+      g.beginPath(); g.arc(c + 12, c + 3, 1.7, 0, 6.3); g.fill();
+    }),
+
+    trol: nuevoSprite((g, c) => {
+      bulto(g, c - 3, c, 17, 15, '#3d5330');
+      bulto(g, c - 9, c - 12, 5.5, 5.5, '#33452a');
+      bulto(g, c - 9, c + 12, 5.5, 5.5, '#33452a');
+      bulto(g, c + 8, c, 11, 10, '#547140');
+      g.fillStyle = '#f0d040';
+      g.beginPath(); g.arc(c + 12, c - 4, 2.3, 0, 6.3); g.fill();
+      g.beginPath(); g.arc(c + 12, c + 4, 2.3, 0, 6.3); g.fill();
+      g.fillStyle = '#e8e8d8';
+      g.beginPath(); g.arc(c + 17, c - 3, 1.6, 0, 6.3); g.fill();
+      g.beginPath(); g.arc(c + 17, c + 3, 1.6, 0, 6.3); g.fill();
+    }),
+
+    heroe: nuevoSprite((g, c) => {
+      bulto(g, c - 4, c, 15, 13, '#2f3f5e');                  // capa
+      bulto(g, c - 1, c, 11, 10, '#4a628f');                  // hombros
+      bulto(g, c + 3, c, 7.5, 7.5, '#d8b48c');                // cabeza
+      g.fillStyle = '#3a2b1e';                                // pelo
+      g.beginPath(); g.arc(c, c, 6.5, Math.PI / 2, -Math.PI / 2); g.fill();
+    }),
+
+    espada: nuevoSprite((g, c) => {
+      g.strokeStyle = '#1a1a20'; g.lineWidth = 6;             // contorno
+      g.beginPath(); g.moveTo(c + 2, c); g.lineTo(c + 20, c); g.stroke();
+      g.strokeStyle = '#ccd2e0'; g.lineWidth = 3.5;           // hoja
+      g.beginPath(); g.moveTo(c + 2, c); g.lineTo(c + 20, c); g.stroke();
+      g.strokeStyle = '#7a5c30'; g.lineWidth = 5;             // guarda
+      g.beginPath(); g.moveTo(c, c - 4); g.lineTo(c, c + 4); g.stroke();
+    }),
+
+    pocion: nuevoSprite((g, c) => {
+      bulto(g, c, c, 9.5, 9.5, '#c03838');
+      g.fillStyle = 'rgba(255,190,190,0.5)';
+      g.beginPath(); g.ellipse(c - 3, c - 3.5, 3.5, 2.4, -0.6, 0, 6.3); g.fill();
+      g.fillStyle = '#c8a060';
+      g.strokeStyle = 'rgba(0,0,0,0.75)'; g.lineWidth = 1.5;
+      g.beginPath(); g.arc(c, c, 3.6, 0, 6.3); g.fill(); g.stroke();
+    })
+  };
+}
+
+// El pozo de bajada: un agujero redondo, dibujado en directo porque late
+function dibujarPozo(cx, cy) {
+  const r = TILE * 0.62;
+  const pulso = 0.85 + Math.sin(J.tiempo * 2.5) * 0.15;
+
+  const halo = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r * 1.9);
+  halo.addColorStop(0, `rgba(120, 170, 220, ${0.30 * pulso})`);
+  halo.addColorStop(1, 'rgba(120, 170, 220, 0)');
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(cx, cy, r * 1.9, 0, 6.3); ctx.fill();
+
+  const hueco = ctx.createRadialGradient(cx, cy - r * 0.2, r * 0.1, cx, cy, r);
+  hueco.addColorStop(0, '#000');
+  hueco.addColorStop(0.75, '#0b0a10');
+  hueco.addColorStop(1, '#2b2733');
+  ctx.fillStyle = hueco;
+  ctx.beginPath(); ctx.ellipse(cx, cy, r, r * 0.86, 0, 0, 6.3); ctx.fill();
+
+  ctx.strokeStyle = `rgba(150, 190, 235, ${0.5 * pulso})`;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.ellipse(cx, cy, r, r * 0.86, 0, 0, 6.3); ctx.stroke();
+}
+
+// ============================================================
+//  Dibujado por fotograma
+// ============================================================
+const aPantallaX = x => x * TILE - cam.x;
+const aPantallaY = y => y * TILE - cam.y;
+
+function pintar() {
+  const j = J.jugador;
+
+  // cámara: sigue al héroe y se queda dentro de los límites de la cueva
+  const objX = j.x * TILE - AN / 2, objY = j.y * TILE - AL / 2;
+  cam.x = Math.max(0, Math.min(ANCHO * TILE - AN, objX));
+  cam.y = Math.max(0, Math.min(ALTO * TILE - AL, objY));
+
+  ctx.save();
+  if (sacudida > 0) ctx.translate(azar(-sacudida, sacudida), azar(-sacudida, sacudida));
+
+  ctx.fillStyle = '#000';
+  ctx.fillRect(-10, -10, AN + 20, AL + 20);
+  ctx.drawImage(lienzoNivel, cam.x, cam.y, AN, AL, 0, 0, AN, AL);
+
+  dibujarPozo(aPantallaX(J.escalera.x), aPantallaY(J.escalera.y));
+
+  for (const o of J.objetos) {
+    const flot = Math.sin(J.tiempo * 3 + o.giro) * 2;
+    sombra(aPantallaX(o.x), aPantallaY(o.y), 0.30);
+    dibujarSprite(sprites.pocion, aPantallaX(o.x), aPantallaY(o.y) + flot, 0);
+  }
+
+  for (const e of J.enemigos) {
+    const px = aPantallaX(e.x), py = aPantallaY(e.y);
+    sombra(px, py, e.r);
+    if (e.herido > 0) { ctx.save(); ctx.filter = 'brightness(2.2) saturate(0.4)'; }
+    dibujarSprite(sprites[e.tipo], px, py, e.mira);
+    if (e.herido > 0) ctx.restore();
+    barraEnemigo(e, px, py);
+  }
+
+  dibujarHeroe(j);
+  dibujarEfectos();
+  luzDeAntorcha(aPantallaX(j.x), aPantallaY(j.y));
+
+  if (flash > 0) {
+    ctx.fillStyle = `rgba(160, 20, 20, ${flash * 0.4})`;
+    ctx.fillRect(0, 0, AN, AL);
+  }
+  ctx.restore();
+}
+
+function dibujarSprite(sprite, px, py, angulo) {
+  const s = SPR * ESCALA_SPR;
+  ctx.save();
+  ctx.translate(px, py);
+  if (angulo) ctx.rotate(angulo);
+  ctx.drawImage(sprite, -s / 2, -s / 2, s, s);
+  ctx.restore();
+}
+
+function sombra(px, py, r) {
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.beginPath();
+  ctx.ellipse(px, py + r * TILE * 0.55, r * TILE * 1.05, r * TILE * 0.5, 0, 0, 6.3);
+  ctx.fill();
+}
+
+function dibujarHeroe(j) {
+  const px = aPantallaX(j.x), py = aPantallaY(j.y);
+  sombra(px, py, j.r);
+
+  // la espada acompaña al golpe: sale por delante y vuelve
+  const prog = j.golpe > 0 ? 1 - j.golpe / 0.18 : 0;
+  const barrido = j.golpe > 0 ? (prog - 0.5) * j.arco * 2 : Math.sin(J.tiempo * 2) * 0.06;
+  const empuje = j.golpe > 0 ? Math.sin(prog * Math.PI) * 9 : 0;
+
+  ctx.save();
+  ctx.translate(px, py);
+  ctx.rotate(j.mira);
+
+  if (j.golpe > 0) {                                  // estela del arco
+    ctx.fillStyle = `rgba(220, 230, 255, ${0.28 * (1 - prog)})`;
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.arc(0, 0, j.alcance * TILE, barrido - 0.55, barrido + 0.55);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  const s = SPR * ESCALA_SPR;
+  ctx.save();
+  ctx.rotate(barrido);
+  ctx.translate(empuje, 0);
+  ctx.drawImage(sprites.espada, -s / 2 + 8, -s / 2 + 12, s, s);
+  ctx.restore();
+
+  ctx.globalAlpha = J.muerto ? 0.35 : (j.invulnerable > 0 ? 0.55 : 1);
+  const paso = j.andando ? Math.sin(J.tiempo * 14) * 0.9 : 0;
+  ctx.drawImage(sprites.heroe, -s / 2, -s / 2 + paso, s, s);
+  ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+function barraEnemigo(e, px, py) {
+  if (e.hp >= e.hpMax) return;
+  const w = TILE * 0.8, x = px - w / 2, y = py - e.r * TILE - 12;
+  ctx.fillStyle = 'rgba(0,0,0,0.6)';
+  ctx.fillRect(x - 1, y - 1, w + 2, 5);
+  ctx.fillStyle = '#c04040';
+  ctx.fillRect(x, y, w * (e.hp / e.hpMax), 3);
+}
+
+function dibujarEfectos() {
+  for (const f of J.efectos) {
+    const k = 1 - f.t / f.vida;
+    const px = aPantallaX(f.x), py = aPantallaY(f.y);
+    if (f.tipo === 'chispa') {
+      ctx.fillStyle = f.color;
+      ctx.globalAlpha = k;
+      ctx.beginPath(); ctx.arc(px, py, 2.5 * k + 0.8, 0, 6.3); ctx.fill();
+    } else {
+      ctx.globalAlpha = k;
+      ctx.fillStyle = f.color;
+      ctx.font = 'bold 15px Consolas, monospace';
+      ctx.textAlign = 'center';
+      ctx.strokeStyle = 'rgba(0,0,0,0.85)'; ctx.lineWidth = 3;
+      ctx.strokeText(f.texto, px, py);
+      ctx.fillText(f.texto, px, py);
+    }
+  }
+  ctx.globalAlpha = 1;
+}
+
+function luzDeAntorcha(cx, cy) {
+  const r = RADIO_LUZ * TILE;
+  const g = ctx.createRadialGradient(cx, cy, r * 0.32, cx, cy, r);
+  g.addColorStop(0, 'rgba(0,0,0,0)');
+  g.addColorStop(0.62, 'rgba(0,0,0,0.25)');
+  g.addColorStop(1, 'rgba(0,0,0,0.93)');
+  ctx.fillStyle = g;
+  ctx.fillRect(-10, -10, AN + 20, AL + 20);
+}
+
+function pintarHud() {
+  const p = J.jugador;
+  document.getElementById('estadoPv').textContent = `PV ${Math.ceil(p.hp)}/${p.hpMax}`;
+  document.getElementById('vida').style.width = Math.max(0, (p.hp / p.hpMax) * 100) + '%';
+  document.getElementById('exp').style.width = (p.exp / (p.nivel * 25)) * 100 + '%';
+  document.getElementById('estadoNivel').textContent =
+    `Cueva ${J.nivel}   ·   Nivel ${p.nivel}   ·   Enemigos ${J.enemigos.length}`;
+  document.getElementById('mensajes').innerHTML =
+    J.log.slice(-5).map(t => `<div>${t}</div>`).join('');
+  document.getElementById('muerte').style.display = J.muerto ? 'flex' : 'none';
+
+  const aviso = document.getElementById('aviso');
+  const puede = !J.muerto && cercaDeEscalera();
+  aviso.style.opacity = puede ? 1 : 0;
+  if (puede) aviso.textContent = '[E] bajar al siguiente nivel';
+}
+
+// ============================================================
+//  Entrada
+// ============================================================
+const teclas = new Set();
+const raton = { x: AN / 2, y: AL / 2, pulsado: false };
+
+addEventListener('keydown', ev => {
+  const k = ev.key.toLowerCase();
+  if (k === 'r') { comenzar(); return; }
+  if (k === 'e') { if (bajar()) construirLienzoNivel(); return; }
+  teclas.add(k);
+  if ([' ', 'w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k))
+    ev.preventDefault();
+});
+addEventListener('keyup', ev => teclas.delete(ev.key.toLowerCase()));
+
+lienzo.addEventListener('mousemove', ev => {
+  const c = lienzo.getBoundingClientRect();
+  raton.x = (ev.clientX - c.left) * (AN / c.width);
+  raton.y = (ev.clientY - c.top) * (AL / c.height);
+});
+lienzo.addEventListener('mousedown', () => raton.pulsado = true);
+addEventListener('mouseup', () => raton.pulsado = false);
+addEventListener('blur', () => { teclas.clear(); raton.pulsado = false; });
+
+function leerEntrada() {
+  const t = k => teclas.has(k);
+  const dx = (t('d') || t('arrowright') ? 1 : 0) - (t('a') || t('arrowleft') ? 1 : 0);
+  const dy = (t('s') || t('arrowdown') ? 1 : 0) - (t('w') || t('arrowup') ? 1 : 0);
+
+  // se apunta con el ratón; si no se ha movido, hacia donde se anda
+  const j = J.jugador;
+  let mira = j.mira;
+  const rx = raton.x + cam.x - j.x * TILE;
+  const ry = raton.y + cam.y - j.y * TILE;
+  if (Math.hypot(rx, ry) > 6) mira = Math.atan2(ry, rx);
+  else if (dx || dy) mira = Math.atan2(dy, dx);
+
+  return { dx, dy, mira, atacar: raton.pulsado || t(' ') };
+}
+
+// ============================================================
+//  Bucle principal
+// ============================================================
+let ultimo = performance.now();
+let hpPrevio = 0;
+
+function bucle(ahora) {
+  const dt = Math.min(0.05, (ahora - ultimo) / 1000);   // sin saltos si se pierde el foco
+  ultimo = ahora;
+
+  actualizar(dt, leerEntrada());
+
+  if (J.jugador.hp < hpPrevio) { flash = 1; sacudida = 5; }
+  hpPrevio = J.jugador.hp;
+  flash = Math.max(0, flash - dt * 3);
+  sacudida = Math.max(0, sacudida - dt * 22);
+
+  pintar();
+  pintarHud();
+  requestAnimationFrame(bucle);
+}
+
+function comenzar() {
+  iniciarPartida();
+  construirLienzoNivel();
+  hpPrevio = J.jugador.hp;
+  flash = 0; sacudida = 0;
+}
+
+prepararSprites();
+comenzar();
+requestAnimationFrame(bucle);
+</script>
+</body>
+</html>
