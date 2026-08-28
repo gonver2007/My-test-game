@@ -1,4 +1,4 @@
-/* ============================================================ 
+/* ============================================================
 personaje.js - el lapislázuli y lo que compra
 Si el jade afila el acero, el lapislázuli endurece al que lo lleva:
 aguante y filo del propio héroe, que no se pierden al cambiar de arma.

@@ -1,4 +1,4 @@
-/* ============================================================ 
+/* ============================================================
 consola.js - la consola de la portada (Alt+Intro)
 Aquí solo está el mueble: la caja, el historial y quien reparte lo
 que se teclea. Las órdenes se añaden a mano en ORDENES. Solo vive en

@@ -1,4 +1,4 @@
-// ============================================================ 
+// ============================================================
 //  vista.js - dibujado, entrada y bucle principal (vista cenital)
 //  Estética de animación japonesa: contorno de tinta, sombreado
 //  plano de dos tonos, noche azul y farolillos que dan luz.
