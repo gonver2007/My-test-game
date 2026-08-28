@@ -593,8 +593,11 @@ body.santuario::before { display: none; }
 #escenario {
     position: fixed; inset: 0;
     overflow: hidden; pointer-events: none; z-index: -2;
-    background: linear-gradient(180deg,
-        #15101f 0%, #2a1430 34%, #5c1f35 62%, #a33a30 84%, #d8632f 100%);
+    /* el grano rompe las bandas que deja un degradado tan largo */
+    background:
+        url("../assets/grano.png") repeat,
+        linear-gradient(180deg,
+            #15101f 0%, #2a1430 34%, #5c1f35 62%, #a33a30 84%, #d8632f 100%);
 }
 
 /* ---------- El sol ---------- */
@@ -985,7 +988,7 @@ body.santuario .panel.ranuras {
     width: 460px; max-width: 90vw;
     margin: 26px auto 0;
     border: 2px solid rgba(232, 180, 79, .45);
-    background: rgba(28, 14, 22, .88);
+    background: url("../assets/tela.png") repeat, rgba(28, 14, 22, .88);
     box-shadow: 0 12px 34px rgba(12, 6, 14, .7);
 }
 body.santuario .ranuras .nota { color: rgba(242, 228, 214, .6); text-shadow: none; }
@@ -1150,8 +1153,7 @@ body.santuario .ranura.inmortal h3 { color: #f0c9a5; }
 body.registros .ranura {
     overflow: hidden;
     background:
-        repeating-linear-gradient(90deg,
-            rgba(255, 255, 255, .022) 0 1px, transparent 1px 7px),
+        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(58, 26, 32, .88), rgba(20, 9, 16, .92));
     box-shadow:
         inset 0 1px 0 rgba(240, 201, 165, .18),
@@ -1160,16 +1162,14 @@ body.registros .ranura {
 }
 body.registros .ranura.vacia {
     background:
-        repeating-linear-gradient(90deg,
-            rgba(255, 255, 255, .015) 0 1px, transparent 1px 7px),
+        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(34, 16, 24, .6), rgba(16, 7, 13, .68));
     box-shadow: inset 0 1px 0 rgba(240, 201, 165, .08);
 }
 /* la sellada arde bajo la veta */
 body.registros .ranura.inmortal {
     background:
-        repeating-linear-gradient(90deg,
-            rgba(255, 255, 255, .03) 0 1px, transparent 1px 7px),
+        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(92, 30, 28, .88), rgba(38, 12, 16, .92));
     box-shadow:
         inset 0 1px 0 rgba(240, 201, 165, .3),
@@ -1301,7 +1301,7 @@ body.santuario .panel.armeria {
     margin: 22px auto 0;
     border: 2px solid rgba(232, 180, 79, .45);
     border-radius: 2px;
-    background: rgba(28, 14, 22, .9);
+    background: url("../assets/tela.png") repeat, rgba(28, 14, 22, .9);
     box-shadow: 0 12px 34px rgba(12, 6, 14, .7);
 }
 body.santuario .armeria .saldo b { color: var(--oroViejo); background: none; }
@@ -1312,24 +1312,21 @@ body.santuario .arma {
     border: 2px solid rgba(232, 180, 79, .35);
     border-radius: 2px;
     background:
-        repeating-linear-gradient(90deg,
-            rgba(255, 255, 255, .022) 0 1px, transparent 1px 7px),
+        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(58, 26, 32, .88), rgba(20, 9, 16, .92));
     box-shadow: inset 0 1px 0 rgba(240, 201, 165, .18);
     text-shadow: none;
 }
 body.santuario .arma:hover {
     background:
-        repeating-linear-gradient(90deg,
-            rgba(255, 255, 255, .03) 0 1px, transparent 1px 7px),
+        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(92, 40, 40, .9), rgba(30, 12, 18, .92));
     border-color: rgba(232, 180, 79, .6);
 }
 body.santuario .arma.elegida {
     border-color: var(--oroViejo);
     background:
-        repeating-linear-gradient(90deg,
-            rgba(255, 255, 255, .03) 0 1px, transparent 1px 7px),
+        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(92, 30, 28, .9), rgba(38, 12, 16, .92));
     box-shadow: inset 0 1px 0 rgba(240, 201, 165, .3), 0 0 22px rgba(232, 180, 79, .22);
 }
@@ -1389,8 +1386,7 @@ body.santuario .mejorar.lapislazuli:hover:not(:disabled) {
 body.santuario .arma.mejora:hover {
     transform: none;
     background:
-        repeating-linear-gradient(90deg,
-            rgba(255, 255, 255, .022) 0 1px, transparent 1px 7px),
+        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(58, 26, 32, .88), rgba(20, 9, 16, .92));
     border-color: rgba(232, 180, 79, .35);
 }

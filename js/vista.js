@@ -8,14 +8,18 @@ const lienzo = document.getElementById('vista');
 const ctx = lienzo.getContext('2d');
 let AN = lienzo.width, AL = lienzo.height;   // los fija la ventana, ver ajustarLienzo
 
-const TILE = 34;              // píxeles por casilla
+const TILE = 44;              // píxeles por casilla
 const ALCANCE_LUZ = 12;       // hasta dónde llega el farol del héroe, en casillas
 const RAYOS_LUZ = 320;        // rayos con que se recorta la silueta iluminada
 const MORDIDA_PARED = 0.7;    // cuánto entra el rayo en el muro, para verle la cara
 const OSCURIDAD = 0.82;       // la noche no llega a negra: es azul de tinta
 const MARGEN_SOMBRA = 14;     // sobra alrededor, para que el temblor no descubra bordes
-const SPR = 56;               // lado del lienzo de cada sprite
-const ESCALA_SPR = 1.16;      // las figuras se dibujan algo mayores que su lienzo
+const SPR = 56;               // lado en que están dibujadas las figuras
+const LADO_SPR = 1.912;       // lo que ocupa una figura, medido en casillas
+// El tamaño en pantalla sale de la casilla, no de un número suelto: así el
+// héroe crece con el mundo cuando cambia TILE, y su hoja sigue midiendo lo
+// que dice su alcance en vez de quedarse corta
+const ESCALA_SPR = LADO_SPR * TILE / SPR;
 
 // ============================================================
 //  Paleta: cada material lleva base, luz y sombra, los tres planos.
@@ -133,11 +137,28 @@ function distanciasAlSuelo() {
     return d;
 }
 
+// Las afueras del recinto no son un fondo aparte: forman parte del mismo
+// lienzo del nivel, y por eso se mueven con él sin costura alguna. Cuánto
+// bosque hay que pintar de más depende de la ventana: lo justo para que su
+// borde nunca llegue a verse, ni siquiera en una pantalla muy ancha.
+let MARGEN = 0;               // casillas de afueras a cada lado
+let OFF = 0;                  // esas mismas casillas, en píxeles
+
+function margenAfueras() {
+    const sobraX = Math.max(0, (AN - ANCHO * TILE) / 2);
+    const sobraY = Math.max(0, (AL - ALTO * TILE) / 2);
+    return Math.ceil((Math.max(sobraX, sobraY) + TILE * 2) / TILE);
+}
+
 function construirLienzoNivel() {
     const W = ANCHO * TILE, H = ALTO * TILE;
+    MARGEN = margenAfueras();
+    OFF = MARGEN * TILE;
+    const WT = W + OFF * 2, HT = H + OFF * 2;   // el lienzo entero, afueras incluidas
     const dist = distanciasAlSuelo();
 
-    // 1) Silueta del recinto: el suelo tal cual, con el filo intacto
+    // 1) Silueta del recinto: el suelo tal cual, con el filo intacto. Estas
+    //    capas solo cubren el recinto; el margen es bosque y nada más
     const silueta = lienzoOculto(W, H), sg = silueta.getContext('2d');
     sg.fillStyle = '#fff';
     for (let y = 0; y < ALTO; y++)
@@ -157,13 +178,14 @@ function construirLienzoNivel() {
             if (esMuro(x + 1, y)) { bordes.moveTo(px + TILE, py); bordes.lineTo(px + TILE, py + TILE); }
         }
 
-    const nivel = lienzoOculto(W, H), ng = nivel.getContext('2d');
-    pintarExterior(ng, W, H, dist);                    // el bosque y la aldea de fuera
-    ng.drawImage(capaTejados(W, H, silueta, bordes), 0, 0);
-    ng.drawImage(capaSuelo(W, H, silueta, bordes), 0, 0);
+    const nivel = lienzoOculto(WT, HT), ng = nivel.getContext('2d');
+    pintarExterior(ng, WT, HT, dist);                  // el bosque y la aldea de fuera
+    ng.drawImage(capaTejados(W, H, silueta, bordes), OFF, OFF);
+    ng.drawImage(capaSuelo(W, H, silueta, bordes), OFF, OFF);
 
     // 3) Línea de tinta que cierra el recinto, como el entintado de un cel
     ng.save();
+    ng.translate(OFF, OFF);
     ng.lineCap = 'square';
     ng.strokeStyle = P.tinta;
     ng.lineWidth = 3.5;
@@ -178,6 +200,8 @@ function construirLienzoNivel() {
 // ============================================================
 //  Fuera del recinto: ladera de bosque nocturno con pinos en masa,
 //  sotobosque y algún tejado de aldea asomando entre las copas
+//  Pinta el lienzo entero, afueras incluidas: las casillas del recinto viven
+//  desplazadas OFF píxeles, y todo lo que cae fuera de ellas es monte libre
 // ============================================================
 function pintarExterior(g, W, H, dist) {
     const noche = g.createLinearGradient(0, 0, W * 0.4, H);
@@ -186,45 +210,66 @@ function pintarExterior(g, W, H, dist) {
     g.fillStyle = noche;
     g.fillRect(0, 0, W, H);
 
+    // de píxel del lienzo a casilla del recinto, que empieza en OFF
+    const casillaX = px => Math.floor((px - OFF) / TILE);
+    const casillaY = py => Math.floor((py - OFF) / TILE);
+
+    // fuera del recinto siempre hay sitio: allí no hay muros de los que
+    // guardar distancia, solo monte
     const hueco = (cx, cy, min) =>
-        cx >= 0 && cy >= 0 && cx < ANCHO && cy < ALTO && dist[cy * ANCHO + cx] >= min;
+        cx < 0 || cy < 0 || cx >= ANCHO || cy >= ALTO || dist[cy * ANCHO + cx] >= min;
 
     // manchas amplias de maleza, para que el fondo no quede liso
-    for (let i = 0; i < 300; i++) {
+    const manchas = Math.round(300 * (W * H) / (ANCHO * TILE * ALTO * TILE));
+    for (let i = 0; i < manchas; i++) {
         const x = azar(0, W), y = azar(0, H);
-        if (!hueco(Math.floor(x / TILE), Math.floor(y / TILE), 2)) continue;
+        if (!hueco(casillaX(x), casillaY(y), 2)) continue;
         g.fillStyle = `rgba(45, 92, 150, ${azar(0.05, 0.14)})`;
         g.beginPath();
         g.ellipse(x, y, azar(30, 90), azar(20, 60), azar(0, 3.14), 0, 6.2832);
         g.fill();
     }
 
-    // aldea: algún tejado suelto donde el bosque deja sitio de sobra
-    for (let intento = 0; intento < 120; intento++) {
-        const cx = azarEnt(1, ANCHO - 6), cy = azarEnt(1, ALTO - 7);
+    // aldea: algún tejado suelto donde el bosque deja sitio de sobra. Se
+    // reparte por todo el lienzo, también por las afueras
+    // las claves se corren para que las casillas de las afueras, que son
+    // negativas, no se pisen con las de dentro
+    const clave = (cx, cy) => (cy + 2048) * 8192 + (cx + 2048);
+    const ocupado = new Set();
+    const libre = (cx, cy) => !ocupado.has(clave(cx, cy));
+    for (let intento = 0; intento < 220; intento++) {
+        const cx = azarEnt(-MARGEN + 1, ANCHO + MARGEN - 6);
+        const cy = azarEnt(-MARGEN + 1, ALTO + MARGEN - 7);
         let cabe = true;
         for (let y = cy; y < cy + 6 && cabe; y++)
-            for (let x = cx; x < cx + 5 && cabe; x++) cabe = hueco(x, y, 4);
+            for (let x = cx; x < cx + 5 && cabe; x++) cabe = hueco(x, y, 4) && libre(x, y);
         if (!cabe) continue;
-        casaDeAldea(g, cx * TILE + TILE, cy * TILE + TILE, TILE * 3, TILE * 4);
+        casaDeAldea(g, OFF + cx * TILE + TILE, OFF + cy * TILE + TILE, TILE * 3, TILE * 4);
         for (let y = cy - 1; y < cy + 7; y++)          // el solar queda ocupado
-            for (let x = cx - 1; x < cx + 6; x++)
+            for (let x = cx - 1; x < cx + 6; x++) {
+                ocupado.add(clave(x, y));
                 if (x >= 0 && y >= 0 && x < ANCHO && y < ALTO) dist[y * ANCHO + x] = 1;
+            }
     }
 
-    // arboleda: copas apretadas, más frías cuanto más lejos del recinto
-    for (let y = 0; y < ALTO; y++)
-        for (let x = 0; x < ANCHO; x++) {
-            const d = dist[y * ANCHO + x];
-            if (d < 3 || Math.random() > 0.45) continue;
-            copaDeArbol(g, x * TILE + azar(3, TILE - 3), y * TILE + azar(3, TILE - 3),
+    // arboleda: copas apretadas, más frías cuanto más lejos del recinto. En
+    // las afueras la distancia es la que hay hasta el borde, así que el monte
+    // se cierra del todo según se aleja
+    for (let y = -MARGEN; y < ALTO + MARGEN; y++)
+        for (let x = -MARGEN; x < ANCHO + MARGEN; x++) {
+            const dentro = x >= 0 && y >= 0 && x < ANCHO && y < ALTO;
+            const d = dentro ? dist[y * ANCHO + x] : 999;
+            if (d < 3 || !libre(x, y) || Math.random() > 0.45) continue;
+            copaDeArbol(g, OFF + x * TILE + azar(3, TILE - 3),
+                        OFF + y * TILE + azar(3, TILE - 3),
                         azar(TILE * 0.6, TILE * 1.15), Math.min(1, (d - 3) / 7));
         }
 
     // helechos y piedras sueltas en el sotobosque
-    for (let i = 0; i < 460; i++) {
+    const motas = Math.round(460 * (W * H) / (ANCHO * TILE * ALTO * TILE));
+    for (let i = 0; i < motas; i++) {
         const x = azar(0, W), y = azar(0, H);
-        if (!hueco(Math.floor(x / TILE), Math.floor(y / TILE), 2)) continue;
+        if (!hueco(casillaX(x), casillaY(y), 2)) continue;
         if (Math.random() < 0.62) {
             g.strokeStyle = `rgba(95, 155, 210, ${azar(0.12, 0.3)})`;
             g.lineWidth = 1.6; g.lineCap = 'round';
@@ -238,6 +283,8 @@ function pintarExterior(g, W, H, dist) {
         }
     }
 }
+
+// ============================================================
 
 // Copa vista desde arriba: lóbulos de un mismo trazo, tinta debajo y una
 // media luna de luz arriba a la izquierda. Cel puro, sin degradados.
@@ -522,9 +569,15 @@ function dibujarAdornos() {
 // ============================================================
 let sprites;
 
+// El lienzo se hace del tamaño con que va a verse y el dibujo se escala
+// dentro: así las figuras salen nítidas por grande que sea la casilla, sin
+// tocar una sola de las coordenadas con que están dibujadas
 function nuevoSprite(pintar) {
-    const c = lienzoOculto(SPR, SPR);
-    pintar(c.getContext('2d'), SPR / 2);
+    const lado = Math.ceil(SPR * ESCALA_SPR);
+    const c = lienzoOculto(lado, lado);
+    const g = c.getContext('2d');
+    g.scale(lado / SPR, lado / SPR);
+    pintar(g, SPR / 2);
     return c;
 }
 
@@ -780,9 +833,9 @@ function pintar() {
     ctx.save();
     if (sacudida > 0) ctx.translate(azar(-sacudida, sacudida), azar(-sacudida, sacudida));
 
-    ctx.fillStyle = P.nocheBaja;
-    ctx.fillRect(-10, -10, AN + 20, AL + 20);
-    ctx.drawImage(lienzoNivel, cam.x, cam.y, AN, AL, 0, 0, AN, AL);
+    // el lienzo del nivel trae ya sus afueras alrededor, así que basta con
+    // recortarle la ventana: bosque y recinto se mueven a una, sin costura
+    ctx.drawImage(lienzoNivel, cam.x + OFF, cam.y + OFF, AN, AL, 0, 0, AN, AL);
 
     dibujarAdornos();
     dibujarPuerta(aPantallaX(J.puerta.x), aPantallaY(J.puerta.y));
@@ -895,8 +948,10 @@ function dibujarHeroe(j) {
     // la katana acompaña al golpe: sale por delante y vuelve
     const prog = j.golpe > 0 ? 1 - j.golpe / 0.18 : 0;
     const barrido = j.golpe > 0 ? (prog - 0.5) * j.arco * 2 : Math.sin(J.tiempo * 2) * 0.06;
-    const empuje = j.golpe > 0 ? Math.sin(prog * Math.PI) * 9 : 0;
     const s = SPR * ESCALA_SPR;
+    // los apartes de la hoja y el escudo van en partes del propio muñeco, no
+    // en píxeles sueltos: si la figura crece, crecen con ella
+    const empuje = j.golpe > 0 ? Math.sin(prog * Math.PI) * s * 0.138 : 0;
 
     if (j.dash > 0) estelaDeImpulso(px, py, j);
 
@@ -934,7 +989,7 @@ function dibujarHeroe(j) {
         ctx.save();
         ctx.rotate(barrido);
         ctx.translate(empuje, 0);
-        ctx.drawImage(sprites.katana, -s / 2 + 8, -s / 2 + 12, s, s);
+        ctx.drawImage(sprites.katana, -s / 2 + s * 0.123, -s / 2 + s * 0.185, s, s);
         ctx.restore();
     }
 
@@ -944,7 +999,7 @@ function dibujarHeroe(j) {
     ctx.drawImage(sprites.heroe, -s / 2, -s / 2 + paso, s, s);
 
     // el escudo va en el brazo contrario a la hoja; al cubrirse se alza de frente
-    ctx.translate(j.cubriendo ? 15 : 3, j.cubriendo ? 0 : -11);
+    ctx.translate(j.cubriendo ? s * 0.231 : s * 0.046, j.cubriendo ? 0 : -s * 0.169);
     ctx.drawImage(sprites.escudo, -s / 2, -s / 2, s, s);
 
     ctx.restore();
@@ -958,7 +1013,7 @@ function estelaDeImpulso(px, py, j) {
     for (let i = 1; i <= 3; i++) {
         ctx.save();
         ctx.globalAlpha = 0.22 * k * (1 - i / 4);
-        ctx.translate(px - Math.cos(j.mira) * i * 9, py - Math.sin(j.mira) * i * 9);
+        ctx.translate(px - Math.cos(j.mira) * i * s * 0.138, py - Math.sin(j.mira) * i * s * 0.138);
         ctx.rotate(j.mira);
         ctx.drawImage(sprites.heroe, -s / 2, -s / 2, s, s);
         ctx.restore();
@@ -1607,6 +1662,9 @@ function ajustarLienzo() {
     lienzoSombra = null; sctx = null;
     raton.x = AN / 2; raton.y = AL / 2;
     if (petalos.length) prepararAmbiente();
+    // las afueras se pintan a la medida de la ventana: solo hay que rehacer el
+    // lienzo si al agrandarla el margen se queda corto. Al encoger sobra monte
+    if (lienzoNivel && margenAfueras() > MARGEN) construirLienzoNivel();
 }
 addEventListener('resize', ajustarLienzo);
 
