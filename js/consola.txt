@@ -13,6 +13,6 @@ cuando escribes ungive jade {la ranura que sea "1,2,3,4,5"o todas como te lo e p
 cuando escribes god {la ranura que sea "1,2,3,4,5"o todas como te lo e puesto hay entre comillas y con comas} el personaje sera inmortal
 cuando escribes ungod {la ranura que sea "1,2,3,4,5"o todas como te lo e puesto hay entre comillas y con comas} el personaje dejara de ser inmortal
 
-
+//cuando escribes tp {solo funciona desde el menu de esc dentro de game.html} cualquier numero de el 1 a el 100 te hace tp a ese sandero
 
 

@@ -1,0 +1,7 @@
+añadir seccion despegable de armas secundarias justo abajo de armas primarias en el boton de armas de prev.htm "lanza dardos con veneno con daño por segundo"shuriken que si se mejora puede rebotar en mas enemigos"
+añadir los comandos por poner marcados con // en consola.txt
+
+hacer lo de los pergaminos y lo de los amuletos 
+IDEAS
+
+-amuletos- sole te puedes equipar 1 y se optienen tras matar a un jefe
