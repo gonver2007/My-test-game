@@ -576,8 +576,11 @@ body.santuario {
     --ceniza:   #f2e4d6;
     --sakuraSuave: #f6b7c6;
 
-    background: linear-gradient(180deg,
-        #15101f 0%, #2a1430 34%, #5c1f35 62%, #a33a30 84%, #d8632f 100%);
+    /* el cielo lo pinta #escenario, que va detrás de todo. Si el body pusiera
+       aquí su propio fondo lo taparía en una banda central: html es flex con
+       align-items:center, así que el body solo mide lo que mide su contenido */
+    background: none;
+    width: 100%; box-sizing: border-box;
     font-family: "Zen Kaku Gothic New", "Trebuchet MS", system-ui, sans-serif;
     color: var(--ceniza);
 }
@@ -1024,3 +1027,455 @@ body.santuario .ranura .borrar.confirmar {
 
 /* la pantalla de ranuras no cuelga botones del torii: solo la vuelta */
 body.santuario .torii { margin-top: 26px; }
+
+/* ============================================================
+   La sala de los registros (ranura.html): las cinco de un vistazo
+   Aquí el torii no sujeta nada: es decorado y vive en el escenario, con
+   sus proporciones de siempre. Las ranuras van delante, en fila, como
+   las tablillas votivas, y así caben sin desplazar la página
+   ============================================================ */
+/* el arco del fondo: ancho para que sus pilares asomen a los lados de la
+   lista, y alto para que el dintel cruce por encima del rótulo */
+#escenario .torii {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    top: 3%; bottom: 6%;
+    width: 1200px; max-width: 92vw;
+    margin: 0; padding: 0;
+}
+/* las piezas crecen con él: el torii es el mismo, solo que a otra escala */
+#escenario .torii .kasagi  { height: 46px; border-radius: 24px; }
+#escenario .torii .shimaki { top: 62px;  height: 28px; }
+#escenario .torii .nuki    { top: 118px; height: 32px; }
+#escenario .torii .pilar   { top: 90px; }
+
+/* el rótulo va más recogido que en la portada: lo que cede es para las
+   tablillas */
+body.registros #portada { padding: 10px 20px 24px; }
+body.registros .rotulo { margin-bottom: 8px; }
+body.registros .rotulo span { font-size: 16px; }
+body.registros #portada h1 { font-size: clamp(26px, 4.6vw, 46px); }
+body.registros .enlace { margin: 8px 0 6px; }
+body.registros .lema { margin: 12px 0 0; font-size: 12px; }
+
+body.santuario.registros .panel.ranuras {
+    width: 880px; max-width: 94vw;
+    margin: 22px auto 0;
+    padding: 16px 18px 14px;
+}
+body.registros .ranuras .lista {
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+}
+body.registros .ranuras .nota { margin-top: 10px; font-size: 11.5px; }
+
+/* cada ranura es una tablilla: el número arriba, la fecha abajo y el
+   borrado al pie, donde no estorba al clic que entra en la partida */
+body.registros .ranura {
+    display: flex; flex-direction: column;
+    min-height: 148px;
+    padding: 12px 10px 14px;
+    text-align: center;
+}
+body.registros .ranura.llena { padding-bottom: 46px; }
+body.registros .ranura h3 { margin: 0 0 8px; font-size: 11px; letter-spacing: .18em; }
+body.registros .ranura .resumen { font-size: 13px; line-height: 1.45; }
+body.registros .ranura .fecha { margin-top: auto; padding-top: 8px; font-size: 11px; }
+body.registros .ranura .borrar {
+    left: 50%; right: auto; top: auto; bottom: 10px;
+    transform: translateX(-50%);
+}
+
+/* la vuelta, del ancho de su palabra, bajo las tablillas */
+body.santuario.registros #botones { width: auto; margin: 18px auto 0; }
+body.santuario.registros #botones .boton {
+    width: auto; padding: 12px 46px; font-size: 16px;
+}
+
+/* pantallas bajas: el rótulo cede lo que necesitan las tablillas */
+@media (max-height: 720px) {
+    body.registros #portada h1 { font-size: clamp(24px, 3.4vw, 34px); }
+    body.registros .lema { display: none; }
+    body.registros .ranura { min-height: 132px; }
+    body.santuario.registros .panel.ranuras { margin-top: 14px; }
+}
+
+/* pantallas estrechas: las tablillas se reparten en tres y luego en una
+   columna. Aquí sí puede hacer falta desplazar, no caben de otro modo */
+@media (max-width: 900px) {
+    body.registros .ranuras .lista { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 560px) {
+    body.registros .ranuras .lista { grid-template-columns: 1fr; }
+}
+
+/* ---------- El sello de la inmortalidad ---------- */
+/* lo estampa la consola con «god»: un hanko de tinta roja en la esquina de
+   la tablilla, para saber quién es inmortal sin entrar en la partida */
+.ranura .sello {
+    position: absolute; right: 8px; top: 8px;
+    width: 27px; height: 27px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "Shippori Mincho B1", "Yu Mincho", serif;
+    font-size: 15px; font-weight: 700; line-height: 1;
+    color: #fff4ea;
+    background: var(--brasa, #d94b33);
+    border: 2px solid #f0c9a5;
+    border-radius: 3px;
+    transform: rotate(-7deg);
+    box-shadow: 0 0 14px rgba(217, 75, 51, .55);
+    animation: selloVivo 2.6s ease-in-out infinite;
+}
+/* la tablilla sellada arde un poco: el oro sube y el fondo toma brasa */
+body.santuario .ranura.inmortal {
+    border-color: rgba(240, 201, 165, .75);
+    background: rgba(60, 18, 20, .82);
+}
+body.santuario .ranura.inmortal h3 { color: #f0c9a5; }
+
+@keyframes selloVivo {
+    0%, 100% { box-shadow: 0 0 12px rgba(217, 75, 51, .45); }
+    50%      { box-shadow: 0 0 22px rgba(217, 75, 51, .85); }
+}
+
+/* quien pide quietud se queda con el sello, pero sin latido */
+@media (prefers-reduced-motion: reduce) {
+    .ranura .sello { animation: none; }
+}
+
+/* ============================================================
+   Las tablillas, por dentro
+   Una lámina plana no parece madera: se le da veta, luz que cae de
+   arriba, un filete interior y el numeral antiguo de la ranura al fondo,
+   como el que se pinta en las tablillas votivas
+   ============================================================ */
+body.registros .ranura {
+    overflow: hidden;
+    background:
+        repeating-linear-gradient(90deg,
+            rgba(255, 255, 255, .022) 0 1px, transparent 1px 7px),
+        linear-gradient(180deg, rgba(58, 26, 32, .88), rgba(20, 9, 16, .92));
+    box-shadow:
+        inset 0 1px 0 rgba(240, 201, 165, .18),
+        inset 0 -14px 26px rgba(12, 6, 14, .45),
+        0 6px 16px rgba(12, 6, 14, .4);
+}
+body.registros .ranura.vacia {
+    background:
+        repeating-linear-gradient(90deg,
+            rgba(255, 255, 255, .015) 0 1px, transparent 1px 7px),
+        linear-gradient(180deg, rgba(34, 16, 24, .6), rgba(16, 7, 13, .68));
+    box-shadow: inset 0 1px 0 rgba(240, 201, 165, .08);
+}
+/* la sellada arde bajo la veta */
+body.registros .ranura.inmortal {
+    background:
+        repeating-linear-gradient(90deg,
+            rgba(255, 255, 255, .03) 0 1px, transparent 1px 7px),
+        linear-gradient(180deg, rgba(92, 30, 28, .88), rgba(38, 12, 16, .92));
+    box-shadow:
+        inset 0 1px 0 rgba(240, 201, 165, .3),
+        inset 0 -14px 26px rgba(12, 6, 14, .4),
+        0 6px 18px rgba(217, 75, 51, .28);
+}
+
+/* el numeral de la ranura, escrito en grande y muy tenue detrás de todo */
+body.registros .ranura::before {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    font-family: "Shippori Mincho B1", "Yu Mincho", serif;
+    font-size: 84px; font-weight: 700; line-height: 1;
+    color: rgba(232, 180, 79, .085);
+    pointer-events: none;
+    transition: color .18s;
+}
+body.registros .lista .ranura:nth-child(1)::before { content: '\4E00'; }
+body.registros .lista .ranura:nth-child(2)::before { content: '\4E8C'; }
+body.registros .lista .ranura:nth-child(3)::before { content: '\4E09'; }
+body.registros .lista .ranura:nth-child(4)::before { content: '\56DB'; }
+body.registros .lista .ranura:nth-child(5)::before { content: '\4E94'; }
+
+/* el filete interior: el doble marco de las láminas antiguas */
+body.registros .ranura::after {
+    content: ''; position: absolute; inset: 4px;
+    border: 1px solid rgba(232, 180, 79, .16);
+    pointer-events: none;
+    transition: border-color .18s;
+}
+body.registros .ranura.vacia::after { border-style: dashed; opacity: .55; }
+body.registros .ranura.inmortal::after { border-color: rgba(240, 201, 165, .3); }
+
+/* al pasar por encima la tablilla se despierta: el numeral asoma y el
+   filete se enciende */
+body.registros .ranura:hover::before { color: rgba(232, 180, 79, .17); }
+body.registros .ranura:hover::after { border-color: rgba(232, 180, 79, .42); }
+
+/* una raya de oro bajo el número, como el travesaño del torii */
+body.registros .ranura h3::after {
+    content: ''; display: block;
+    width: 34px; height: 1px; margin: 6px auto 0;
+    background: linear-gradient(90deg,
+        transparent, rgba(232, 180, 79, .55), transparent);
+}
+
+/* el contenido va por delante del numeral y del filete. Al sello y al
+   borrado solo se les sube el piso: su position ya la tienen */
+body.registros .ranura h3,
+body.registros .ranura .resumen,
+body.registros .ranura .fecha { position: relative; z-index: 1; }
+body.registros .ranura .sello,
+body.registros .ranura .borrar { z-index: 2; }
+
+/* ---------- Lo más hondo de cada senda ---------- */
+/* la senda más honda de esa ranura, en mitad de la tablilla y entre dos
+   varillas de oro. El margen automático arriba y abajo es lo que lo centra
+   en el hueco que dejan el arma y la fecha */
+body.registros .hondura {
+    display: flex; flex-direction: column; align-items: center; gap: 5px;
+    margin: auto 0;
+}
+body.registros .hondura::before,
+body.registros .hondura::after {
+    content: ''; width: 48px; height: 1px;
+    background: linear-gradient(90deg,
+        transparent, rgba(232, 180, 79, .45), transparent);
+}
+body.santuario.registros .hondura b {
+    padding: 0; background: none;
+    font-family: "Shippori Mincho B1", "Yu Mincho", serif;
+    font-size: 30px; font-weight: 800; line-height: 1;
+    color: var(--hueso);
+    text-shadow: 0 0 18px rgba(217, 75, 51, .5), 2px 2px 0 var(--brasaHonda);
+}
+body.registros .hondura span {
+    font-size: 9px; letter-spacing: .3em; text-indent: .3em;
+    text-transform: uppercase;
+    color: var(--oroViejo);
+}
+/* con la hondura en medio, la fecha ya no necesita empujar hacia abajo */
+body.registros .ranura.llena .fecha { margin-top: 0; }
+
+/* ---------- Las esquirlas de la tablilla ---------- */
+/* el arma manda arriba y las monedas bajan a su propio renglón, a media
+   altura entre el acero y el número de la senda */
+body.registros .ranura .monedas {
+    margin: auto 0 0;
+    font-size: 13px; letter-spacing: .04em;
+    color: rgba(242, 228, 214, .9);
+    white-space: nowrap;
+}
+body.registros .ranura .monedas .esquirla { margin-left: 2px; }
+
+/* ============================================================
+   El zaguán (prev.html): lo último antes de cruzar
+   El rótulo va como en las demás pantallas del ocaso; los botones se
+   reparten en renglones para que la armería quepa debajo
+   ============================================================ */
+body.zaguan #portada { padding: 14px 20px 26px; }
+body.zaguan .rotulo { margin-bottom: 8px; }
+body.zaguan .rotulo span { font-size: 16px; }
+body.zaguan #portada h1 { font-size: clamp(26px, 4.6vw, 48px); }
+body.zaguan .enlace { margin: 8px 0 6px; }
+body.zaguan .lema { margin: 14px 0 0; font-size: 12px; }
+
+body.santuario.zaguan #botones {
+    width: 520px; max-width: 92vw;
+    margin: 22px auto 0;
+    gap: 10px;
+}
+body.zaguan #botones .fila { display: flex; gap: 10px; width: 100%; }
+body.santuario.zaguan #botones .fila .boton {
+    flex: 1; padding: 12px 0; font-size: 14px; letter-spacing: .12em;
+    white-space: nowrap;
+}
+body.santuario.zaguan #botones .fila .boton:hover,
+body.santuario.zaguan #botones .fila .boton:focus-visible {
+    letter-spacing: .16em; text-indent: .16em;
+}
+body.santuario.zaguan #btVolver { border-color: #f0c9a5; }
+body.santuario.zaguan #btVolver:hover,
+body.santuario.zaguan #btVolver:focus-visible { border-color: #ffe6c8; }
+
+/* ---------- La armería y el personaje, en madera de ocaso ---------- */
+body.santuario .panel.armeria {
+    /* el ancho de la portada no vale aquí: la armería necesita sus 780 */
+    max-width: 780px;
+    margin: 22px auto 0;
+    border: 2px solid rgba(232, 180, 79, .45);
+    border-radius: 2px;
+    background: rgba(28, 14, 22, .9);
+    box-shadow: 0 12px 34px rgba(12, 6, 14, .7);
+}
+body.santuario .armeria .saldo b { color: var(--oroViejo); background: none; }
+body.santuario .armeria .nota { color: rgba(242, 228, 214, .6); }
+
+/* cada arma es una tablilla, como las de la sala de los registros */
+body.santuario .arma {
+    border: 2px solid rgba(232, 180, 79, .35);
+    border-radius: 2px;
+    background:
+        repeating-linear-gradient(90deg,
+            rgba(255, 255, 255, .022) 0 1px, transparent 1px 7px),
+        linear-gradient(180deg, rgba(58, 26, 32, .88), rgba(20, 9, 16, .92));
+    box-shadow: inset 0 1px 0 rgba(240, 201, 165, .18);
+    text-shadow: none;
+}
+body.santuario .arma:hover {
+    background:
+        repeating-linear-gradient(90deg,
+            rgba(255, 255, 255, .03) 0 1px, transparent 1px 7px),
+        linear-gradient(180deg, rgba(92, 40, 40, .9), rgba(30, 12, 18, .92));
+    border-color: rgba(232, 180, 79, .6);
+}
+body.santuario .arma.elegida {
+    border-color: var(--oroViejo);
+    background:
+        repeating-linear-gradient(90deg,
+            rgba(255, 255, 255, .03) 0 1px, transparent 1px 7px),
+        linear-gradient(180deg, rgba(92, 30, 28, .9), rgba(38, 12, 16, .92));
+    box-shadow: inset 0 1px 0 rgba(240, 201, 165, .3), 0 0 22px rgba(232, 180, 79, .22);
+}
+body.santuario .arma.cerrada,
+body.santuario .arma.cerrada:hover {
+    background: rgba(20, 9, 16, .55);
+    border-style: dashed;
+    border-color: rgba(232, 180, 79, .25);
+    box-shadow: none;
+}
+body.santuario .arma h3 { color: var(--hueso); text-shadow: none; }
+body.santuario .arma.cerrada h3,
+body.santuario .arma.cerrada .pie { color: rgba(242, 228, 214, .45); }
+body.santuario .arma.cerrada .fichas dd { color: rgba(242, 228, 214, .4); }
+body.santuario .arma .marca {
+    color: #1c0f18; background: var(--oroViejo); border-radius: 2px;
+}
+body.santuario .arma .pie { color: rgba(242, 228, 214, .68); }
+body.santuario .arma .fichas dt { color: var(--oroViejo); }
+body.santuario .arma .fichas dd { color: var(--hueso); }
+body.santuario .arma .pips { color: var(--oroViejo); }
+
+/* los botones de forja: los mismos colores que el principal, en pequeño */
+body.santuario .mejorar {
+    color: #fff4ea;
+    background: linear-gradient(180deg, var(--brasa), var(--brasaHonda));
+    border: 2px solid #f0c9a5;
+    border-radius: 2px;
+    box-shadow: none;
+    transition: filter .14s, background .14s;
+}
+body.santuario .mejorar:hover:not(:disabled) {
+    filter: brightness(1.14);
+    background: linear-gradient(180deg, #e85a3f, #b52d20);
+}
+body.santuario .mejorar:disabled {
+    color: rgba(242, 228, 214, .4);
+    background: rgba(20, 9, 16, .8);
+    border-color: rgba(232, 180, 79, .2);
+}
+/* el verde y el azul se quedan: dicen con qué moneda se paga */
+body.santuario .mejorar.comprar {
+    background: linear-gradient(180deg, #3f8f86, #245a55);
+    border-color: #a8ded4;
+}
+body.santuario .mejorar.comprar:hover:not(:disabled) {
+    background: linear-gradient(180deg, #4ea79c, #2c6b64);
+}
+body.santuario .mejorar.lapislazuli {
+    background: linear-gradient(180deg, #3a6fd8, #24468f);
+    border-color: #b9cffb;
+}
+body.santuario .mejorar.lapislazuli:hover:not(:disabled) {
+    background: linear-gradient(180deg, #4f85f0, #2b57ad);
+}
+
+body.santuario .arma.mejora:hover {
+    transform: none;
+    background:
+        repeating-linear-gradient(90deg,
+            rgba(255, 255, 255, .022) 0 1px, transparent 1px 7px),
+        linear-gradient(180deg, rgba(58, 26, 32, .88), rgba(20, 9, 16, .92));
+    border-color: rgba(232, 180, 79, .35);
+}
+body.santuario .arma.mejora .fichas dd { color: #cfe0ff; }
+body.santuario .arma.mejora .pips { color: #8fb6ff; }
+
+/* ---------- Con algún panel abierto ---------- */
+/* el rótulo y el título se van, como hacen los controles en la portada, y
+   el panel se queda con la pantalla: así no hay que desplazar nada */
+body.zaguan.viendoPanel #portada { padding-top: 24px; }
+/* la botonera entera se va: con algo abierto no hay más que el panel y su
+   cierre, y así nadie cruza el umbral mientras está eligiendo el acero */
+body.zaguan.viendoPanel #botones { display: none; }
+
+/* el cierre solo asoma cuando hay algo que cerrar */
+body.zaguan #btCerrarPanel { display: none; }
+body.zaguan.viendoPanel #btCerrarPanel {
+    display: block;
+    width: 220px; max-width: 60vw;
+    margin: 16px auto 0;
+    padding: 12px 0;
+    font-size: 14px; letter-spacing: .12em;
+}
+body.santuario.zaguan.viendoPanel .panel.armeria {
+    margin-top: 16px;
+    max-height: calc(100vh - 160px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(232, 180, 79, .45) transparent;
+}
+body.santuario .panel.armeria::-webkit-scrollbar { width: 10px; }
+body.santuario .panel.armeria::-webkit-scrollbar-track { background: rgba(12, 6, 14, .4); }
+body.santuario .panel.armeria::-webkit-scrollbar-thumb {
+    background: rgba(232, 180, 79, .35);
+    border-radius: 6px;
+    border: 2px solid rgba(28, 14, 22, .9);
+}
+body.santuario .panel.armeria::-webkit-scrollbar-thumb:hover {
+    background: rgba(232, 180, 79, .55);
+}
+
+/* ---------- Los huecos todavía sin guion ---------- */
+/* habilidades, pergaminos y amuletos: el marco está hecho y vestido, para
+   que el día que tengan contenido solo falte quien lo pinte */
+body.santuario .panel.vacio {
+    max-width: 520px;
+    text-align: center;
+}
+body.santuario .panel.vacio h2 {
+    margin: 0 0 12px;
+    font-family: "Shippori Mincho B1", "Yu Mincho", serif;
+    font-size: 20px; letter-spacing: .28em; text-indent: .28em;
+}
+body.santuario .panel.vacio .nota { margin: 0; line-height: 1.7; }
+
+/* ---------- Las láminas, en un solo renglón ---------- */
+/* armas y mejoras dejan de apilarse en varias filas: van en fila única y, si
+   no caben, se corren a un lado. Así el panel mide siempre lo mismo de alto.
+   El safe center las deja centradas cuando son pocas, pero sin esconder la
+   primera cuando sobran, que es lo que hace el center a secas al desbordar */
+body.santuario .armeria .armas {
+    flex-wrap: nowrap;
+    justify-content: safe center;
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* el aire de arriba deja sitio al brinco del ratón; el de abajo, a la barra */
+    padding: 6px 2px 12px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(232, 180, 79, .45) transparent;
+}
+/* ni se encogen ni se estiran: cada lámina mantiene su ancho */
+body.santuario .armeria .armas .arma {
+    flex: 0 0 auto;
+    scroll-snap-align: center;
+}
+body.santuario .armeria .armas::-webkit-scrollbar { height: 10px; }
+body.santuario .armeria .armas::-webkit-scrollbar-track {
+    background: rgba(12, 6, 14, .4); border-radius: 6px;
+}
+body.santuario .armeria .armas::-webkit-scrollbar-thumb {
+    background: rgba(232, 180, 79, .35);
+    border-radius: 6px;
+    border: 2px solid rgba(28, 14, 22, .9);
+}
+body.santuario .armeria .armas::-webkit-scrollbar-thumb:hover {
+    background: rgba(232, 180, 79, .55);
+}

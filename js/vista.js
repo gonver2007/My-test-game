@@ -1497,7 +1497,7 @@ document.getElementById('mjControles').addEventListener('click', () => {
 // no hay nada que anotar al salir: el arma y las esquirlas se guardan solas
 // en cuanto se ganan o se cambian
 document.getElementById('mjInicio').addEventListener('click', () => {
-    location.href = 'index.html';
+    location.href = '../index.html';
 });
 
 document.getElementById('mjSalir').addEventListener('click', () => {
@@ -1515,7 +1515,7 @@ document.getElementById('mtContinuar').addEventListener('click', () => {
 });
 
 document.getElementById('mtSalir').addEventListener('click', () => {
-    location.href = 'index.html';
+    location.href = '../index.html';
 });
 
 addEventListener('keydown', ev => {

@@ -205,7 +205,9 @@ function cuadro(ahora) {
 
 // ---------- Botones ----------
 // cada pantalla dice en su <body data-siguiente="..."> a dónde lleva el botón
-// principal, así index.html y prev.html comparten este mismo guion
+// principal, así todas comparten este mismo guion. Las rutas son relativas a
+// quien las declara: la portada vive en la raíz y las demás en html/, que es
+// de donde salen el html/ranura.html de index y el ../index.html de ranura
 function continuar() { location.href = document.body.dataset.siguiente || 'game.html'; }
 function volver() { location.href = document.body.dataset.anterior || 'index.html'; }
 
