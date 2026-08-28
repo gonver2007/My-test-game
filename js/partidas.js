@@ -1,4 +1,4 @@
-/* ============================================================ 
+/* ============================================================
 partidas.js - las cinco ranuras de guardado
 Cada ranura recuerda por dónde iba la partida y con qué acero:
 senda alcanzada, arma en mano, forja y esquirlas. Se escribe sola
