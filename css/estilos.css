@@ -169,13 +169,42 @@ canvas#vista {
     align-items: center; justify-content: center; flex-direction: column;
     background: rgba(24, 8, 30, 0.6);
     color: #fff;
+}
+#muerte .titulo {
     font-size: 44px; font-weight: bold; letter-spacing: 8px;
     text-shadow: 4px 4px 0 var(--bermellon), 6px 6px 0 var(--tinta);
 }
-#muerte small {
-    font-size: 15px; letter-spacing: 2px; margin-top: 18px;
+/* la cuenta de lo que se quedó en el suelo por no llegar a la puerta */
+#muerte .perdido {
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    margin-top: 22px;
+}
+#muerte .perdido[hidden] { display: none; }
+#muerte .perdido .rotulo {
+    font-size: 14px; letter-spacing: 2px;
     color: var(--sakura); text-shadow: 2px 2px 0 var(--tinta);
 }
+#muerte .perdido .cuentas { display: flex; gap: 20px; }
+#muerte .perdido .cuentas span {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 25px; font-weight: bold; letter-spacing: 1px;
+    text-shadow: 2px 2px 0 var(--tinta);
+}
+#muerte .perdido .jade { color: #9fe6d6; }
+#muerte .perdido .lapis { color: #a8c4ff; }
+/* apagadas: son esquirlas que ya no se tienen. El hueco lo pone el gap, así
+   que la sangría propia del icono sobra aquí */
+#muerte .perdido .esquirla {
+    margin-left: 0;
+    opacity: 0.75; filter: grayscale(0.25);
+}
+
+/* los dos caminos que quedan tras caer, uno debajo del otro */
+#muerte .opciones {
+    display: flex; flex-direction: column; gap: 12px;
+    margin-top: 30px;
+}
+#muerte .boton { width: 280px; }
 
 /* Menú de Esc: una lámina pequeña en el centro. No cubre la escena entera
    a propósito, porque la partida no se detiene mientras está abierto. */

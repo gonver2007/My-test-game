@@ -26,7 +26,17 @@
         <div id="lapis"><span id="lapisIcono"></span><span id="lapisCifra">0</span></div>
     </div>
     <div id="aviso"></div>
-    <div id="muerte">HAS CAÍDO<small>Pulsa R para empezar de nuevo</small></div>
+    <!-- al caer no se reinicia solo: el jugador elige si vuelve a prepararse
+         o se marcha al inicio -->
+    <div id="muerte">
+        <span class="titulo">HAS CAÍDO</span>
+        <!-- lo lleva vista.js al caer; sin botín que llorar, ni aparece -->
+        <div id="muertePerdido" class="perdido" hidden></div>
+        <div class="opciones">
+            <button id="mtContinuar" class="boton principal">CONTINUAR</button>
+            <button id="mtSalir" class="boton">SALIR</button>
+        </div>
+    </div>
 
     <!-- Esc lo abre y lo cierra; mientras tanto la partida sigue corriendo -->
     <div id="menuJuego" hidden>
@@ -40,7 +50,6 @@
             <li><b>Clic der</b> Cubrirte</li>
             <li><b>Espacio</b> Impulso</li>
             <li><b>E</b> Cruzar la puerta</li>
-            <li><b>R</b> Empezar de nuevo</li>
             <li><b>Esc</b> Este menú</li>
         </ul>
         <button id="mjInicio" class="boton">VOLVER AL INICIO</button>

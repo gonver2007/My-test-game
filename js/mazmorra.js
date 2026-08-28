@@ -52,7 +52,9 @@ const J = {
     lapis: 0,            // y el de lapislázuli, que paga las mejoras
     // lo juntado en el patio de ahora: no llega a la ranura hasta cruzar su
     // puerta, y se pierde entero si el héroe cae antes
-    pendiente: { jade: 0, lapis: 0 }
+    pendiente: { jade: 0, lapis: 0 },
+    // y lo que se quedó en el suelo al caer, para poder decírselo al jugador
+    perdido: { jade: 0, lapis: 0 }
 };
 
 const azar = (min, max) => Math.random() * (max - min) + min;
@@ -496,7 +498,7 @@ function danarJugador(e) {
         j.cubriendo = j.corriendo = false;
         J.muerto = true;
         perderBotin();
-        mensaje('Has muerto. Pulsa R para empezar de nuevo.');
+        mensaje('Has muerto.');
     }
 }
 
@@ -609,6 +611,7 @@ function perderBotin() {
     J.esquirlas -= jade;
     J.lapis -= lapis;
     J.pendiente.jade = J.pendiente.lapis = 0;
+    J.perdido = { jade, lapis };
     if (jade || lapis) mensaje(`Se quedan en el patio ${jade} de jade y ${lapis} de lapislázuli.`);
 }
 
@@ -645,6 +648,7 @@ function iniciarPartida() {
     J.esquirlas = (typeof Forja !== 'undefined') ? Forja.esquirlas() : 0;
     J.lapis = (typeof Personaje !== 'undefined') ? Personaje.lapis() : 0;
     J.pendiente = { jade: 0, lapis: 0 };
+    J.perdido = { jade: 0, lapis: 0 };
     // la ranura puede venir marcada como inmortal desde la consola
     J.jugador.inmortal = !!(typeof Partidas !== 'undefined' && Partidas.actual().god);
     // la ranura guarda el acero y el jade, no el camino: siempre se entra por

@@ -1295,6 +1295,28 @@ function contador(caja, cifra, valor, mostrado) {
     return valor;
 }
 
+// si ya está escrita la cuenta de la caída de ahora
+let caidaEscrita = false;
+
+// Lo que se quedó en el suelo del patio por no llegar a la puerta. Se pone
+// entre el rótulo y los botones, con los mismos iconos que el HUD.
+function pintarCaida() {
+    const caja = document.getElementById('muertePerdido');
+    const { jade, lapis } = J.perdido;
+    if (!jade && !lapis) { caja.hidden = true; return; }
+
+    const iconoJade = (typeof ESQUIRLA_SVG !== 'undefined') ? ESQUIRLA_SVG : '';
+    const iconoLapis = (typeof LAPIS_SVG !== 'undefined') ? LAPIS_SVG : '';
+    const cuentas = [];
+    if (jade) cuentas.push(`<span class="jade">${jade}${iconoJade}</span>`);
+    if (lapis) cuentas.push(`<span class="lapis">${lapis}${iconoLapis}</span>`);
+
+    caja.innerHTML =
+        `<span class="rotulo">Perdiste</span>
+         <span class="cuentas">${cuentas.join('')}</span>`;
+    caja.hidden = false;
+}
+
 function pintarHud() {
     const p = J.jugador;
     document.getElementById('estadoPv').textContent = `PV ${Math.ceil(p.hp)}/${p.hpMax}`;
@@ -1311,6 +1333,12 @@ function pintarHud() {
     document.getElementById('estadoNivel').textContent =
         `Patio ${J.nivel}   ·   Enemigos ${J.enemigos.length}\n${J.arma}`;
     document.getElementById('muerte').style.display = J.muerto ? 'flex' : 'none';
+    // la cuenta de lo dejado atrás se escribe una sola vez, al caer, no en
+    // cada cuadro que el velo pasa por delante
+    if (J.muerto !== caidaEscrita) {
+        caidaEscrita = J.muerto;
+        if (J.muerto) pintarCaida();
+    }
 
     const aviso = document.getElementById('aviso');
     const cerca = !J.muerto && cercaDePuerta();
@@ -1479,10 +1507,20 @@ document.getElementById('mjSalir').addEventListener('click', () => {
     setTimeout(() => { document.getElementById('mjNota').hidden = false; }, 250);
 });
 
+// ---------- La pantalla de caída ----------
+// Ya no se reinicia en el sitio: continuar deja al héroe otra vez en el zaguán,
+// donde puede rehacerse en la armería antes de volver a entrar.
+document.getElementById('mtContinuar').addEventListener('click', () => {
+    location.href = 'prev.html';
+});
+
+document.getElementById('mtSalir').addEventListener('click', () => {
+    location.href = 'index.html';
+});
+
 addEventListener('keydown', ev => {
     const k = ev.key.toLowerCase();
     if (k === 'escape') { alternarMenu(); return; }
-    if (k === 'r') { comenzar(); return; }
     if (k === 'e') { if (!ev.repeat && cruzar()) construirLienzoNivel(); return; }
     if (k === ' ' && !ev.repeat) dashPedido = true;
     teclas.add(k);

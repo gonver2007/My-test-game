@@ -99,7 +99,39 @@ index.html, y nada de lo que hace sale de este navegador.
         if (!servidas) decir('Ninguna de esas ranuras tiene partida.', 'mal');
     }
 
+    // cada orden con su forma de escribirla y lo que hace: es la lista que
+    // se recita con «gon info ver»
+    const AYUDA = [
+        ['give <moneda> <ranuras> <cuántas>',   'añade jade o lapislázuli a esas ranuras'],
+        ['ungive <moneda> <ranuras> <cuántas>', 'quita jade o lapislázuli de esas ranuras'],
+        ['god <ranuras>',                       'el personaje de esas ranuras se vuelve inmortal'],
+        ['ungod <ranuras>',                     'les devuelve la carne y el hueso'],
+        ['gon info ver',                        'recita esta misma lista'],
+        ['clear',                               'borra el chat de la consola y el historial']
+    ];
+
+    function recitarOrdenes() {
+        decir('Órdenes del santuario:', 'bien');
+        for (const orden of AYUDA) decir('  ' + orden[0] + ' — ' + orden[1]);
+        decir('  monedas: jade, lapis · ranuras: "1,3" entre comillas, o todas', 'eco');
+    }
+
     const ORDENES = {
+
+        // gon info ver -> la lista de todo lo que se puede teclear
+        gon(a, b) {
+            if ((a || '').toLowerCase() === 'info' && (b || '').toLowerCase() === 'ver')
+                return recitarOrdenes();
+            decir('Así: gon info ver', 'mal');
+        },
+
+        // clear -> la consola queda como recién abierta: sin chat y sin
+        // nada que pasear con las flechas
+        clear() {
+            salida.textContent = '';
+            historial.length = 0;
+            puesto = 0;
+        },
 
         // give jade "1,3" 50   ·   give lapis todas 50
         give(que, ranuras, cuantas) {
@@ -167,5 +199,5 @@ index.html, y nada de lo que hace sale de este navegador.
         }
     });
 
-    decir('Consola del santuario.', 'eco');
+    decir('Consola del santuario. Escribe «gon info ver» para la lista.', 'eco');
 })();
