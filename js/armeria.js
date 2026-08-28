@@ -1,4 +1,4 @@
-/* ============================================================
+/* ============================================================ 
 armeria.js - el arsenal: qué arma se lleva y cuánto está afilada
 Lo usan dos pantallas: prev.html para escoger y forjar, y la
 partida para arrancar con el acero elegido. Todo se guarda en el
