@@ -95,6 +95,9 @@ canvas#vista {
     box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.6), 0 0 10px rgba(120, 200, 255, 0.9);
 }
 #estadoNivel { text-align: right; color: var(--oro); }
+/* el nombre de la comarca, que lo pone biomas.js, va en su propio tono para
+   que se lea de un golpe de vista junto al número de senda */
+#estadoNivel b { color: var(--cielo); font-weight: bold; letter-spacing: 1px; }
 
 /* contadores de jade y lapislázuli, en el rincón de abajo a la izquierda */
 #monedas {
@@ -783,6 +786,43 @@ body.santuario .lema {
     color: rgba(242, 228, 214, .68);
     text-shadow: 0 2px 6px rgba(12, 6, 14, .8);
 }
+
+/* ============================================================
+   Pantalla final: el recuento de lo andado, entre el lema y los botones
+   ============================================================ */
+body.final .lema { max-width: 620px; margin-left: auto; margin-right: auto; }
+
+.recuento {
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+    margin: 26px auto 4px; padding: 18px 30px;
+    border-top: 2px solid rgba(232, 180, 79, .35);
+    border-bottom: 2px solid rgba(232, 180, 79, .35);
+}
+.recuento[hidden] { display: none; }
+.recuento .titulo {
+    margin: 0; font-size: 12px; letter-spacing: .34em;
+    color: var(--oro); text-shadow: 0 2px 6px rgba(12, 6, 14, .8);
+}
+.recuento .cifras { display: flex; gap: 34px; flex-wrap: wrap; justify-content: center; }
+.recuento .dato { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.recuento .dato b {
+    font-size: 26px; letter-spacing: 1px; color: var(--papel);
+    text-shadow: 0 3px 8px rgba(12, 6, 14, .85);
+}
+.recuento .dato i {
+    font-style: normal; font-size: 11px; letter-spacing: .2em;
+    color: rgba(242, 228, 214, .55);
+}
+.recuento .dato.acero b { font-size: 19px; color: var(--oro); }
+.recuento .cuentas { display: flex; gap: 26px; }
+.recuento .cuentas span {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 22px; font-weight: bold; letter-spacing: 1px;
+    text-shadow: 0 3px 8px rgba(12, 6, 14, .85);
+}
+.recuento .cuentas .jade { color: #9fe6d6; }
+.recuento .cuentas .lapis { color: #a8c4ff; }
+.recuento .cuentas .esquirla { margin-left: 0; }
 
 /* ============================================================
    El torii: los botones cuelgan entre sus pilares

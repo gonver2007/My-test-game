@@ -7,12 +7,20 @@
 
 const ANCHO = 36, ALTO = 44;
 
-// Trazado de la planta: dos o tres salas amplias, apiladas de abajo arriba.
-// Se entra siempre por la de abajo y se sale por la puerta de la de arriba.
-const SALAS_MIN = 2, SALAS_MAX = 3;
-const SALA_ANCHO_MIN = 15, SALA_ANCHO_MAX = 26;
-const SALA_ALTO_MIN = 9, SALA_ALTO_MAX = 13;
-const ANCHO_PASILLO = 3;          // casillas de ancho de los corredores
+// Trazado de la planta: unas cuantas salas apiladas de abajo arriba. Se entra
+// siempre por la de abajo y se sale por la puerta de la de arriba.
+// Estas medidas son solo el patrón de la casa: cada bioma trae las suyas en su
+// ficha, y estas quedan de red por si se juega sin biomas cargados.
+const PLANTA_BASE = {
+    salas: [2, 3],                // cuántas salas se apilan
+    ancho: [15, 26],              // lo que mide cada una, en casillas
+    alto: [9, 13],
+    pasillo: 3,                   // casillas de ancho de los corredores
+    chaflan: 0.6,                 // con qué frecuencia se recorta una esquina
+    atajos: 1                     // corredores de más, para que no haya embudo
+};
+
+let ANCHO_PASILLO = PLANTA_BASE.pasillo;   // lo fija el bioma al trazar la planta
 
 // Maniobras del héroe
 const FACTOR_CARRERA = 1.55;      // lo que acelera Shift
@@ -40,12 +48,14 @@ const J = {
     jugador: null,
     enemigos: [],
     objetos: [],
+    trampas: [],         // las que planta el bioma, si es que planta alguna
     efectos: [],         // chispas y números de daño, solo decorativos
     explorado: null,     // 1 = casilla ya vista; lo que recuerda el minimapa
     puerta: { x: 0, y: 0, apertura: 0 },   // apertura: 0 cerrada, 1 abierta del todo
     nivel: 1,
     log: [],
     muerto: false,
+    completado: false,   // se cruzó la última puerta: el camino llegó a su fin
     tiempo: 0,
     arma: 'katana',      // nombre del acero equipado, solo para el HUD
     esquirlas: 0,        // saldo de jade, copiado de la ranura al empezar
@@ -102,29 +112,47 @@ function descubrir() {
 //  corredores en ángulo recto. Nada de contornos orgánicos: aquí
 //  todo son rectas, y las esquinas achaflanadas dan las diagonales.
 // ============================================================
+// La planta que toca trazar: la del bioma de esta senda, con la de serie de
+// red por si biomas.js no está cargado
+function plantaDelNivel() {
+    const bioma = (typeof Biomas !== 'undefined') ? Biomas.deNivel(J.nivel) : null;
+    return Object.assign({}, PLANTA_BASE, bioma && bioma.planta);
+}
+
+// Un tramo de valores [min, max] recortado a lo que de verdad cabe. Así un
+// bioma puede pedir salas enormes o diminutas sin romper el trazado.
+function medida(tramo, tope, suelo) {
+    const max = Math.max(suelo, Math.min(tramo[1], tope));
+    const min = Math.max(suelo, Math.min(tramo[0], max));
+    return azarEnt(min, max);
+}
+
 function generarSalas() {
+    const p = plantaDelNivel();
+    ANCHO_PASILLO = Math.max(2, Math.min(p.pasillo, 6));
+
     const m = [];
     for (let y = 0; y < ALTO; y++) m.push(new Array(ANCHO).fill(1));
     J.mapa = m;
 
     // El mapa se reparte en franjas horizontales, una por sala. La franja 0 es
     // la de abajo, donde se aparece; la última, arriba, es la de la puerta.
-    const cuantas = azarEnt(SALAS_MIN, SALAS_MAX);
+    const cuantas = azarEnt(p.salas[0], p.salas[1]);
     const franja = Math.floor((ALTO - 4) / cuantas);
 
     const salas = [];
     for (let i = 0; i < cuantas; i++) {
-        const w = azarEnt(SALA_ANCHO_MIN, Math.min(SALA_ANCHO_MAX, ANCHO - 6));
-        const h = azarEnt(SALA_ALTO_MIN, Math.min(SALA_ALTO_MAX, franja - 3));
+        const w = medida(p.ancho, ANCHO - 6, 6);
+        const h = medida(p.alto, franja - 3, 4);
         const pie = ALTO - 2 - i * franja;                  // borde bajo de la franja
         const hueco = Math.max(1, franja - h - 1);          // aire que sobra dentro
         const sala = {
-            x: azarEnt(2, ANCHO - w - 3),
+            x: azarEnt(2, Math.max(2, ANCHO - w - 3)),
             y: pie - h - azarEnt(1, hueco),
             w, h
         };
         excavarSala(sala);
-        if (Math.random() < 0.6) achaflanar(sala);
+        if (Math.random() < p.chaflan) achaflanar(sala);
         salas.push(sala);
     }
 
@@ -132,9 +160,12 @@ function generarSalas() {
     for (let i = 1; i < salas.length; i++)
         unirSalas(centro(salas[i - 1]), centro(salas[i]));
 
-    // ...y uno más, por un costado, para que haya dos caminos y no un embudo
-    const par = azarEnt(0, salas.length - 2);
-    unirSalas(puntoLateral(salas[par], -1), puntoLateral(salas[par + 1], 1));
+    // ...y los que pida el bioma por un costado, para que haya más de un
+    // camino y la planta no se convierta en un embudo
+    for (let k = 0; k < p.atajos && salas.length > 1; k++) {
+        const par = azarEnt(0, salas.length - 2);
+        unirSalas(puntoLateral(salas[par], -1), puntoLateral(salas[par + 1], 1));
+    }
 
     // lo que no cuelgue de la zona principal se vuelve roca maciza
     const region = mayorRegion(m);
@@ -269,6 +300,7 @@ function nuevoNivel() {
 
     J.enemigos = [];
     J.objetos = [];
+    J.trampas = [];
     J.efectos = [];
     J.explorado = new Uint8Array(ANCHO * ALTO);
     descubrir();
@@ -291,13 +323,84 @@ function nuevoNivel() {
         if (p) J.objetos.push({ x: p[0] + 0.5, y: p[1] + 0.5, tipo: 'elixir', r: 0.35, giro: azar(0, 6.28) });
     }
 
+    // el hierro del suelo, si el bioma lo tiene: se reparte antes que los
+    // enemigos por lo mismo que los elixires, para que le quede sitio
+    sembrarTrampas(coger);
+
     const cuantos = Math.min(ENEMIGOS_TOPE, ENEMIGOS_BASE + (J.nivel - 1) * ENEMIGOS_POR_NIVEL);
     for (let i = 0; i < cuantos; i++) {
         const p = coger();
         if (p) J.enemigos.push(crearEnemigo(p[0] + 0.5, p[1] + 0.5));
     }
 
-    mensaje(`--- Senda ${J.nivel} del santuario ---`);
+    mensaje(`--- Senda ${J.nivel} · ${nombreDelBioma()} ---`);
+}
+
+// El rótulo de la comarca en que se anda. Sale de biomas.js y de ningún otro
+// sitio: el HUD y los mensajes leen los dos de aquí.
+function nombreDelBioma() {
+    return (typeof Biomas !== 'undefined') ? Biomas.nombre(J.nivel) : 'santuario';
+}
+
+// ============================================================
+//  Trampas: hierro que sube y baja del suelo por su cuenta. Solo las
+//  planta el bioma que las tiene declaradas en su ficha; los demás
+//  tramos se recorren igual que siempre.
+// ============================================================
+function sembrarTrampas(coger) {
+    const bioma = (typeof Biomas !== 'undefined') ? Biomas.deNivel(J.nivel) : null;
+    const ficha = bioma && bioma.trampas;
+    if (!ficha) return;
+
+    const cuantas = azarEnt(ficha.cuantas[0], ficha.cuantas[1]);
+    for (let i = 0; i < cuantas; i++) {
+        const p = coger();
+        if (!p) break;
+        const ciclo = azar(ficha.ciclo[0], ficha.ciclo[1]);
+        J.trampas.push({
+            x: p[0] + 0.5, y: p[1] + 0.5,
+            tipo: ficha.tipo, r: ficha.r, dano: ficha.dano,
+            ciclo, t: azar(0, ciclo),      // cada una lleva su propio compás
+            fase: 0, cd: 0
+        });
+    }
+}
+
+// Cuánto de su vuelta lleva andado la trampa, de 0 a 1. El tramo que hace
+// daño está declarado aquí, y es el mismo que dibuja la vista: así lo que se
+// ve en el suelo es exactamente lo que muerde.
+const TRAMPA_AVISO = 0.62;        // empieza a asomar y a chirriar
+const TRAMPA_FUERA = 0.74;        // el hierro está arriba: a partir de aquí hiere
+const TRAMPA_VUELVE = 0.94;       // y se recoge
+
+function actualizarTrampas(dt) {
+    const j = J.jugador;
+    for (const t of J.trampas) {
+        t.t = (t.t + dt) % t.ciclo;
+        t.fase = t.t / t.ciclo;
+        t.cd -= dt;
+
+        const armada = t.fase >= TRAMPA_FUERA && t.fase < TRAMPA_VUELVE;
+        if (!armada || t.cd > 0 || J.muerto) continue;
+        if (Math.hypot(t.x - j.x, t.y - j.y) > t.r + j.r) continue;
+
+        t.cd = t.ciclo * 0.5;      // no vuelve a morder en la misma subida
+        danarPorTrampa(t);
+    }
+}
+
+// El hierro no entiende de guardias ni de escudos: viene de abajo. Lo único
+// que salva es no estar encima, o el amparo del impulso.
+function danarPorTrampa(t) {
+    const j = J.jugador;
+    if (j.inmortal || j.invulnerable > 0) return;
+
+    j.hp -= t.dano;
+    j.invulnerable = 0.5;
+    chispas(t.x, t.y, '#c04040', 8);
+    numero(j.x, j.y, t.dano, '#ff3b30');
+    mensaje('Los pinchos del suelo te alcanzan.');
+    comprobarCaida();
 }
 
 // La casilla transitable más próxima al punto pedido: así ni la entrada ni la
@@ -329,6 +432,9 @@ function crearEnemigo(x, y) {
 function actualizar(dt, entrada) {
     J.tiempo += dt;
     actualizarEfectos(dt);
+    // el hierro sigue subiendo y bajando aunque el héroe haya caído: lo que se
+    // para es que muerda, no que se mueva
+    actualizarTrampas(dt);
     if (J.muerto) return;
 
     const j = J.jugador;
@@ -493,13 +599,18 @@ function danarJugador(e) {
     } else {
         numero(j.x, j.y, dano, '#ff3b30');   // golpe enemigo directo: rojo
     }
-    if (j.hp <= 0) {
-        j.hp = 0;
-        j.cubriendo = j.corriendo = false;
-        J.muerto = true;
-        perderBotin();
-        mensaje('Has muerto.');
-    }
+    comprobarCaida();
+}
+
+// Un solo sitio decide que el héroe ha caído, venga el golpe de quien venga
+function comprobarCaida() {
+    const j = J.jugador;
+    if (j.hp > 0) return;
+    j.hp = 0;
+    j.cubriendo = j.corriendo = false;
+    J.muerto = true;
+    perderBotin();
+    mensaje('Has muerto.');
 }
 
 // diferencia entre dos ángulos, siempre en [-PI, PI]
@@ -524,6 +635,16 @@ function cruzar() {
             : 'La puerta todavía se está abriendo.');
         return false;
     }
+    // la última puerta no lleva a otra senda: detrás está el final del camino.
+    // Quien la cruza se lleva lo juntado y sale del santuario por arriba.
+    if (typeof Biomas !== 'undefined' && Biomas.ultima(J.nivel)) {
+        asentarBotin();
+        apuntarFinal();
+        J.completado = true;
+        mensaje('Cruzas el último umbral. El santuario queda atrás.');
+        return true;
+    }
+
     J.nivel++;
     apuntarHondura();
     // el umbral paga a cara o cruz, y solo en jade: el lapislázuli lo dejan
@@ -605,6 +726,12 @@ function apuntarHondura() {
     if (J.nivel > (Partidas.actual().hondo || 1)) Partidas.guardarActual({ hondo: J.nivel });
 }
 
+// haber llegado al final queda escrito en la ranura, para siempre
+function apuntarFinal() {
+    if (typeof Partidas === 'undefined') return;
+    Partidas.guardarActual({ hondo: J.nivel, completado: true });
+}
+
 // cruzar la puerta es lo que hace tuyo el botín de la senda: hasta entonces no
 // se escribe nada en la ranura
 function asentarBotin() {
@@ -664,8 +791,10 @@ function iniciarPartida() {
     J.nivel = 1;
     J.log = [];
     J.muerto = false;
+    J.completado = false;
     J.enemigos = [];
     J.objetos = [];
+    J.trampas = [];
     J.efectos = [];
     J.tiempo = 0;
     mensaje('Cruzas el portal del santuario.');

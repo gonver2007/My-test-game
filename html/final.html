@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sendas del Santuario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&amp;family=Zen+Kaku+Gothic+New:wght@500;700;900&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/estilos.css">
+</head>
+<body class="menu santuario final" data-siguiente="prev.html" data-anterior="../index.html">
+
+<!-- el mismo ocaso de las demás pantallas, con el torii de vuelta: aquí sí
+     viene a cuento, porque es el umbral que se acaba de cruzar -->
+<div id="escenario" aria-hidden="true">
+    <div class="halo"></div>
+    <div class="sol"></div>
+
+    <div class="nube alta"></div>
+    <div class="nube media"></div>
+    <div class="nube baja"></div>
+
+    <div class="sierra lejos"></div>
+    <div class="sierra honda"></div>
+    <div class="sierra cerca"></div>
+
+    <div class="tronco t1"></div>
+    <div class="tronco t2"></div>
+    <div class="tronco t3"></div>
+    <div class="tronco t4"></div>
+
+    <div class="torii">
+        <div class="kasagi"></div>
+        <div class="shimaki"></div>
+        <div class="nuki"></div>
+        <div class="pilar izq"></div>
+        <div class="pilar der"></div>
+    </div>
+
+    <div class="petalos"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="brasas"><i></i><i></i><i></i><i></i></div>
+
+    <div class="vineta"></div>
+</div>
+
+<div id="portada">
+    <div class="rotulo"><span>終わりの間</span></div>
+    <h1>HAS LLEGADO</h1>
+    <div class="enlace"><span>AL</span></div>
+    <h1>SANTUARIO</h1>
+    <p class="lema">Cien sendas, y al final del camino la puerta se abrió sola.
+    Descansa: el santuario ya no te espera, te reconoce.</p>
+
+    <!-- lo rellena el guion de abajo con lo que dejó apuntado la partida -->
+    <div id="recuento" class="recuento" hidden></div>
+
+    <nav id="botones">
+        <button id="btOtraVez" type="button" class="boton principal">RECORRERLO DE NUEVO</button>
+        <div class="fila">
+            <button id="btRegistros" type="button" class="boton">SALA DE REGISTROS</button>
+            <button id="btInicio" type="button" class="boton">VOLVER AL INICIO</button>
+        </div>
+    </nav>
+</div>
+
+<script src="../js/armeria.js"></script>
+<script src="../js/personaje.js"></script>
+<script>
+/* El recuento de la partida que acaba de terminar. vista.js lo dejó escrito
+   en la sesión justo antes de traernos aquí; si no está -porque se ha
+   entrado a mano o el navegador no guarda- la pantalla sale igual, solo que
+   sin cifras. */
+(function despedida() {
+    'use strict';
+
+    const caja = document.getElementById('recuento');
+
+    let datos = null;
+    try {
+        const crudo = sessionStorage.getItem('sendas.final');
+        if (crudo) datos = JSON.parse(crudo);
+        sessionStorage.removeItem('sendas.final');   // se lee una sola vez
+    } catch (e) { datos = null; }
+
+    if (datos) {
+        const jade = (typeof ESQUIRLA_SVG !== 'undefined') ? ESQUIRLA_SVG : '';
+        const lapis = (typeof LAPIS_SVG !== 'undefined') ? LAPIS_SVG : '';
+
+        // el tiempo se dice como se diría en voz alta, no en segundos
+        const s = Math.max(0, datos.tiempo | 0);
+        const horas = Math.floor(s / 3600), minutos = Math.floor(s / 60) % 60;
+        const tiempo = horas
+            ? `${horas} h ${minutos} min`
+            : `${minutos} min ${s % 60} s`;
+
+        caja.innerHTML = `
+            <p class="titulo">EL CAMINO ANDADO</p>
+            <div class="cifras">
+                <span class="dato"><b>${datos.sendas || 100}</b><i>sendas</i></span>
+                <span class="dato"><b>${tiempo}</b><i>de camino</i></span>
+            </div>
+            <div class="cifras">
+                <span class="dato acero"><b>${datos.arma || 'katana'}</b><i>en la mano</i></span>
+            </div>
+            <div class="cuentas">
+                <span class="jade">${datos.jade || 0}${jade}</span>
+                <span class="lapis">${datos.lapis || 0}${lapis}</span>
+            </div>`;
+        caja.hidden = false;
+    }
+
+    const ir = (id, destino) =>
+        document.getElementById(id).addEventListener('click', () => { location.href = destino; });
+
+    ir('btOtraVez', 'prev.html');
+    ir('btRegistros', 'ranura.html');
+    ir('btInicio', '../index.html');
+})();
+</script>
+</body>
+</html>

@@ -22,6 +22,7 @@ function partidaNueva() {
         lapis: 0,
         god: false,             // inmortalidad, que solo enciende la consola
         hondo: 1,               // la senda más honda a la que ha llegado esta ranura
+        completado: false,      // si esta ranura llegó a cruzar la última puerta
         creada: Date.now(),
         jugada: Date.now()
     };
