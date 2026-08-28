@@ -16,8 +16,10 @@ const M = {
     sakura: '#f0a8c8', sakuraClara: '#ffd6e6'
 };
 
+// la portada del ocaso pinta su cielo con CSS y no trae lienzo; las demás
+// pantallas sí, y entonces se anima aquí
 const lienzo = document.getElementById('fondoMenu');
-const ctx = lienzo.getContext('2d');
+const ctx = lienzo ? lienzo.getContext('2d') : null;
 let ancho = 0, alto = 0;
 let petalos = [];
 let t = 0;
@@ -207,24 +209,43 @@ function cuadro(ahora) {
 function continuar() { location.href = document.body.dataset.siguiente || 'game.html'; }
 function volver() { location.href = document.body.dataset.anterior || 'index.html'; }
 
-// controles y créditos comparten hueco: abrir uno cierra el otro
-function alternar(cual) {
-    const controles = document.getElementById('panelControles');
-    const creditos = document.getElementById('panelCreditos');
-    if (!controles || !creditos) return;
-    const pedido = cual === 'controles' ? controles : creditos;
-    const otro = cual === 'controles' ? creditos : controles;
-    otro.hidden = true;
-    pedido.hidden = !pedido.hidden;
-    document.getElementById('panel').classList.toggle('abierto', !pedido.hidden);
+// los huecos que se abren en el sitio del menú: controles y créditos en la
+// portada; armería, personaje, habilidades, pergaminos y amuletos en el
+// zaguán. Cada pantalla trae los suyos y los que no existen no se abren
+const PANELES = ['panelControles', 'panelCreditos', 'armeria', 'personaje',
+    'habilidades', 'pergaminos', 'amuletos'];
+
+// todos comparten hueco: abrir uno cierra los demás, y volver a pulsar cierra
+function alternar(id) {
+    const pedido = document.getElementById(id);
+    if (!pedido) return;
+    const abrir = pedido.hidden;
+    cerrarPaneles();
+    pedido.hidden = !abrir;
+    marcarPaneles();
 }
 
+// mientras hay alguno abierto el body lleva la marca: con ella la pantalla
+// esconde el rótulo y lo demás, y el panel se lee sin nada delante. La miran
+// también armeria.js y personaje.js, que abren los suyos por su cuenta
+function marcarPaneles() {
+    const abierto = PANELES.some(id => {
+        const panel = document.getElementById(id);
+        return panel && !panel.hidden;
+    });
+    document.body.classList.toggle('viendoPanel', abierto);
+    const hueco = document.getElementById('panel');
+    if (hueco) hueco.classList.toggle('abierto', abierto);
+}
+
+function hayPanelAbierto() { return document.body.classList.contains('viendoPanel'); }
+
 function cerrarPaneles() {
-    const panel = document.getElementById('panel');
-    if (!panel) return;
-    document.getElementById('panelControles').hidden = true;
-    document.getElementById('panelCreditos').hidden = true;
-    panel.classList.remove('abierto');
+    for (const id of PANELES) {
+        const panel = document.getElementById(id);
+        if (panel) panel.hidden = true;
+    }
+    marcarPaneles();
 }
 
 // los botones que una pantalla no tenga sencillamente no se atan
@@ -235,8 +256,12 @@ function enlazar(id, accion) {
 
 enlazar('btJugar', continuar);
 enlazar('btVolver', volver);
-enlazar('btControles', () => alternar('controles'));
-enlazar('btCreditos', () => alternar('creditos'));
+enlazar('btControles', () => alternar('panelControles'));
+enlazar('btCreditos', () => alternar('panelCreditos'));
+enlazar('btHabilidades', () => alternar('habilidades'));
+enlazar('btPergaminos', () => alternar('pergaminos'));
+enlazar('btAmuletos', () => alternar('amuletos'));
+enlazar('btCerrarPanel', cerrarPaneles);
 
 addEventListener('keydown', e => {
     // mientras se escribe (la consola) el teclado no es del menú, y Alt+Intro
@@ -244,11 +269,24 @@ addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT' || e.altKey) return;
     // Enter vale por el botón principal; donde no lo hay (la lista de ranuras)
     // no se avanza a ciegas
-    if (e.key === 'Enter' && document.getElementById('btJugar')) continuar();
+    if (e.key === 'Enter' && !hayPanelAbierto() && document.getElementById('btJugar')) continuar();
     if (e.key === 'Escape') cerrarPaneles();
 });
 
-addEventListener('resize', () => { medir(); sembrarPetalos(); });
-medir();
-sembrarPetalos();
-requestAnimationFrame(cuadro);
+// el renglón de láminas se corre con la rueda: con el ratón nadie tiene por
+// qué ir a buscar la barra de abajo
+addEventListener('wheel', e => {
+    const fila = e.target.closest && e.target.closest('.armas');
+    if (!fila || fila.scrollWidth <= fila.clientWidth) return;
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;   // ya viene de lado
+    fila.scrollLeft += e.deltaY;
+    e.preventDefault();
+}, { passive: false });
+
+// sin lienzo no hay nada que animar, pero los botones ya quedaron atados
+if (ctx) {
+    addEventListener('resize', () => { medir(); sembrarPetalos(); });
+    medir();
+    sembrarPetalos();
+    requestAnimationFrame(cuadro);
+}

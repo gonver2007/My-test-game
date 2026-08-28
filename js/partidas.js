@@ -1,7 +1,7 @@
 /* ============================================================ 
 partidas.js - las cinco ranuras de guardado
 Cada ranura recuerda por dónde iba la partida y con qué acero:
-patio alcanzado, arma en mano, forja y esquirlas. Se escribe sola
+senda alcanzada, arma en mano, forja y esquirlas. Se escribe sola
 cada vez que pasa algo que merezca la pena recordar.
    ============================================================ */
 'use strict';
@@ -11,7 +11,7 @@ const CLAVE_PARTIDAS = 'sendas.partidas';
 const CLAVE_ACTIVA = 'sendas.ranura';
 
 // La ranura no recuerda por dónde ibas: cada visita al santuario empieza en el
-// primer patio. Lo que se conserva es el acero y lo que se ha juntado.
+// primera senda. Lo que se conserva es el acero y lo que se ha juntado.
 function partidaNueva() {
     return {
         arma: 'katana',
@@ -21,6 +21,7 @@ function partidaNueva() {
         esquirlas: 0,
         lapis: 0,
         god: false,             // inmortalidad, que solo enciende la consola
+        hondo: 1,               // la senda más honda a la que ha llegado esta ranura
         creada: Date.now(),
         jugada: Date.now()
     };
@@ -130,11 +131,18 @@ const Partidas = {
             </div>`;
 
         const confirmando = porBorrar === i;
+        // la inmortalidad que enciende la consola se anuncia con su sello, para
+        // que no haya que entrar en la partida para saber quién la lleva
+        const sello = p.god
+            ? '<span class="sello" title="Inmortal">神</span>'
+            : '';
         return `
-            <div class="ranura llena" data-ranura="${i}">
+            <div class="ranura llena${p.god ? ' inmortal' : ''}" data-ranura="${i}">
+                ${sello}
                 <h3>RANURA ${i + 1}</h3>
-                <p class="resumen">${nombreArma(p)}
-                    · ${p.esquirlas}${jade()} · ${p.lapis || 0}${lapis()}</p>
+                <p class="resumen">${nombreArma(p)}</p>
+                <p class="monedas">${p.esquirlas}${jade()} · ${p.lapis || 0}${lapis()}</p>
+                <p class="hondura"><b>${p.hondo || 1}</b><span>senda</span></p>
                 <p class="fecha">Última vez: ${fecha(p.jugada)}</p>
                 <button class="borrar${confirmando ? ' confirmar' : ''}" data-borrar="${i}">
                     ${confirmando ? '¿SEGURO?' : 'BORRAR'}
@@ -146,7 +154,7 @@ const Partidas = {
         caja.innerHTML = `
             <div class="lista">${Partidas.todas().map(fila).join('')}</div>
             <p class="nota">Cada ranura guarda su arma y sus esquirlas.
-            El santuario se recorre siempre desde el primer patio.</p>`;
+            El santuario se recorre siempre desde la primera senda.</p>`;
     }
 
     function entrar(i) {

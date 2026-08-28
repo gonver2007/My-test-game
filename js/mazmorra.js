@@ -29,9 +29,9 @@ const RADIO_VISION = 8.5;
 
 const VEL_PUERTA = 1.4;           // lo que tardan en separarse las hojas
 
-// Cuánta compaña hay en cada patio. Como la puerta no se abre hasta que no
+// Cuánta compaña hay en cada senda. Como la puerta no se abre hasta que no
 // queda nadie, este número es también lo larga que se hace la planta.
-const ENEMIGOS_BASE = 12;         // los del primer patio
+const ENEMIGOS_BASE = 12;         // los de la primera senda
 const ENEMIGOS_POR_NIVEL = 5;     // los que se suman por cada una que se baja
 const ENEMIGOS_TOPE = 45;         // más no caben con holgura en el mapa
 
@@ -50,7 +50,7 @@ const J = {
     arma: 'katana',      // nombre del acero equipado, solo para el HUD
     esquirlas: 0,        // saldo de jade, copiado de la ranura al empezar
     lapis: 0,            // y el de lapislázuli, que paga las mejoras
-    // lo juntado en el patio de ahora: no llega a la ranura hasta cruzar su
+    // lo juntado en la senda de ahora: no llega a la ranura hasta cruzar su
     // puerta, y se pierde entero si el héroe cae antes
     pendiente: { jade: 0, lapis: 0 },
     // y lo que se quedó en el suelo al caer, para poder decírselo al jugador
@@ -284,7 +284,7 @@ function nuevoNivel() {
         ? candidatas.splice(azarEnt(0, candidatas.length - 1), 1)[0]
         : null;
 
-    // los elixires se reparten antes: con el patio lleno de enemigos, si no se
+    // los elixires se reparten antes: con la senda llena de enemigos, si no se
     // reservan su sitio se quedarían sin hueco donde caer
     for (let i = 0; i < 3; i++) {
         const p = coger();
@@ -297,7 +297,7 @@ function nuevoNivel() {
         if (p) J.enemigos.push(crearEnemigo(p[0] + 0.5, p[1] + 0.5));
     }
 
-    mensaje(`--- Patio ${J.nivel} del santuario ---`);
+    mensaje(`--- Senda ${J.nivel} del santuario ---`);
 }
 
 // La casilla transitable más próxima al punto pedido: así ni la entrada ni la
@@ -403,13 +403,13 @@ function actualizar(dt, entrada) {
     abrirPuertaSiToca(dt);
 }
 
-// El sello cede cuando no queda nada vivo en el patio. Las hojas tardan un
+// El sello cede cuando no queda nada vivo en la senda. Las hojas tardan un
 // momento en separarse: hasta que no acaban, la puerta no deja pasar.
 function abrirPuertaSiToca(dt) {
     if (J.enemigos.length) return;
     if (J.puerta.apertura === 0) {
         mensaje('Cae el último enemigo: el sello se deshace y la puerta se abre.');
-        mensaje('Sin nada que temer, reconoces el patio entero.');
+        mensaje('Sin nada que temer, reconoces la senda entera.');
         chispas(J.puerta.x, J.puerta.y, '#a8dcff', 18);
         J.explorado.fill(1);     // ya no hay peligro: se levanta la niebla del mapa
     }
@@ -525,6 +525,7 @@ function cruzar() {
         return false;
     }
     J.nivel++;
+    apuntarHondura();
     // el umbral paga a cara o cruz, y solo en jade: el lapislázuli lo dejan
     // los enemigos al caer
     const jade = Math.random() < 0.5;
@@ -535,7 +536,7 @@ function cruzar() {
     asentarBotin();
     nuevoNivel();
     // el efecto va después de la mudanza: nuevoNivel lo limpia y planta al
-    // héroe en el patio siguiente, que es donde debe verse
+    // héroe en la senda siguiente, que es donde debe verse
     if (jade) esquirlaGanada(J.jugador.x, J.jugador.y, 'jade');
     return true;
 }
@@ -585,7 +586,7 @@ function actualizarEfectos(dt) {
 // La armería vive en prev.html; si se entra directo a la partida no está
 // cargada, y entonces el héroe sale con la katana de serie.
 
-// Lo que se junta se apunta primero en la cuenta del patio; el HUD lee de
+// Lo que se junta se apunta primero en la cuenta de la senda; el HUD lee de
 // aquí, no del almacén
 function premiar(esquirlas) {
     J.esquirlas += esquirlas;
@@ -597,7 +598,14 @@ function premiarLapis(esquirlas) {
     J.pendiente.lapis += esquirlas;
 }
 
-// cruzar la puerta es lo que hace tuyo el botín del patio: hasta entonces no
+// la senda más honda a la que ha llegado esta ranura queda apuntada en ella:
+// es lo que enseña la sala de los registros, y solo sube, nunca baja
+function apuntarHondura() {
+    if (typeof Partidas === 'undefined') return;
+    if (J.nivel > (Partidas.actual().hondo || 1)) Partidas.guardarActual({ hondo: J.nivel });
+}
+
+// cruzar la puerta es lo que hace tuyo el botín de la senda: hasta entonces no
 // se escribe nada en la ranura
 function asentarBotin() {
     if (typeof Forja !== 'undefined' && J.pendiente.jade) Forja.premiar(J.pendiente.jade);
@@ -605,14 +613,14 @@ function asentarBotin() {
     J.pendiente.jade = J.pendiente.lapis = 0;
 }
 
-// y morir lo deja todo en el suelo del patio
+// y morir lo deja todo en el suelo de la senda
 function perderBotin() {
     const jade = J.pendiente.jade, lapis = J.pendiente.lapis;
     J.esquirlas -= jade;
     J.lapis -= lapis;
     J.pendiente.jade = J.pendiente.lapis = 0;
     J.perdido = { jade, lapis };
-    if (jade || lapis) mensaje(`Se quedan en el patio ${jade} de jade y ${lapis} de lapislázuli.`);
+    if (jade || lapis) mensaje(`Se quedan en la senda ${jade} de jade y ${lapis} de lapislázuli.`);
 }
 
 function equiparArma(j) {
@@ -652,7 +660,7 @@ function iniciarPartida() {
     // la ranura puede venir marcada como inmortal desde la consola
     J.jugador.inmortal = !!(typeof Partidas !== 'undefined' && Partidas.actual().god);
     // la ranura guarda el acero y el jade, no el camino: siempre se entra por
-    // el primer patio
+    // la primera senda
     J.nivel = 1;
     J.log = [];
     J.muerto = false;

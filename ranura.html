@@ -1,23 +1,62 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sendas del Santuario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&amp;family=Zen+Kaku+Gothic+New:wght@500;700;900&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/estilos.css">
 </head>
-<body class="menu" data-siguiente="prev.html" data-anterior="index.html">
+<body class="menu santuario registros" data-siguiente="prev.html" data-anterior="index.html">
 
-<canvas id="fondoMenu"></canvas>
+<!-- el mismo ocaso de la portada, y aquí también el torii: en esta pantalla
+     no sujeta nada, solo enmarca desde el fondo. Es decorado y nada más,
+     así que ni se le pregunta al ratón -->
+<div id="escenario" aria-hidden="true">
+    <div class="halo"></div>
+    <div class="sol"></div>
+
+    <div class="nube alta"></div>
+    <div class="nube media"></div>
+    <div class="nube baja"></div>
+
+    <div class="sierra lejos"></div>
+    <div class="sierra honda"></div>
+    <div class="sierra cerca"></div>
+
+    <div class="tronco t1"></div>
+    <div class="tronco t2"></div>
+    <div class="tronco t3"></div>
+    <div class="tronco t4"></div>
+
+    <div class="torii">
+        <div class="kasagi"></div>
+        <div class="shimaki"></div>
+        <div class="nuki"></div>
+        <div class="pilar izq"></div>
+        <div class="pilar der"></div>
+    </div>
+
+    <div class="petalos"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="brasas"><i></i><i></i><i></i><i></i></div>
+
+    <div class="vineta"></div>
+</div>
 
 <div id="portada">
-    <h1>ELIGE<small>tu</small>RANURA</h1>
+    <div class="rotulo"><span>記録の間</span></div>
+    <h1>ELIGE</h1>
+    <div class="enlace"><span>TU</span></div>
+    <h1>RANURA</h1>
     <p class="lema">Cinco senderos: cada uno recuerda el suyo.</p>
 
     <!-- la lista la rellena partidas.js al cargar -->
     <div id="ranuras" class="panel ranuras"></div>
 
     <nav id="botones">
-        <button id="btVolver" class="boton">VOLVER</button>
+        <button id="btVolver" type="button" class="boton">VOLVER</button>
     </nav>
 </div>
 

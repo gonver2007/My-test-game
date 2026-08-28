@@ -123,12 +123,15 @@ const Personaje = {
         if (subir) { Personaje.subir(subir.dataset.subir); pintar(); }
     });
 
+    // abrir y cerrar es cosa de menu.js: él sabe de todos los paneles, los
+    // cierra entre sí y marca el body para que la pantalla esconda el rótulo
     boton.addEventListener('click', () => {
-        const armeria = document.getElementById('armeria');
-        if (armeria) armeria.hidden = true;     // los dos paneles comparten hueco
-        caja.hidden = !caja.hidden;
+        if (typeof alternar === 'function') alternar('personaje');
+        else caja.hidden = !caja.hidden;
         if (!caja.hidden) pintar();
     });
 
-    addEventListener('keydown', e => { if (e.key === 'Escape') caja.hidden = true; });
+    addEventListener('keydown', e => {
+        if (e.key === 'Escape' && typeof cerrarPaneles !== 'function') caja.hidden = true;
+    });
 })();

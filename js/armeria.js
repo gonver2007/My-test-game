@@ -197,7 +197,7 @@ const Forja = {
             <h2>ARMERÍA</h2>
             <p class="saldo">Esquirlas de jade: <b>${Forja.esquirlas()}${ESQUIRLA}</b></p>
             <div class="armas">${ARMAS.map(tarjeta).join('')}</div>
-            <p class="nota">Cruzar la puerta de un patio al siguiente deja una esquirla
+            <p class="nota">Cruzar la puerta de una senda a la siguiente deja una esquirla
             una de cada dos veces: el santuario no siempre paga.
             Un arma comprada se empuña al momento y ya se puede forjar.</p>`;
     }
@@ -213,12 +213,16 @@ const Forja = {
         if (elegir) { Forja.equipar(elegir.dataset.arma); pintar(); }
     });
 
+    // abrir y cerrar es cosa de menu.js: él sabe de todos los paneles, los
+    // cierra entre sí y marca el body para que la pantalla esconda el rótulo.
+    // Sin él (una pantalla que solo traiga la armería) esto se abre igual
     boton.addEventListener('click', () => {
-        const personaje = document.getElementById('personaje');
-        if (personaje) personaje.hidden = true;         // los dos paneles comparten hueco
-        caja.hidden = !caja.hidden;
+        if (typeof alternar === 'function') alternar('armeria');
+        else caja.hidden = !caja.hidden;
         if (!caja.hidden) pintar();
     });
 
-    addEventListener('keydown', e => { if (e.key === 'Escape') caja.hidden = true; });
+    addEventListener('keydown', e => {
+        if (e.key === 'Escape' && typeof cerrarPaneles !== 'function') caja.hidden = true;
+    });
 })();

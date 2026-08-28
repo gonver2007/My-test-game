@@ -1298,7 +1298,7 @@ function contador(caja, cifra, valor, mostrado) {
 // si ya está escrita la cuenta de la caída de ahora
 let caidaEscrita = false;
 
-// Lo que se quedó en el suelo del patio por no llegar a la puerta. Se pone
+// Lo que se quedó en el suelo de la senda por no llegar a la puerta. Se pone
 // entre el rótulo y los botones, con los mismos iconos que el HUD.
 function pintarCaida() {
     const caja = document.getElementById('muertePerdido');
@@ -1331,7 +1331,7 @@ function pintarHud() {
     lapisMostrado = contador('lapis', 'lapisCifra', J.lapis, lapisMostrado);
 
     document.getElementById('estadoNivel').textContent =
-        `Patio ${J.nivel}   ·   Enemigos ${J.enemigos.length}\n${J.arma}`;
+        `Senda ${J.nivel}   ·   Enemigos ${J.enemigos.length}\n${J.arma}`;
     document.getElementById('muerte').style.display = J.muerto ? 'flex' : 'none';
     // la cuenta de lo dejado atrás se escribe una sola vez, al caer, no en
     // cada cuadro que el velo pasa por delante
@@ -1364,7 +1364,7 @@ const mctx = mini.getContext('2d');
 let terrenoMini = null;             // lo ya descubierto, dibujado una sola vez
 let tctx = null;
 let volcado = null;                 // casillas que ya pasaron al lienzo
-let barridoCompleto = false;        // ya se volcó el mapa entero al vaciarse el patio
+let barridoCompleto = false;        // ya se volcó el mapa entero al vaciarse la senda
 
 function prepararMinimapa() {
     mini.width = ANCHO * MINI;
@@ -1380,7 +1380,7 @@ function prepararMinimapa() {
 
 // Pinta solo lo recién descubierto: de ordinario basta con mirar alrededor del
 // héroe, porque más lejos no ha podido cambiar nada. La excepción es el momento
-// en que cae el último enemigo y el patio entero pasa a estar explorado: ahí hay
+// en que cae el último enemigo y la senda entera pasa a estar explorada: ahí hay
 // que barrer el mapa completo, y una sola vez.
 function volcarDescubierto() {
     const j = J.jugador;
@@ -1439,7 +1439,7 @@ function pintarMinimapa() {
         mctx.globalAlpha = 1;
     }
 
-    // con el patio limpio se ven todos los elixires, por si toca curarse
+    // con la senda limpia se ven todos los elixires, por si toca curarse
     const limpia = !J.enemigos.length;
     for (const o of J.objetos) {
         if (!limpia && !aLaVista(o)) continue;

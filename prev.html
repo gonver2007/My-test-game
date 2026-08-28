@@ -1,29 +1,90 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sendas del Santuario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&amp;family=Zen+Kaku+Gothic+New:wght@500;700;900&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/estilos.css">
 </head>
-<body class="menu" data-siguiente="game.html" data-anterior="ranura.html">
+<body class="menu santuario zaguan" data-siguiente="game.html" data-anterior="ranura.html">
 
-<canvas id="fondoMenu"></canvas>
+<!-- el mismo ocaso de las otras pantallas, aquí sin torii: el zaguán deja
+     el cielo despejado. Es decorado y nada más -->
+<div id="escenario" aria-hidden="true">
+    <div class="halo"></div>
+    <div class="sol"></div>
+
+    <div class="nube alta"></div>
+    <div class="nube media"></div>
+    <div class="nube baja"></div>
+
+    <div class="sierra lejos"></div>
+    <div class="sierra honda"></div>
+    <div class="sierra cerca"></div>
+
+    <div class="tronco t1"></div>
+    <div class="tronco t2"></div>
+    <div class="tronco t3"></div>
+    <div class="tronco t4"></div>
+
+    <div class="petalos"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="brasas"><i></i><i></i><i></i><i></i></div>
+
+    <div class="vineta"></div>
+</div>
 
 <div id="portada">
-    <h1>ANTES<small>de</small>PARTIR</h1>
+    <div class="rotulo"><span>支度の間</span></div>
+    <h1>ANTES</h1>
+    <div class="enlace"><span>DE</span></div>
+    <h1>PARTIR</h1>
     <p class="lema">El farolillo está encendido. Cruza cuando quieras.</p>
 
     <nav id="botones">
-        <button id="btJugar" class="boton principal">ENTRAR AL SANTUARIO</button>
-        <button id="btArmeria" class="boton">ARMERÍA</button>
-        <button id="btPersonaje" class="boton">PERSONAJE</button>
-        <button id="btVolver" class="boton">VOLVER</button>
+        <button id="btJugar" type="button" class="boton principal">ENTRAR A LA SENDA</button>
+        <div class="fila">
+            <button id="btArmeria" type="button" class="boton">ARMERÍA</button>
+            <button id="btPersonaje" type="button" class="boton">PERSONAJE</button>
+            <button id="btHabilidades" type="button" class="boton">HABILIDADES</button>
+        </div>
+        <div class="fila">
+            <button id="btPergaminos" type="button" class="boton">PERGAMINOS</button>
+            <button id="btVolver" type="button" class="boton">VOLVER</button>
+            <button id="btAmuletos" type="button" class="boton">AMULETOS</button>
+        </div>
     </nav>
 
     <!-- los rellenan armeria.js y personaje.js al abrirlos, para que el saldo
          mostrado sea siempre el del momento -->
     <div id="armeria" class="panel armeria" hidden></div>
     <div id="personaje" class="panel armeria" hidden></div>
+
+    <!-- estos tres no tienen guion propio todavía: el hueco queda hecho, y se
+         abren y cierran como los demás -->
+    <div id="habilidades" class="panel armeria vacio" hidden>
+        <h2>HABILIDADES</h2>
+        <p class="nota">El pergamino sigue en blanco. Aquí se anotarán las
+        artes que se aprendan dentro del santuario.</p>
+    </div>
+
+    <div id="pergaminos" class="panel armeria vacio" hidden>
+        <h2>PERGAMINOS</h2>
+        <p class="nota">Ninguno desenrollado todavía. Aquí irán los que se
+        encuentren en las sendas.</p>
+    </div>
+
+    <div id="amuletos" class="panel armeria vacio" hidden>
+        <h2>AMULETOS</h2>
+        <p class="nota">Todavía no cuelga ninguno del cinto. Aquí se guardarán
+        los que el santuario conceda.</p>
+    </div>
+
+    <!-- con algo abierto los botones se van, así que la salida del panel es
+         este: menu.js lo ata a cerrarPaneles -->
+    <button id="btCerrarPanel" type="button" class="boton">CERRAR</button>
 </div>
 
 <script src="js/armeria.js"></script>
