@@ -9,7 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&amp;family=Zen+Kaku+Gothic+New:wght@500;700;900&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/estilos.css">
 </head>
-<body class="menu santuario final" data-siguiente="prev.html" data-anterior="../index.html">
+<body class="menu santuario final" data-siguiente="prev.html" data-anterior="portada.html">
 
 <!-- el mismo ocaso de las demás pantallas, con el torii de vuelta: aquí sí
      viene a cuento, porque es el umbral que se acaba de cruzar -->
@@ -66,6 +66,8 @@
 
 <script src="../js/armeria.js"></script>
 <script src="../js/personaje.js"></script>
+<script src="../js/ajustes.js"></script>
+<script src="../js/menu.js"></script>
 <script>
 /* El recuento de la partida que acaba de terminar. vista.js lo dejó escrito
    en la sesión justo antes de traernos aquí; si no está -porque se ha
@@ -73,6 +75,12 @@
    sin cifras. */
 (function despedida() {
     'use strict';
+
+    // Abierta suelta, menu.js está mandándola ya al armazón para que se cargue
+    // dentro del marco. Aquí no se toca nada: el recuento se lee una sola vez
+    // y se borra, y si lo leyera esta carga de paso, la buena lo encontraría
+    // vacío. La partida entra directa por el armazón y no pasa por aquí.
+    if (window.self === window.top) return;
 
     const caja = document.getElementById('recuento');
 
@@ -113,9 +121,11 @@
     const ir = (id, destino) =>
         document.getElementById(id).addEventListener('click', () => { location.href = destino; });
 
+    // portada.html y no ../index.html: index es el armazón que nos tiene
+    // enmarcados, y mandarlo ahí dentro sería meter el marco en sí mismo
     ir('btOtraVez', 'prev.html');
     ir('btRegistros', 'ranura.html');
-    ir('btInicio', '../index.html');
+    ir('btInicio', 'portada.html');
 })();
 </script>
 </body>

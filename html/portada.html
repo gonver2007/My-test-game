@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sendas del Santuario</title>
+</head>
+<!-- Vivía en la raíz, como index.html, hasta que index pasó a ser el armazón
+     que sujeta la música. Al mudarse aquí las rutas suben un escalón y los
+     destinos bajan uno: html/ranura.html se queda en ranura.html.
+     data-musica dice que en esta pantalla el tema suena; el armazón lo lee. -->
+<body data-siguiente="ranura.html" data-ajustes="ajustes.html" data-musica="si">
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&amp;family=Zen+Kaku+Gothic+New:wght@500;700;900&amp;display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;background:#160d1c;overflow:hidden;}
+  a{color:#e8b44f;} a:hover{color:#f6dca6;}
+  @keyframes sakura{0%{transform:translate3d(0,-14vh,0) rotate(0deg) scale(1);opacity:0}
+    10%{opacity:1}
+    35%{transform:translate3d(70px,30vh,0) rotate(160deg) scale(.85)}
+    70%{transform:translate3d(-40px,70vh,0) rotate(320deg) scale(1)}
+    95%{opacity:1}
+    100%{transform:translate3d(60px,115vh,0) rotate(520deg) scale(.9);opacity:0}}
+  @keyframes drift{0%{transform:translateX(-6%)}100%{transform:translateX(6%)}}
+  @keyframes emberRise{0%{transform:translateY(0) scale(1);opacity:0}
+    20%{opacity:.9}100%{transform:translateY(-46vh) scale(.4);opacity:0}}
+  @keyframes sunGlow{0%,100%{opacity:.35;transform:scale(1)}50%{opacity:.6;transform:scale(1.06)}}
+
+  /* ---------- Los botones del torii ----------
+    Antes el hover lo llevaba el atributo style-hover del lienzo de diseño,
+    que sin su guion no hacía nada. Ahora es css: al pasar por encima el
+    botón se levanta, el oro se enciende, las letras se abren y una pasada
+     de luz cruza la laca */
+  .boton{position:relative;overflow:hidden;width:100%;padding:16px 0;
+    font-family:'Zen Kaku Gothic New',sans-serif;font-weight:900;font-size:18px;
+    letter-spacing:.2em;text-indent:.2em;
+    color:#f2e4d6;background:rgba(28,14,22,.78);
+    border:2px solid rgba(232,180,79,.55);border-radius:2px;cursor:pointer;
+    transition:color .18s, background .18s, border-color .18s,
+      letter-spacing .22s, text-indent .22s, box-shadow .22s,
+      transform .16s cubic-bezier(.2,.9,.3,1.35);}
+
+  .boton:hover,.boton:focus-visible{
+    color:#fff;background:rgba(217,75,51,.3);border-color:#e8b44f;
+    letter-spacing:.26em;text-indent:.26em;transform:translateY(-3px);
+    box-shadow:0 8px 22px rgba(12,6,14,.55),0 0 22px rgba(232,180,79,.3);}
+  .boton:focus-visible{outline:2px solid #e8b44f;outline-offset:3px;}
+  .boton:active{transform:translateY(1px);box-shadow:0 2px 10px rgba(12,6,14,.5);}
+
+  /* el principal arde: el mismo gesto, pero en brasa */
+  .boton.principal{color:#fff4ea;background:linear-gradient(180deg,#d94b33,#a5271c);
+    border-color:#f0c9a5;box-shadow:0 0 30px rgba(217,75,51,.45);}
+  .boton.principal:hover,.boton.principal:focus-visible{
+    background:linear-gradient(180deg,#e85a3f,#b52d20);border-color:#ffe6c8;
+    box-shadow:0 10px 26px rgba(12,6,14,.5),0 0 46px rgba(217,75,51,.75);}
+
+  /* la pasada de luz: una franja inclinada que barre el botón una sola vez */
+  .boton::before{content:'';position:absolute;top:0;bottom:0;left:-60%;width:45%;
+    transform:skewX(-18deg);opacity:0;pointer-events:none;
+    background:linear-gradient(100deg,rgba(255,240,210,0),
+      rgba(255,240,210,.32),rgba(255,240,210,0));}
+  .boton:hover::before,.boton:focus-visible::before{animation:destello .8s ease-out;}
+  @keyframes destello{
+    0%{left:-60%;opacity:0} 18%{opacity:1} 82%{opacity:1} 100%{left:120%;opacity:0}}
+
+  /* quien pide quietud se queda con el cambio de color y nada más */
+  @media (prefers-reduced-motion: reduce){
+    .boton,.boton:hover,.boton:focus-visible,.boton:active{transform:none;
+      letter-spacing:.2em;text-indent:.2em;}
+    .boton:hover::before,.boton:focus-visible::before{animation:none;}
+  }
+
+  /* la consola: vestida del ocaso, porque esta pantalla no carga estilos.css */
+  #consola{position:fixed;left:16px;bottom:16px;z-index:20;
+    width:440px;max-width:calc(100vw - 32px);display:flex;flex-direction:column;
+    font-family:'Zen Kaku Gothic New',system-ui,sans-serif;font-size:13px;letter-spacing:.03em;
+    border:2px solid rgba(232,180,79,.45);border-radius:2px;
+    background:rgba(20,9,16,.95);box-shadow:0 12px 34px rgba(12,6,14,.75);}
+  #consola[hidden]{display:none;}
+  #consola .salida{height:190px;overflow-y:auto;padding:9px 11px;color:#f2e4d6;
+    white-space:pre-wrap;word-break:break-word;}
+  #consola .salida .eco{color:#b08a86;}
+  #consola .salida .bien{color:#f0c9a5;}
+  #consola .salida .mal{color:#ff8a7a;}
+  #consola .entrada{display:flex;align-items:center;gap:7px;padding:7px 11px;
+    border-top:2px solid rgba(232,180,79,.3);}
+  #consola .signo{color:#e8b44f;}
+  #consola input{flex:1;min-width:0;font:inherit;color:#e8b44f;
+    background:none;border:none;outline:none;caret-color:#e8b44f;}
+</style>
+</helmet>
+<div style="position:fixed;inset:0;overflow:hidden;background:linear-gradient(180deg,#15101f 0%,#2a1430 34%,#5c1f35 62%,#a33a30 84%,#d8632f 100%);font-family:'Zen Kaku Gothic New',system-ui,sans-serif;">
+
+  <div style="position:absolute;left:50%;top:16%;transform:translateX(-50%);width:640px;height:640px;border-radius:50%;background:radial-gradient(circle,rgba(232,102,52,.55) 0%,rgba(232,102,52,0) 68%);animation:sunGlow 9s ease-in-out infinite;"></div>
+  <div style="position:absolute;left:50%;top:26%;transform:translateX(-50%);width:420px;height:420px;border-radius:50%;background:#d94b33;"></div>
+
+  <div style="position:absolute;left:0;right:0;top:26%;height:26px;background:rgba(24,12,26,.45);border-radius:40px;animation:drift 34s ease-in-out infinite alternate;"></div>
+  <div style="position:absolute;left:-10%;right:-10%;top:34%;height:34px;background:rgba(24,12,26,.55);border-radius:40px;animation:drift 46s ease-in-out infinite alternate-reverse;"></div>
+  <div style="position:absolute;left:-6%;right:-6%;top:43%;height:20px;background:rgba(24,12,26,.4);border-radius:40px;animation:drift 40s ease-in-out infinite alternate;"></div>
+
+  <div style="position:absolute;left:0;right:0;bottom:26%;height:36%;background:#5b2536;clip-path:polygon(0% 100%,0% 64%,10% 40%,17% 56%,26% 22%,32% 8%,38% 22%,46% 54%,55% 30%,63% 48%,72% 18%,80% 44%,88% 30%,100% 58%,100% 100%);"></div>
+  <div style="position:absolute;left:0;right:0;bottom:20%;height:30%;background:#341829;clip-path:polygon(0% 100%,0% 70%,8% 52%,15% 66%,24% 30%,31% 44%,40% 22%,48% 46%,57% 26%,66% 52%,74% 34%,84% 58%,92% 40%,100% 66%,100% 100%);"></div>
+
+  <div style="position:absolute;left:0;right:0;bottom:0;height:22%;background:#170c14;clip-path:polygon(0% 100%,0% 46%,12% 34%,26% 48%,40% 30%,55% 46%,70% 32%,84% 46%,100% 34%,100% 100%);"></div>
+
+  <div style="position:absolute;left:4%;bottom:6%;width:14px;height:34%;background:#0f070d;border-radius:8px;"></div>
+  <div style="position:absolute;left:8.5%;bottom:6%;width:10px;height:26%;background:#0f070d;border-radius:8px;"></div>
+  <div style="position:absolute;right:5%;bottom:6%;width:12px;height:30%;background:#0f070d;border-radius:8px;"></div>
+  <div style="position:absolute;right:9%;bottom:6%;width:9px;height:22%;background:#0f070d;border-radius:8px;"></div>
+
+  <!-- El arco, montado igual que el de ranura.html: una pieza más del decorado,
+       aquí entre los troncos y los pétalos, que es el sitio que ocupa allí
+       dentro de #escenario. Por eso los pétalos y las brasas le pasan por
+       delante y el velo del final lo tiñe con el resto del paisaje.
+
+       La clave de que se esté quieto es que no tiene alto propio: va clavado
+       de arriba (top) al suelo (bottom:0), así que siempre cruza la pantalla
+       entera y los pilares llegan al borde solos, sin cuentas. Lo de antes
+       —alto en 46%, pilares en vh y una escala inversa a mano— es lo que lo
+       hacía bailar: media caja seguía a la ventana y la otra media no.
+       El tamaño es el mismo de siempre: 660 de ancho y las mismas piezas. -->
+  <div id="torii" style="position:absolute;left:50%;transform:translateX(-50%);top:311px;bottom:0;width:660px;max-width:94%;pointer-events:none;">
+    <div style="position:absolute;left:2%;right:2%;top:0;height:26px;border-radius:14px;background:#1c0f18;"></div>
+    <div style="position:absolute;left:8%;right:8%;top:34px;height:16px;background:#1c0f18;"></div>
+    <!-- arrancan en el borde de arriba, por detrás de los dos travesaños, para
+         que el dintel no quede flotando, y bajan hasta el suelo del decorado.
+         El ancho en tanto por ciento, como en estilos.css: así el hueco de en
+         medio sigue siendo el mismo cuando el arco encoge -->
+    <div style="position:absolute;left:14%;top:0;bottom:0;width:7.5%;background:#1c0f18;"></div>
+    <div style="position:absolute;right:14%;top:0;bottom:0;width:7.5%;background:#1c0f18;"></div>
+    <div style="position:absolute;left:14%;right:14%;top:66px;height:18px;background:#1c0f18;"></div>
+  </div>
+
+  <sc-if value="{{ showPetals }}" hint-placeholder-val="{{ true }}">
+  <div style="position:absolute;inset:0;pointer-events:none;">
+    <div style="position:absolute;left:5%;top:0;width:11px;height:15px;border-radius:70% 0 70% 0;background:#f6b7c6;animation:sakura 14s linear -1s infinite;"></div>
+    <div style="position:absolute;left:13%;top:0;width:8px;height:12px;border-radius:70% 0 70% 0;background:#efa2b8;animation:sakura 18s linear -7s infinite;"></div>
+    <div style="position:absolute;left:21%;top:0;width:12px;height:16px;border-radius:70% 0 70% 0;background:#fbcdd8;animation:sakura 16s linear -12s infinite;"></div>
+    <div style="position:absolute;left:31%;top:0;width:9px;height:13px;border-radius:70% 0 70% 0;background:#f6b7c6;animation:sakura 20s linear -4s infinite;"></div>
+    <div style="position:absolute;left:42%;top:0;width:8px;height:11px;border-radius:70% 0 70% 0;background:#efa2b8;animation:sakura 17s linear -9s infinite;"></div>
+    <div style="position:absolute;left:53%;top:0;width:11px;height:15px;border-radius:70% 0 70% 0;background:#fbcdd8;animation:sakura 21s linear -15s infinite;"></div>
+    <div style="position:absolute;left:63%;top:0;width:9px;height:13px;border-radius:70% 0 70% 0;background:#f6b7c6;animation:sakura 15s linear -3s infinite;"></div>
+    <div style="position:absolute;left:73%;top:0;width:12px;height:16px;border-radius:70% 0 70% 0;background:#efa2b8;animation:sakura 19s linear -11s infinite;"></div>
+    <div style="position:absolute;left:84%;top:0;width:8px;height:12px;border-radius:70% 0 70% 0;background:#fbcdd8;animation:sakura 16s linear -6s infinite;"></div>
+    <div style="position:absolute;left:93%;top:0;width:10px;height:14px;border-radius:70% 0 70% 0;background:#f6b7c6;animation:sakura 22s linear -17s infinite;"></div>
+  </div>
+  </sc-if>
+
+  <div style="position:absolute;left:18%;bottom:12%;width:5px;height:5px;border-radius:50%;background:#f8c46a;box-shadow:0 0 10px #e8863455;animation:emberRise 13s linear -4s infinite;"></div>
+  <div style="position:absolute;left:28%;bottom:8%;width:5px;height:5px;border-radius:50%;background:#f8c46a;box-shadow:0 0 10px #e8863455;animation:emberRise 11s linear -2s infinite;"></div>
+  <div style="position:absolute;left:66%;bottom:8%;width:4px;height:4px;border-radius:50%;background:#f8c46a;box-shadow:0 0 10px #e8863455;animation:emberRise 14s linear -6s infinite;"></div>
+  <div style="position:absolute;left:80%;bottom:10%;width:5px;height:5px;border-radius:50%;background:#f8c46a;box-shadow:0 0 10px #e8863455;animation:emberRise 12s linear -9s infinite;"></div>
+
+  <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(12,6,14,.6) 0%,rgba(12,6,14,.18) 40%,rgba(12,6,14,.62) 100%);pointer-events:none;"></div>
+
+  <!-- Los botones, por delante del arco y ya no dentro de él. Escalan con el
+       menú igual que el arco, así que siguen cayendo entre sus pilares. Las
+       medidas son las que tenían cuando colgaban del torii: 396px de ancho
+       (los 660 menos el 20% de cada lado) y 425px de alto (los 311 del arco
+       más los 114 que había desde su borde). -->
+  <div id="menuBotones" style="position:absolute;left:50%;transform:translateX(-50%);top:425px;width:396px;max-width:80%;display:flex;flex-direction:column;gap:14px;">
+    <button id="btJugar" type="button" class="boton principal">CONTINUAR</button>
+    <button id="btAjustes" type="button" class="boton">AJUSTES</button>
+    <button type="button" class="boton">CRÉDITOS</button>
+  </div>
+
+
+
+  <div id="rotulo" style="position:absolute;left:50%;top:4%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;width:820px;max-width:92%;">
+    <div style="display:flex;align-items:center;gap:18px;margin-bottom:12px;">
+      <div style="width:70px;height:2px;background:linear-gradient(90deg,rgba(232,180,79,0),#e8b44f);"></div>
+      <div style="font-family:'Shippori Mincho B1',serif;font-weight:700;font-size:18px;letter-spacing:.42em;color:#e8b44f;text-indent:.42em;">聖域の道</div>
+      <div style="width:70px;height:2px;background:linear-gradient(90deg,#e8b44f,rgba(232,180,79,0));"></div>
+    </div>
+    <h1 style="margin:0;font-family:'Shippori Mincho B1',serif;font-weight:800;font-size:60px;line-height:.9;letter-spacing:.06em;color:#f7efe1;text-align:center;text-shadow:0 0 40px rgba(217,75,51,.55),5px 6px 0 #a5271c;">SENDAS</h1>
+    <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:12px 0 8px;">
+      <div style="width:8px;height:8px;transform:rotate(45deg);background:#d94b33;"></div>
+      <div style="font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:17px;letter-spacing:.62em;color:#e8b44f;text-indent:.62em;">DEL</div>
+      <div style="width:8px;height:8px;transform:rotate(45deg);background:#d94b33;"></div>
+    </div>
+    <h1 style="margin:0;font-family:'Shippori Mincho B1',serif;font-weight:800;font-size:60px;line-height:.9;letter-spacing:.06em;color:#f7efe1;text-align:center;text-shadow:0 0 40px rgba(217,75,51,.55),5px 6px 0 #a5271c;">SANTUARIO</h1>
+
+  </div>
+
+
+</div>
+
+<!-- el mueble de la consola (Alt+Intro). Solo lo tiene la portada: consola.js
+     se marcha sin decir nada donde no encuentra esta caja -->
+<div id="consola" hidden>
+  <div class="salida"></div>
+  <div class="entrada">
+    <span class="signo">›</span>
+    <input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="orden">
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;showPetals&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}"></script>
+<script src="../js/partidas.js"></script>
+<script src="../js/ajustes.js"></script>
+<script src="../js/consola.js"></script>
+<script src="../js/menu.js"></script>
+</body>
+</html>

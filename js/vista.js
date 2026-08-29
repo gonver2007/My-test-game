@@ -6,7 +6,11 @@
 // ============================================================
 const lienzo = document.getElementById('vista');
 const ctx = lienzo.getContext('2d');
-let AN = lienzo.width, AL = lienzo.height;   // los fija la ventana, ver ajustarLienzo
+// Resolución fija del juego: se ve igual de grande en cualquier pantalla.
+// El tamaño real de ventana solo decide cómo se escala el lienzo (letterbox)
+// y cómo se acomoda el hud, que sí vive en píxeles de pantalla de verdad.
+const ANCHO_JUEGO = 1440, ALTO_JUEGO = 900;
+let AN = lienzo.width, AL = lienzo.height;
 
 const TILE = 44;              // píxeles por casilla
 const ALCANCE_LUZ = 12;       // hasta dónde llega el farol del héroe, en casillas
@@ -2523,7 +2527,8 @@ function pintarHud() {
     // cada cuadro que el velo pasa por delante
     if (J.muerto !== caidaEscrita) {
         caidaEscrita = J.muerto;
-        if (J.muerto) pintarCaida();
+        // al caer se recoge todo lo que hubiera abierto: la caída manda
+        if (J.muerto) { pintarCaida(); alternarMenu(false); }
     }
 
     const aviso = document.getElementById('aviso');
@@ -2675,8 +2680,8 @@ const menuJuego = document.getElementById('menuJuego');
 
 function alternarMenu(abrir) {
     menuJuego.hidden = abrir === undefined ? !menuJuego.hidden : !abrir;
-    // los controles se piden aparte: el menú siempre se abre recogido
-    document.getElementById('mjLista').hidden = true;
+    // los ajustes se piden aparte: el menú siempre se abre recogido
+    ventanaAjustes(false);
     // el héroe no se queda corriendo ni cubriéndose por tener el menú delante
     teclas.clear();
     raton.izq = raton.der = false;
@@ -2684,9 +2689,44 @@ function alternarMenu(abrir) {
 
 document.getElementById('mjCerrar').addEventListener('click', () => alternarMenu(false));
 
-document.getElementById('mjControles').addEventListener('click', () => {
-    const lista = document.getElementById('mjLista');
-    lista.hidden = !lista.hidden;
+// ---------- La ventana de los ajustes ----------
+// ajustes.html asomada encima de la partida en vez de una pantalla aparte:
+// salir del santuario costaría la senda empezada. La página se carga la
+// primera vez que se pide, y no antes.
+const cajaAjustes = document.getElementById('ventanaAjustes');
+const marcoAjustes = document.getElementById('marcoAjustes');
+
+function ventanaAjustes(abrir) {
+    if (abrir && !marcoAjustes.dataset.puesta) {
+        // el ?marco=1 no es adorno: es como ajustes.html distingue esta
+        // ventanita del marco del armazón, donde va entera y con música
+        marcoAjustes.src = 'ajustes.html?marco=1';
+        marcoAjustes.dataset.puesta = '1';
+    }
+    cajaAjustes.hidden = !abrir;
+    if (!abrir) return;
+    // el menú se aparta mientras dura la ventana y vuelve al cerrarla
+    menuJuego.hidden = true;
+    // el héroe no se queda corriendo ni cubriéndose por tener la ventana delante
+    teclas.clear();
+    raton.izq = raton.der = false;
+}
+
+document.getElementById('mjAjustes').addEventListener('click', () => ventanaAjustes(true));
+
+// pinchar en la penumbra de alrededor también la cierra
+cajaAjustes.addEventListener('mousedown', ev => {
+    if (ev.target === cajaAjustes) alternarMenu(true);
+});
+
+// Lo que se toca dentro de la ventana llega por aquí: el marco puede no
+// compartir almacén con la partida (según el navegador, y desde file:// casi
+// nunca), así que sus cambios se anotan y se aplican de este lado también.
+addEventListener('message', ev => {
+    const aviso = ev.data;
+    if (!aviso || aviso.tipo !== 'ajustes') return;
+    if (aviso.cerrar) { alternarMenu(true); return; }
+    Ajustes.guardar({ volumen: aviso.volumen, musica: aviso.musica, hud: aviso.hud });
 });
 
 // no hay nada que anotar al salir: el arma y las esquirlas se guardan solas
@@ -2716,14 +2756,23 @@ function irAlFinal() {
             tiempo: Math.round(J.tiempo)
         }));
     } catch (e) { /* nada: la despedida no depende de esto */ }
-    location.href = 'final.html';
+    volverAlMenu('final.html');
+}
+
+// La partida vive fuera del marco, así que salir de ella es volver al armazón
+// y decirle con qué pantalla abrirse. Se podría ir derecho a html/final.html y
+// dejar que menu.js la mandara para acá, pero entonces se cargaría dos veces, y
+// la despedida lee su recuento una sola vez y lo borra: la primera carga se lo
+// llevaría por delante.
+function volverAlMenu(pantalla) {
+    location.href = '../index.html?ir=' + encodeURIComponent(pantalla);
 }
 
 // ---------- La pantalla de caída ----------
 // Ya no se reinicia en el sitio: continuar deja al héroe otra vez en el zaguán,
 // donde puede rehacerse en la armería antes de volver a entrar.
 document.getElementById('mtContinuar').addEventListener('click', () => {
-    location.href = 'prev.html';
+    volverAlMenu('prev.html');
 });
 
 document.getElementById('mtSalir').addEventListener('click', () => {
@@ -2817,23 +2866,32 @@ function comenzar() {
     flash = 0; sacudida = 0;
 }
 
-// El lienzo ocupa la ventana entera y se rehace cuando esta cambia: las capas
-// que se guardan a medida (viñeta y sombra) se tiran para volver a nacer con
-// el tamaño nuevo, y el ambiente se resiembra para que no quede todo a un lado.
+// El lienzo tiene siempre la misma resolución (ANCHO_JUEGO x ALTO_JUEGO): así
+// se ve igual de grande sin importar la pantalla. Solo se llama una vez, al
+// arrancar; lo que cambia con la ventana es la escala visual, ver abajo.
 function ajustarLienzo() {
-    AN = lienzo.width = Math.max(480, innerWidth);
-    AL = lienzo.height = Math.max(360, innerHeight);
+    AN = lienzo.width = ANCHO_JUEGO;
+    AL = lienzo.height = ALTO_JUEGO;
     capaVineta = null;
     lienzoSombra = null; sctx = null;
     raton.x = AN / 2; raton.y = AL / 2;
     if (petalos.length) prepararAmbiente();
-    // las afueras se pintan a la medida de la ventana: solo hay que rehacer el
-    // lienzo si al agrandarla el margen se queda corto. Al encoger sobra monte
     if (lienzoNivel && margenAfueras() > MARGEN) construirLienzoNivel();
 }
-addEventListener('resize', ajustarLienzo);
+
+// Esto sí reacciona a la ventana: agranda el lienzo lo justo para tapar toda
+// la pantalla sin deformarse (de sobra se recorta un poco de arriba/abajo o
+// de los lados, según la forma de la ventana, en vez de dejar bandas negras).
+// El hud, en cambio, es dom normal y se acomoda solo al tamaño real de la pantalla.
+function ajustarEscalaLienzo() {
+    const escala = Math.max(innerWidth / AN, innerHeight / AL);
+    lienzo.style.width = Math.round(AN * escala) + 'px';
+    lienzo.style.height = Math.round(AL * escala) + 'px';
+}
+addEventListener('resize', ajustarEscalaLienzo);
 
 prepararSprites();
 ajustarLienzo();
+ajustarEscalaLienzo();
 comenzar();
 requestAnimationFrame(bucle);

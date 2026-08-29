@@ -9,10 +9,9 @@
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&amp;family=Zen+Kaku+Gothic+New:wght@500;700;900&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/estilos.css">
 </head>
-<body class="menu santuario registros" data-siguiente="prev.html" data-anterior="portada.html" data-musica="si">
+<body class="menu santuario preferencias" data-anterior="portada.html" data-musica="si">
 
-<!-- el mismo ocaso de la portada, y aquí también el torii: en esta pantalla
-     no sujeta nada, solo enmarca desde el fondo. Es decorado y nada más,
+<!-- el mismo ocaso de la portada y de las ranuras: decorado y nada más,
      así que ni se le pregunta al ratón -->
 <div id="escenario" aria-hidden="true">
     <div class="halo"></div>
@@ -46,27 +45,22 @@
 </div>
 
 <div id="portada">
-    <div class="rotulo"><span>記録の間</span></div>
-    <h1>ELIGE</h1>
-    <div class="enlace"><span>TU</span></div>
-    <h1>RANURA</h1>
-    <p class="lema">Cinco senderos: cada uno recuerda el suyo.</p>
+    <div class="rotulo"><span>調べの間</span></div>
+    <h1>AJUSTES</h1>
+    <p class="lema">Lo que se oye, lo que se ve y lo que hace cada tecla.</p>
 
-    <!-- la lista la rellena partidas.js al cargar -->
-    <div id="ranuras" class="panel ranuras"></div>
+    <!-- la hoja la rellena ajustes.js al cargar -->
+    <div id="ajustes" class="panel ajustes abierto"></div>
 
     <nav id="botones">
         <button id="btVolver" type="button" class="boton">VOLVER</button>
     </nav>
 </div>
 
-<!-- la caja de música ya no está aquí: la sujeta el armazón (index.html), que
-     no se recarga al cambiar de pantalla. Esta solo dice, en su data-musica de
-     arriba, que en ella el tema suena -->
+<!-- sin caja de música propia: la sujeta el armazón (index.html) cuando esta
+     pantalla se abre entera, y dentro de la partida no suena en absoluto,
+     que allí la música la pone el juego -->
 
-<script src="../js/armeria.js"></script>
-<script src="../js/personaje.js"></script>
-<script src="../js/partidas.js"></script>
 <script src="../js/ajustes.js"></script>
 <script src="../js/menu.js"></script>
 </body>

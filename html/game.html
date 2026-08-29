@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8">
 <title>Sendas del Santuario</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&amp;family=Zen+Kaku+Gothic+New:wght@500;700;900&amp;display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/estilos.css">
 </head>
 <body class="juego">
@@ -40,23 +43,20 @@
 
     <!-- Esc lo abre y lo cierra; mientras tanto la partida sigue corriendo -->
     <div id="menuJuego" hidden>
-        <button id="mjCerrar" class="boton">SEGUIR JUGANDO</button>
-        <button id="mjControles" class="boton">CONTROLES</button>
-        <ul id="mjLista" class="controles" hidden>
-            <li><b>W A S D</b> Moverte</li>
-            <li><b>Shift</b> Correr</li>
-            <li><b>Ratón</b> Apuntar</li>
-            <li><b>Clic izq</b> Atacar</li>
-            <li><b>Clic der</b> Cubrirte</li>
-            <li><b>Espacio</b> Impulso</li>
-            <li><b>E</b> Cruzar la puerta</li>
-            <li><b>Esc</b> Este menú</li>
-        </ul>
+        <button id="mjCerrar" class="boton principal">SEGUIR JUGANDO</button>
+        <button id="mjAjustes" class="boton">AJUSTES</button>
         <!-- solo se enseña en las ranuras con «cheat on»; lo destapa consola.js -->
-        <button id="mjConsola" class="boton" hidden>CONSOLA</button>
         <button id="mjInicio" class="boton">VOLVER AL INICIO</button>
         <button id="mjSalir" class="boton">CERRAR EL JUEGO</button>
         <p id="mjNota" hidden>El navegador no deja cerrar esta pestaña: ciérrala tú.</p>
+    </div>
+
+    <!-- Los ajustes no son una pantalla aparte: se asoman aquí encima, en su
+         propia ventana, y por el borde se sigue viendo la senda. La página es
+         la misma ajustes.html que abre la portada, cargada dentro la primera
+         vez que se pide; ella sola se da cuenta de que va enmarcada. -->
+    <div id="ventanaAjustes" hidden>
+        <iframe id="marcoAjustes" title="Ajustes" src="about:blank"></iframe>
     </div>
 
     <!-- el mismo mueble de la portada. Aquí Alt+Intro y el botón del menú solo
@@ -73,6 +73,7 @@
 <script src="../js/armeria.js"></script>
 <script src="../js/personaje.js"></script>
 <script src="../js/partidas.js"></script>
+<script src="../js/ajustes.js"></script>
 <!-- las comarcas se declaran antes que nada: la mazmorra y la vista las leen -->
 <script src="../js/biomas.js"></script>
 <script src="../js/mazmorra.js"></script>

@@ -163,7 +163,12 @@ const Partidas = {
     function entrar(i) {
         if (!Partidas.ranura(i)) Partidas.crear(i);
         else Partidas.activar(i);
-        location.href = document.body.dataset.siguiente || 'game.html';
+        const destino = document.body.dataset.siguiente || 'game.html';
+        // irA lo pone menu.js, que se carga después de este archivo pero mucho
+        // antes de que nadie pulse. Es quien sabe sacar el marco a pantalla
+        // completa si el destino resulta ser la partida
+        if (typeof irA === 'function') irA(destino);
+        else location.href = destino;
     }
 
     caja.addEventListener('click', e => {
