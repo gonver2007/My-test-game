@@ -52,9 +52,21 @@
             <li><b>E</b> Cruzar la puerta</li>
             <li><b>Esc</b> Este menú</li>
         </ul>
+        <!-- solo se enseña en las ranuras con «cheat on»; lo destapa consola.js -->
+        <button id="mjConsola" class="boton" hidden>CONSOLA</button>
         <button id="mjInicio" class="boton">VOLVER AL INICIO</button>
         <button id="mjSalir" class="boton">CERRAR EL JUEGO</button>
         <p id="mjNota" hidden>El navegador no deja cerrar esta pestaña: ciérrala tú.</p>
+    </div>
+
+    <!-- el mismo mueble de la portada. Aquí Alt+Intro y el botón del menú solo
+         lo abren si la ranura trae encendido el permiso -->
+    <div id="consola" hidden>
+        <div class="salida"></div>
+        <div class="entrada">
+            <span class="signo">›</span>
+            <input type="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="orden">
+        </div>
     </div>
 </div>
 
@@ -64,6 +76,9 @@
 <!-- las comarcas se declaran antes que nada: la mazmorra y la vista las leen -->
 <script src="../js/biomas.js"></script>
 <script src="../js/mazmorra.js"></script>
+<!-- antes que la vista: así su Esc se atiende primero y cierra la consola
+     sin abrir además el menú -->
+<script src="../js/consola.js"></script>
 <script src="../js/vista.js"></script>
 </body>
 </html>

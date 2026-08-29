@@ -515,7 +515,8 @@ body.menu::before { z-index: -1; }
     box-shadow: none;
 }
 
-/* ---------- Consola de la portada (Alt+Intro) ---------- */
+/* ---------- Consola (Alt+Intro) ---------- */
+/* la de la portada y, en las ranuras con «cheat on», la de la partida */
 /* fija al rincón de abajo a la izquierda, por encima de todo lo demás */
 #consola {
     position: fixed; left: 16px; bottom: 16px; z-index: 20;
@@ -1150,11 +1151,13 @@ body.santuario.registros #botones .boton {
     body.registros .ranuras .lista { grid-template-columns: 1fr; }
 }
 
-/* ---------- El sello de la inmortalidad ---------- */
-/* lo estampa la consola con «god»: un hanko de tinta roja en la esquina de
-   la tablilla, para saber quién es inmortal sin entrar en la partida */
+/* ---------- Los sellos de la consola ---------- */
+/* hankos en las esquinas de arriba de la tablilla, para saber lo que lleva
+   encendido sin entrar en la partida: cada uno en la suya, así que no se
+   estorban cuando están los dos */
+/* el rojo lo estampa «god»: la inmortalidad, arriba a la derecha */
 .ranura .sello {
-    position: absolute; right: 8px; top: 8px;
+    position: absolute; right: 8px; top: 8px; z-index: 2;
     width: 27px; height: 27px;
     display: flex; align-items: center; justify-content: center;
     font-family: "Shippori Mincho B1", "Yu Mincho", serif;
@@ -1167,6 +1170,17 @@ body.santuario.registros #botones .boton {
     box-shadow: 0 0 14px rgba(217, 75, 51, .55);
     animation: selloVivo 2.6s ease-in-out infinite;
 }
+/* el de jade lo estampa «cheat on»: la consola abierta dentro de la partida,
+   en la esquina de enfrente */
+.ranura .sello.consola {
+    left: 8px; right: auto;
+    background: var(--jade, #2f7a76);
+    border-color: #7fd6c4;
+    box-shadow: 0 0 14px rgba(127, 214, 196, .5);
+    /* al revés que el otro: dos hankos puestos a mano no caen igual */
+    transform: rotate(6deg);
+    animation-name: selloJade;
+}
 /* la tablilla sellada arde un poco: el oro sube y el fondo toma brasa */
 body.santuario .ranura.inmortal {
     border-color: rgba(240, 201, 165, .75);
@@ -1177,6 +1191,10 @@ body.santuario .ranura.inmortal h3 { color: #f0c9a5; }
 @keyframes selloVivo {
     0%, 100% { box-shadow: 0 0 12px rgba(217, 75, 51, .45); }
     50%      { box-shadow: 0 0 22px rgba(217, 75, 51, .85); }
+}
+@keyframes selloJade {
+    0%, 100% { box-shadow: 0 0 12px rgba(127, 214, 196, .40); }
+    50%      { box-shadow: 0 0 22px rgba(127, 214, 196, .80); }
 }
 
 /* quien pide quietud se queda con el sello, pero sin latido */

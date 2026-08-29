@@ -21,6 +21,7 @@ function partidaNueva() {
         esquirlas: 0,
         lapis: 0,
         god: false,             // inmortalidad, que solo enciende la consola
+        cheat: false,           // el permiso de abrir la consola dentro de la partida
         hondo: 1,               // la senda más honda a la que ha llegado esta ranura
         completado: false,      // si esta ranura llegó a cruzar la última puerta
         creada: Date.now(),
@@ -132,11 +133,12 @@ const Partidas = {
             </div>`;
 
         const confirmando = porBorrar === i;
-        // la inmortalidad que enciende la consola se anuncia con su sello, para
-        // que no haya que entrar en la partida para saber quién la lleva
-        const sello = p.god
-            ? '<span class="sello" title="Inmortal">神</span>'
-            : '';
+        // lo que la consola ha dejado encendido se anuncia con su sello, para
+        // que no haya que entrar en la partida para saber quién lo lleva: la
+        // inmortalidad en rojo a la derecha, la consola en jade a la izquierda
+        const sello =
+            (p.cheat ? '<span class="sello consola" title="Consola en la partida">令</span>' : '') +
+            (p.god ? '<span class="sello" title="Inmortal">神</span>' : '');
         return `
             <div class="ranura llena${p.god ? ' inmortal' : ''}" data-ranura="${i}">
                 ${sello}

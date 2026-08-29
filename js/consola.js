@@ -1,8 +1,9 @@
 /* ============================================================
 consola.js - la consola de la portada (Alt+Intro)
 Aquí solo está el mueble: la caja, el historial y quien reparte lo
-que se teclea. Las órdenes se añaden a mano en ORDENES. Solo vive en
-index.html, y nada de lo que hace sale de este navegador.
+que se teclea. Las órdenes se añaden a mano en ORDENES. Vive en la
+portada y, con «cheat on», también en la partida; nada de lo que hace
+sale de este navegador.
    ============================================================ */
 'use strict';
 
@@ -14,6 +15,10 @@ index.html, y nada de lo que hace sale de este navegador.
     const linea = caja.querySelector('input');
     const historial = [];
     let puesto = 0;            // por dónde va el paseo con las flechas
+
+    // la misma consola sirve en los dos sitios, pero no hace lo mismo en cada
+    // uno: hay órdenes que solo tienen sentido con una partida delante
+    const enPartida = document.body.classList.contains('juego');
 
     // ---------- Escribir ----------
     // clase: sin nada el color de siempre, 'eco' apagado, 'bien' jade, 'mal' rojo
@@ -79,8 +84,9 @@ index.html, y nada de lo que hace sale de este navegador.
         if (!servidas) decir('Ninguna de esas ranuras tiene partida.', 'mal');
     }
 
-    // la inmortalidad se apunta en la ranura; la partida la lee al empezar
-    function inmortalidad(ranuras, si) {
+    // un sí o un no apuntado en las ranuras que se digan; el rótulo cuenta en
+    // voz alta cómo queda cada una
+    function apuntar(ranuras, campo, si, rotulo) {
         const cuales = elegirRanuras(ranuras);
         if (!cuales.length)
             return decir('Ranuras del 1 al 5 entre comillas, o todas.', 'mal');
@@ -92,11 +98,50 @@ index.html, y nada de lo que hace sale de este navegador.
                 if (!aTodas) decir(`Ranura ${i + 1}: vacía.`, 'mal');
                 continue;
             }
-            Partidas.guardarEn(i, { god: si });
-            decir(`Ranura ${i + 1}: ${si ? 'inmortal' : 'de carne y hueso'}.`, 'bien');
+            Partidas.guardarEn(i, { [campo]: si });
+            decir(`Ranura ${i + 1}: ${rotulo(si)}.`, 'bien');
             servidas++;
         }
         if (!servidas) decir('Ninguna de esas ranuras tiene partida.', 'mal');
+    }
+
+    // la inmortalidad se apunta en la ranura; la partida la lee al empezar
+    function inmortalidad(ranuras, si) {
+        apuntar(ranuras, 'god', si,
+            si => si ? 'inmortal' : 'de carne y hueso');
+    }
+
+    // el permiso de consola también vive en la ranura: game.html lo mira al
+    // cargar y, si está encendido, deja abrirla desde el menú de Esc
+    function permisoConsola(ranuras, si) {
+        apuntar(ranuras, 'cheat', si,
+            si => si ? 'con consola en la partida' : 'sin consola en la partida');
+    }
+
+    // Saltar de senda sin cruzar puertas. Esto no toca ninguna ranura: pasa
+    // en la partida que se está jugando, así que solo vale dentro de
+    // game.html y con el camino ya en pie
+    function teletransportar(aDonde) {
+        if (!enPartida)
+            return decir('«tp» solo vale dentro de la partida.', 'mal');
+        if (typeof J === 'undefined' || typeof nuevoNivel !== 'function'
+            || typeof construirLienzoNivel !== 'function')
+            return decir('El camino todavía no está trazado.', 'mal');
+        if (J.muerto)
+            return decir('Has caído: desde aquí no se va a ninguna senda.', 'mal');
+
+        // el camino llega hasta donde diga biomas.js; sin él, las cien de siempre
+        const tope = (typeof Biomas !== 'undefined') ? Biomas.FINAL : 100;
+        const n = parseInt(aDonde, 10);
+        if (!(n >= 1 && n <= tope))
+            return decir(`Una senda del 1 al ${tope}. Así: tp 7`, 'mal');
+
+        J.nivel = n;
+        J.completado = false;       // se salta a una senda, no al final del camino
+        nuevoNivel();               // el recinto nuevo, con el héroe en su entrada
+        construirLienzoNivel();     // y la vista repintada con la comarca que toque
+        const comarca = (typeof Biomas !== 'undefined') ? Biomas.nombre(n) : 'santuario';
+        decir(`Senda ${n}: ${comarca}.`, 'bien');
     }
 
     // cada orden con su forma de escribirla y lo que hace: es la lista que
@@ -106,6 +151,9 @@ index.html, y nada de lo que hace sale de este navegador.
         ['ungive <moneda> <ranuras> <cuántas>', 'quita jade o lapislázuli de esas ranuras'],
         ['god <ranuras>',                       'el personaje de esas ranuras se vuelve inmortal'],
         ['ungod <ranuras>',                     'les devuelve la carne y el hueso'],
+        ['cheat on <ranuras>',                  'deja abrir esta consola desde el menú de Esc de la partida'],
+        ['cheat of <ranuras>',                  'vuelve a cerrarles la consola dentro de la partida'],
+        ['tp <senda>',                          'salta a esa senda; solo dentro de la partida'],
         ['gon info ver',                        'recita esta misma lista'],
         ['clear',                               'borra el chat de la consola y el historial']
     ];
@@ -147,7 +195,19 @@ index.html, y nada de lo que hace sale de este navegador.
         god(ranuras) { inmortalidad(ranuras, true); },
 
         // ungod "1,3"   ·   ungod todas
-        ungod(ranuras) { inmortalidad(ranuras, false); }
+        ungod(ranuras) { inmortalidad(ranuras, false); },
+
+        // cheat on "1,3"   ·   cheat of todas
+        // «of» es como está escrito en las notas; «off» también vale
+        cheat(estado, ranuras) {
+            const dicho = (estado || '').toLowerCase();
+            if (dicho === 'on') return permisoConsola(ranuras, true);
+            if (dicho === 'of' || dicho === 'off') return permisoConsola(ranuras, false);
+            decir('Así: cheat on "1,3"  ·  cheat of todas', 'mal');
+        },
+
+        // tp 7 — la senda a la que se salta, del 1 al último peldaño del camino
+        tp(aDonde) { teletransportar(aDonde); }
     };
 
     // se parte por espacios, salvo dentro de comillas: así "1, 3" llega de una
@@ -168,7 +228,15 @@ index.html, y nada de lo que hace sale de este navegador.
     }
 
     // ---------- Abrir y cerrar ----------
+    // En la portada la consola es de la casa. Dentro de la partida solo se
+    // abre si la ranura lleva el permiso que enciende «cheat on»
+    function permitida() {
+        if (!enPartida) return true;
+        return !!(typeof Partidas !== 'undefined' && Partidas.actual().cheat);
+    }
+
     function abrir(si) {
+        if (!permitida()) return;
         caja.hidden = si === undefined ? !caja.hidden : !si;
         if (!caja.hidden) linea.focus();
         else linea.blur();
@@ -176,8 +244,20 @@ index.html, y nada de lo que hace sale de este navegador.
 
     addEventListener('keydown', e => {
         if (e.altKey && e.key === 'Enter') { e.preventDefault(); abrir(); return; }
-        if (e.key === 'Escape' && !caja.hidden) abrir(false);
+        if (e.key === 'Escape' && !caja.hidden) {
+            // el Esc que cierra la consola no le sirve además al menú del juego
+            e.stopImmediatePropagation();
+            abrir(false);
+        }
     });
+
+    // el botón del menú de Esc: solo lo tiene game.html, y solo se enseña a
+    // quien haya encendido el permiso desde la portada
+    const botonMenu = document.getElementById('mjConsola');
+    if (botonMenu && permitida()) {
+        botonMenu.hidden = false;
+        botonMenu.addEventListener('click', () => abrir(true));
+    }
 
     linea.addEventListener('keydown', e => {
         if (e.key === 'Enter' && !e.altKey) {

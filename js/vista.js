@@ -2731,6 +2731,8 @@ document.getElementById('mtSalir').addEventListener('click', () => {
 });
 
 addEventListener('keydown', ev => {
+    // mientras se teclea en la consola las letras son suyas, no del héroe
+    if (ev.target.tagName === 'INPUT') return;
     const k = ev.key.toLowerCase();
     if (k === 'escape') { alternarMenu(); return; }
     if (k === 'e') {
