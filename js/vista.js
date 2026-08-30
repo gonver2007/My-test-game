@@ -2708,12 +2708,16 @@ function pintarHud() {
     jadeMostrado = contador('jade', 'jadeCifra', J.esquirlas, jadeMostrado);
     orbesMostrado = contador('orbes', 'orbesCifra', J.orbes, orbesMostrado);
 
-    // el rótulo solo se reescribe cuando dice algo distinto: nombre de la
-    // comarca incluido, que sale de biomas.js y no de aquí. La cuenta de
-    // enemigos ya no va aquí -tiene su tablilla en el centro- ni el arma,
-    // que se elige antes de entrar y no cambia en toda la senda.
-    const rotulo = `<span class="senda">Senda ${J.nivel}</span>`
-                 + `<span class="comarca">${nombreDelBioma()}</span>`;
+    // El rótulo solo se reescribe cuando dice algo distinto. Lleva tres cosas:
+    // el emblema de la comarca a la izquierda, en el hueco que dejaban las dos
+    // líneas de texto, y a la derecha el nombre arriba en pequeño y la senda
+    // debajo en grande. Todo lo de la comarca -dibujo, nombre y color- sale de
+    // su ficha en biomas.js y de ningún otro sitio.
+    const rotulo = `<span class="emblema" style="color:${tinteDelBioma()}">${emblemaDelBioma()}</span>`
+                 + `<span class="letras">`
+                 +   `<span class="comarca">${nombreDelBioma()}</span>`
+                 +   `<span class="senda">Senda ${String(J.nivel).padStart(3, "0")}</span>`
+                 + `</span>`;
     if (rotulo !== rotuloNivel) {
         rotuloNivel = rotulo;
         document.getElementById('estadoNivel').innerHTML = rotulo;

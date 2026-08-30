@@ -24,6 +24,7 @@ const BIOMAS = [
     {
         id: 'catacumbas',
         nombre: 'Catacumbas',
+        emblema: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.4 20.4V10.4a7.6 7.6 0 0 1 15.2 0v10Z" fill="#000" opacity=".45"/><path d="M4.4 20.4V10.4a7.6 7.6 0 0 1 15.2 0v10" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/><path d="M12 4.2v16.2M8.4 5.6v14.8M15.6 5.6v14.8M5.4 13.6h13.2" fill="none" stroke="currentColor" stroke-width="1.6"/><rect x="2.6" y="20.2" width="18.8" height="2.6" rx=".9"/></svg>',
         lore: '',
         planta: { salas: [2, 3], ancho: [13, 22], alto: [8, 12], pasillo: 3, chaflan: 0.7, atajos: 1 },
         piso: 'losa',
@@ -56,6 +57,7 @@ const BIOMAS = [
     {
         id: 'alcantarillas',
         nombre: 'Alcantarillas',
+        emblema: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="8.4" opacity=".3"/><path d="M3.6 12h16.8" stroke="currentColor" stroke-width="2" fill="none"/><path d="M5 8h14M5 16h14" stroke="currentColor" stroke-width="1.7" fill="none"/><circle cx="12" cy="12" r="8.4" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>',
         lore: '',
         planta: { salas: [3, 4], ancho: [11, 18], alto: [6, 9], pasillo: 4, chaflan: 0.15, atajos: 2 },
         piso: 'ladrillo',
@@ -90,6 +92,7 @@ const BIOMAS = [
     {
         id: 'bambu',
         nombre: 'Bosque de bambú',
+        emblema: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="9.4" y="2" width="4.4" height="20" rx="1.2"/><rect x="8.8" y="7.4" width="5.6" height="1.5" fill="#000" opacity=".45"/><rect x="8.8" y="13.4" width="5.6" height="1.5" fill="#000" opacity=".45"/><path d="M13.8 6.6c3.6-.6 5.8.4 6.6 2.2-2.8 1-5.2.4-6.6-2.2Z"/><path d="M9.4 12.2c-3.4-.8-5.4.2-6.2 2-2.8 1.2 4.8.8 6.2-2Z" opacity=".8"/></svg>',
         lore: '',
         planta: { salas: [2, 3], ancho: [18, 28], alto: [10, 13], pasillo: 5, chaflan: 0.85, atajos: 2 },
         piso: 'tierra',
@@ -124,6 +127,7 @@ const BIOMAS = [
     {
         id: 'patios',
         nombre: 'Patios exteriores',
+        emblema: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1.6 20 6H4Z"/><rect x="7.4" y="7.2" width="9.2" height="6" rx="1"/><rect x="9.4" y="8.8" width="5.2" height="3" fill="#000" opacity=".5"/><rect x="10.4" y="13.6" width="3.2" height="4.4"/><path d="M6.6 18.4h10.8L19 22H5Z"/></svg>',
         lore: '',
         planta: { salas: [3, 4], ancho: [14, 22], alto: [7, 10], pasillo: 4, chaflan: 0.4, atajos: 2 },
         piso: 'grava',
@@ -158,6 +162,7 @@ const BIOMAS = [
     {
         id: 'mansion',
         nombre: 'Mansión señorial',
+        emblema: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 3 22.4 11H1.6Z"/><rect x="2.6" y="10.4" width="18.8" height="2.2" rx="1"/><rect x="5" y="13.4" width="14" height="8.2" rx=".8" opacity=".75"/><rect x="10.6" y="16.4" width="2.8" height="5.2" fill="#000" opacity=".45"/></svg>',
         lore: '',
         planta: { salas: [3, 4], ancho: [12, 20], alto: [6, 9], pasillo: 3, chaflan: 0.1, atajos: 1 },
         piso: 'tatami',
@@ -190,6 +195,7 @@ const BIOMAS = [
     {
         id: 'plaza',
         nombre: 'Plaza abandonada',
+        emblema: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="2.4" y="6.6" width="19.2" height="12.6" rx="1.2" opacity=".7"/><path d="M9.6 6.6 8 19.2M15 6.6l1.4 12.6M2.4 12.8h19.2" stroke="#000" stroke-opacity=".45" stroke-width="1.5" fill="none"/><path d="M11.2 2.4h1.8l-.5 3.6h-.8Z"/><circle cx="12.1" cy="2" r="1.5"/></svg>',
         lore: '',
         planta: { salas: [2, 3], ancho: [20, 30], alto: [11, 13], pasillo: 5, chaflan: 0.3, atajos: 2 },
         piso: 'adoquin',
@@ -222,6 +228,7 @@ const BIOMAS = [
     {
         id: 'foso',
         nombre: 'Foso del castillo',
+        emblema: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 9.6h20v2.6H2Z"/><path d="M6.4 12.2a5.6 5.6 0 0 1 11.2 0Z" fill="#000" opacity=".4"/><rect x="4.6" y="6.6" width="2.6" height="3.4"/><rect x="16.8" y="6.6" width="2.6" height="3.4"/><path d="M2 16.4c2.4 0 2.4 1.8 5 1.8s2.6-1.8 5-1.8 2.4 1.8 5 1.8 2.6-1.8 5-1.8v2.4c-2.4 0-2.4 1.8-5 1.8s-2.6-1.8-5-1.8-2.4 1.8-5 1.8-2.6-1.8-5-1.8Z" opacity=".8"/></svg>',
         lore: '',
         planta: { salas: [3, 4], ancho: [10, 16], alto: [6, 9], pasillo: 3, chaflan: 0.05, atajos: 0 },
         piso: 'tablon',
@@ -253,6 +260,7 @@ const BIOMAS = [
     {
         id: 'torreones',
         nombre: 'Torreones',
+        emblema: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M4.6 5.2h2.6v2h2.5v-2h2.6v2h2.5v-2h2.6v4.4H4.6Z"/><rect x="5.8" y="9.2" width="12.4" height="12.6" rx=".8" opacity=".82"/><path d="M10.6 13.4h2.8v3.2h-2.8Z" fill="#000" opacity=".45"/><path d="M10.2 18h3.6v3.8h-3.6Z" fill="#000" opacity=".35"/></svg>',
         lore: '',
         planta: { salas: [3, 4], ancho: [12, 18], alto: [7, 10], pasillo: 3, chaflan: 0.5, atajos: 1 },
         piso: 'silleria',
@@ -285,6 +293,7 @@ const BIOMAS = [
     {
         id: 'torii',
         nombre: 'Senda de torii',
+        emblema: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2 4.4c3.6-1.2 16.4-1.2 20 0l-.5 2.2c-3.4-1-15.6-1-19 0Z"/><rect x="3.4" y="7.4" width="17.2" height="2.2" rx=".7"/><path d="M6.2 9.6h3.1l-1 12.2H6.6Z"/><path d="M14.7 9.6h3.1l.9 12.2h-2.7Z"/><rect x="8.4" y="12.4" width="7.2" height="1.9" rx=".6" opacity=".85"/></svg>',
         lore: '',
         planta: { salas: [4, 4], ancho: [10, 15], alto: [5, 7], pasillo: 4, chaflan: 0.2, atajos: 0 },
         piso: 'escalones',
@@ -319,6 +328,7 @@ const BIOMAS = [
     {
         id: 'santuario',
         nombre: 'Santuario',
+        emblema: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="12" r="5.2"/><path d="M12 .8l1.5 3.4h-3ZM12 23.2l-1.5-3.4h3ZM.8 12l3.4-1.5v3ZM23.2 12l-3.4 1.5v-3Z"/><path d="M4.2 4.2 7.5 5.4 5.4 7.5ZM19.8 19.8 16.5 18.6l2.1-2.1ZM4.2 19.8 5.4 16.5l2.1 2.1ZM19.8 4.2 18.6 7.5l-2.1-2.1Z" opacity=".8"/><circle cx="12" cy="12" r="2.4" fill="#000" opacity=".35"/></svg>',
         lore: '',
         planta: { salas: [2, 3], ancho: [20, 28], alto: [11, 13], pasillo: 4, chaflan: 0.9, atajos: 2 },
         piso: 'sagrado',
@@ -366,6 +376,18 @@ const Biomas = {
     deNivel(nivel) { return BIOMAS[Biomas.indice(nivel)]; },
 
     nombre(nivel) { return Biomas.deNivel(nivel).nombre; },
+
+    // el dibujo con que firma la comarca. Va en currentColor: lo tiñe quien
+    // lo enseñe, y el HUD lo hace con el tinte de esta misma ficha
+    emblema(nivel) { return Biomas.deNivel(nivel).emblema || ""; },
+
+    // ese tinte, que es el color con que la comarca se reconoce de un vistazo
+    // con red: una ficha nueva a la que se le olvide el tinte no debe tumbar
+    // el marcador entero, solo salir del oro de siempre
+    tinte(nivel) {
+        const p = Biomas.deNivel(nivel).paleta;
+        return (p && p.tinte) || "#e8b44f";
+    },
 
     // en qué peldaño del bioma se anda: 1 el primero, TRAMO el último
     peldano(nivel) { return ((Math.max(1, nivel) - 1) % TRAMO_BIOMA) + 1; },

@@ -344,6 +344,18 @@ function nombreDelBioma() {
     return (typeof Biomas !== 'undefined') ? Biomas.nombre(J.nivel) : 'santuario';
 }
 
+// Y las otras dos señas de la comarca, que el marcador enseña juntas: el
+// emblema con que firma y el tinte con que se pinta. Igual que el nombre,
+// salen de su ficha; sin biomas.js cargado no hay dibujo y el color es el
+// oro de la casa, que es lo que ya usa el resto del marcador.
+function emblemaDelBioma() {
+    return (typeof Biomas !== 'undefined') ? Biomas.emblema(J.nivel) : '';
+}
+
+function tinteDelBioma() {
+    return (typeof Biomas !== 'undefined') ? Biomas.tinte(J.nivel) : '#e8b44f';
+}
+
 // ============================================================
 //  Trampas: hierro que sube y baja del suelo por su cuenta. Solo las
 //  planta el bioma que las tiene declaradas en su ficha; los demás

@@ -4,8 +4,8 @@ cuando escribes clear borra todo el chat de la consola y el historial
 cuando escribes cheat on {la ranura que sea "1,2,3,4,5"o todas como te lo e puesto hay entre comillas y con comas} activa el poder usar la consola desde en menu de esc en game.html
 cuando escribes cheat of {la ranura que sea "1,2,3,4,5"o todas como te lo e puesto hay entre comillas y con comas} desactiva el poder usar la consola desde en menu de esc en game.html 
 
-cuando escribes give lapis {la ranura que sea "1,2,3,4,5"o todas como te lo e puesto hay entre comillas y con comas} cualquir numero te añade el nuemero de esqurilas de lapislázuli que le pongas a la ranura que le digas, si pones todas te lo añade a todas las ranuras de lapiz que pongas
-cuando escribes ungive lapis {la ranura que sea "1,2,3,4,5"o todas como te lo e puesto hay entre comillas y con comas} cualquir numero te elimina el nuemero de esqurilas de lapislázuli que le pongas a la ranura que le digas, si pones todas te lo elimina a todas las ranuras de lapiz que pongas
+cuando escribes give orbes {la ranura que sea "1,2,3,4,5"o todas como te lo e puesto hay entre comillas y con comas} cualquir numero te añade el nuemero de orbes azules que le pongas a la ranura que le digas, si pones todas te lo añade a todas las ranuras de orbes que pongas
+cuando escribes ungive orbes {la ranura que sea "1,2,3,4,5"o todas como te lo e puesto hay entre comillas y con comas} cualquir numero te elimina el nuemero de orbes azules que le pongas a la ranura que le digas, si pones todas te lo elimina a todas las ranuras de orbes que pongas
 
 cuando escribes give jade {la ranura que sea "1,2,3,4,5"o todas como te lo e puesto hay entre comillas y con comas} cualquir numero te añade el nuemero de esqurilas de jade que le pongas a la ranura que le digas, si pones todas te lo añade a todas las ranuras de jade que pongas
 cuando escribes ungive jade {la ranura que sea "1,2,3,4,5"o todas como te lo e puesto hay entre comillas y con comas} cualquir numero te elimina el nuemero de esqurilas de jade que le pongas a la ranura que le digas, si pones todas te lo elimina a todas las ranuras de jade que pongas

@@ -7,16 +7,23 @@ partida sino de quien juega: viven aparte y valen para las cinco.
 'use strict';
 
 const CLAVE_AJUSTES = 'sendas.ajustes';
-
 // el hud se mide en tantos por ciento de su tamaño de siempre
 const HUD_MIN = 60, HUD_MAX = 160;
 
+// Los valores de casa, los que la regla enseña con una muesca para saber de
+// dónde se partió. El del hud no es el 100: el marcador se dibujó pensando en
+// pantallas grandes y a tamaño exacto se queda corto, así que va un punto
+// crecido. El maestro va a media asta a propósito, para dejar sitio a subirlo
+// tanto como a bajarlo.
+const HUD_DE_SERIE = 110;
+const VOLUMEN_DE_SERIE = 50;
+
 function ajustesNuevos() {
     return {
-        volumen: 50,    // 0..100, el maestro: de él cuelga todo lo que suena
+        volumen: VOLUMEN_DE_SERIE,  // 0..100, el maestro: de él cuelga todo lo que suena
         musica: 70,     // 0..100, y este solo la música, colgando del maestro
         efectos: 80,    // 0..100, y este los golpes y los orbes, también colgando
-        hud: 100        // 60..160, el tamaño del marcador dentro de la partida
+        hud: HUD_DE_SERIE  // 60..160, el tamaño del marcador dentro de la partida
     };
 }
 
@@ -128,9 +135,11 @@ const CONTROLES = [
 
 // Las reglas de cada sección. Tres columnas, en este orden: pantalla, sonido
 // y controles al final, que es lo que menos hace falta tocar.
+// Cada una: [clave, nombre, mínimo, máximo, paso] y, opcional, el valor que
+// lleva muesca en el riel — el de casa, para saber de dónde se partió.
 const SECCIONES = [
-    ['GENERAL', [['hud', 'Tamaño del HUD', HUD_MIN, HUD_MAX, 5]]],
-    ['SONIDO',   [['volumen', 'Volumen maestro', 0, 100, 1],
+    ['GENERAL', [['hud', 'Tamaño del HUD', HUD_MIN, HUD_MAX, 5, HUD_DE_SERIE]]],
+    ['SONIDO',   [['volumen', 'Volumen maestro', 0, 100, 1, VOLUMEN_DE_SERIE],
                   ['musica', 'Música', 0, 100, 1],
                   ['efectos', 'Efectos', 0, 100, 1]]]
 ];
@@ -141,16 +150,25 @@ const SECCIONES = [
 
     const a = Ajustes.leer();
 
-    // la cifra va antes que el riel a propósito: la regla es una rejilla de
+    // La cifra va antes que el riel a propósito: la regla es una rejilla de
     // dos columnas y el riel las cruza enteras por debajo, así que si la cifra
-    // fuese la última caería a un renglón suyo en vez de junto al nombre
-    const regla = ([clave, nombre, min, max, paso]) => `
-        <div class="regla">
+    // fuese la última caería a un renglón suyo en vez de junto al nombre.
+    const regla = ([clave, nombre, min, max, paso, muesca]) => {
+        // La muesca se le da a la hoja de estilo como fracción de 0 a 1 del
+        // recorrido del riel. Así el css la coloca sin saber nada de mínimos
+        // ni de máximos, y vale igual para el hud que para lo que se marque
+        // mañana, tenga el tramo que tenga.
+        const marcada = muesca !== undefined;
+        const clase = marcada ? 'regla marcada' : 'regla';
+        const sitio = marcada ? ` style="--muesca: ${(muesca - min) / (max - min)}"` : '';
+        return `
+        <div class="${clase}"${sitio}>
             <label for="ax_${clave}">${nombre}</label>
             <output for="ax_${clave}">${a[clave]}%</output>
             <input id="ax_${clave}" type="range" data-clave="${clave}"
                    min="${min}" max="${max}" step="${paso}" value="${a[clave]}">
         </div>`;
+    };
 
     // tres columnas lado a lado, cada una con sus propias filas apiladas
     caja.innerHTML = `<div class="secciones">` +

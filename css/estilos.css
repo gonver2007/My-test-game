@@ -1,21 +1,13 @@
-/* ============================================================
-estilos.css - presentación: escena, HUD, menús y la portada del ocaso
-Todo el marco imita una lámina de animación: tinta gruesa,
-colores planos y ni un solo bisel gris. La portada de index.html va
-al final, en su propia sección, porque tiene paleta aparte.
-   ============================================================ */
 :root {
-    --tinta: #17132b;
-    --noche: #101c3a;
-    --papel: #f2ecdc;
-    --bermellon: #e0453f;
-    --cielo: #6fb6f0;
-    --oro: #ffd784;
-    --sakura: #f0a8c8;
+    /* La paleta del ocaso, la única que viste ya el juego. Hubo antes una de
+       noche azul -bosque, luna y laca añil-; de aquella no queda nada, y este
+       archivo no vuelve a nombrar un azul salvo donde el azul significa algo:
+       los orbes, que son azules por su nombre, y el jade, que es verde. */
+    --tinta:    #1a0f16;   /* el contorno: negro cálido, no violeta */
+    --papel:    #f2ecdc;
+    --bermellon:#e0453f;
+    --oro:      #ffd784;
 
-    /* Los colores del ocaso. Nacieron en la portada y hoy visten también el
-       marcador y el menú de la partida, así que viven aquí arriba y no
-       dentro de body.santuario, que era donde se guardaban antes. */
     --carbon:   #170c14;   /* la loma más cercana, casi negra */
     --ciruela:  #1c0f18;   /* la madera del torii */
     --sierra:   #5b2536;
@@ -33,21 +25,15 @@ al final, en su propia sección, porque tiene paleta aparte.
 
 html, body {
     background:
-        radial-gradient(circle at 50% 32%, #23407a 0%, #14224a 45%, #0a1024 100%);
+        /* el mismo ocaso que el armazón y la portada (#160d1c), con algo de
+           lumbre arriba. Antes era el radial de noche azul del juego viejo */
+        radial-gradient(circle at 50% 32%, #3a1a20 0%, #20101a 45%, #160d1c 100%);
     color: var(--papel);
     font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
     margin: 0; height: 100%;
     display: flex; flex-direction: column;
     align-items: center; justify-content: center;
     user-select: none;
-}
-
-/* franjas diagonales muy tenues detrás de todo, como el fondo de un opening */
-body::before {
-    content: '';
-    position: fixed; inset: -20%;
-    background: url("../assets/franjas.png") repeat;
-    pointer-events: none;
 }
 
 #escena {
@@ -57,7 +43,7 @@ body::before {
     box-shadow:
         0 0 0 2px rgba(255, 255, 255, 0.12),
         0 18px 46px rgba(0, 0, 0, 0.75),
-        0 0 70px rgba(80, 150, 230, 0.22);
+        0 0 70px rgba(217, 75, 51, 0.22);
 }
 
 /* la partida ocupa la ventana entera, pero el lienzo del juego mantiene
@@ -84,10 +70,11 @@ canvas#vista {
 
 /* ============================================================
    El marcador de la partida
-   Mismo trazo que el torii y los paneles: laca plana, filete de tinta
-   gruesa, sombra dura sin desenfoque y los rótulos en mincho muy
-   abierto. Antes iba de filete fino, degradado y esquina blanda, que
-   es de otra escuela y se notaba nada más entrar en la senda.
+   Vestido del ocaso, igual que el torii, los botones y los paneles:
+   laca de ciruela, filete fino de oro viejo, esquina de 2px y brillo
+   ambiental suave. Nada de tinta gruesa, sombra dura desplazada ni
+   sombra de texto: ese era el trazo del juego viejo, el de la noche
+   azul, y no queda ya en ninguna pantalla.
    ============================================================ */
 
 /* Las piezas del marcador crecen y menguan con la regla de los ajustes.
@@ -96,15 +83,14 @@ canvas#vista {
    Los menús (muerte, Esc) no van aquí: esos no son hud. */
 #hud, #monedas, #minimapa, #aviso { zoom: var(--escalaHud); }
 
-/* La tablilla: el ladrillo con que está hecho todo el marcador. Es el mismo
-   cuerpo que .boton y .panel -laca, tinta y sombra dura-, solo que quieto:
-   aquí nada se pulsa ni se pasa por encima. */
+/* La tablilla: el ladrillo con que está hecho todo el marcador. Mismo cuerpo
+   que .boton del ocaso y que .panel.abierto, solo que quieta: aquí nada se
+   pulsa ni se pasa por encima. */
 .tablilla {
-    background: rgba(23, 34, 74, .92);
-    border: 3px solid var(--tinta);
-    border-radius: 4px;
-    box-shadow: inset 0 3px 0 rgba(255, 255, 255, .14),
-                0 5px 0 rgba(0, 0, 0, .5);
+    background: rgba(28, 14, 22, .78);
+    border: 2px solid rgba(232, 180, 79, .45);
+    border-radius: 2px;
+    box-shadow: 0 10px 28px rgba(12, 6, 14, .55);
     padding: 8px 14px;
 }
 
@@ -113,20 +99,35 @@ canvas#vista {
     /* tres columnas, y la de en medio ceñida a su contenido: como las de los
        lados se reparten lo que sobra a partes iguales, la tablilla cae en el
        centro de la pantalla y no en el del hueco que dejan la cédula y la
-       comarca, que no miden lo mismo ni de lejos */
+       comarca, que ahora miden lo mismo pero no tienen por qué seguir así */
     display: grid; grid-template-columns: 1fr auto 1fr; align-items: start;
     padding: 14px 18px;
     font-size: 15px; font-weight: 700; letter-spacing: .08em;
     pointer-events: none;
+
+    /* lo que mide la barra de vida, que es lo que acaba fijando el ancho de
+       las dos tablillas de los lados */
+    --anchoBarra: 190px;
 }
 
-/* ---------- la cédula del héroe ---------- */
+/* ---------- las dos tablillas de los lados ---------- */
+/* La cédula y el rótulo de la comarca son el mismo cuadro. El ancho sale de
+   la barra de vida más su aire y su filete, y la altura de estirarse los dos
+   a la de su fila: así se igualan solos y siguen igualados si mañana cambia
+   la barra, en vez de quedarse a merced de dos medidas escritas a mano que
+   hay que acordarse de tocar a la vez. */
+#cedula, #estadoNivel {
+    width: calc(var(--anchoBarra) + 32px);   /* 14 de aire y 2 de filete por lado */
+    box-sizing: border-box;
+    align-self: stretch;
+    display: flex; flex-direction: column; justify-content: center;
+}
+
 #cedula { justify-self: start; }
 
 #estadoPv {
     display: flex; align-items: baseline; gap: 6px;
     margin-bottom: 7px;
-    text-shadow: 2px 2px 0 var(--tinta);
 }
 #estadoPv b {
     font-size: 11px; letter-spacing: .22em; text-indent: .22em;
@@ -136,72 +137,97 @@ canvas#vista {
     font-family: "Shippori Mincho B1", "Yu Mincho", serif;
     font-size: 22px; line-height: 1; color: var(--hueso);
 }
-#pvTope { font-style: normal; font-size: 13px; color: #9fb0d4; }
+#pvTope { font-style: normal; font-size: 13px; color: rgba(242, 228, 214, .55); }
 
-/* barras: ranura de laca honda con el mismo filete de tinta que todo lo
-   demás, y el relleno plano, sin degradados */
+/* barras: ranura de laca honda con el mismo filete de oro tenue que las
+   tablillas, y el relleno de brasa, plano */
 .barra {
-    width: 190px; height: 12px;
-    border: 3px solid var(--tinta);
-    border-radius: 3px;
-    background: rgba(12, 8, 24, .9);
-    box-shadow: inset 0 2px 0 rgba(0, 0, 0, .5);
+    width: var(--anchoBarra); height: 11px;
+    border: 2px solid rgba(232, 180, 79, .35);
+    border-radius: 2px;
+    background: rgba(12, 6, 14, .7);
     overflow: hidden;
 }
 .barra > div {
     height: 100%;
-    background: var(--brasa);
-    box-shadow: inset 0 3px 0 rgba(255, 255, 255, .22);
+    background: linear-gradient(180deg, var(--brasa), var(--brasaHonda));
     transition: width .12s linear;
 }
 .barra.dash {
-    height: 8px; width: 190px; margin-top: 6px;
+    height: 7px; width: var(--anchoBarra); margin-top: 6px;
+    border-color: rgba(232, 180, 79, .25);
 }
 /* mientras se recarga es ceniza apagada; llena, se enciende en oro */
-.barra.dash > div { background: #4a5687; box-shadow: none; }
+.barra.dash > div { background: rgba(242, 228, 214, .22); }
 .barra.dash.lista > div {
     background: var(--oroViejo);
-    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .35);
+    box-shadow: 0 0 12px rgba(232, 180, 79, .8);
 }
-
-/* ---------- la comarca, a la derecha ---------- */
+/* ---------- el emblema, la comarca y la senda, a la derecha ---------- */
+/* El ancho, la altura y el estirarse los pone la regla que comparte con la
+   cédula. Lo de aquí es su reparto: en fila, con el emblema ocupando el
+   hueco que las dos líneas de texto dejaban libre a la izquierda, y las
+   letras alineadas al canto derecho. El row pisa el column de la compartida. */
 #estadoNivel {
     justify-self: end;
-    display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+    flex-direction: row; align-items: center; gap: 9px;
     text-align: right;
-    text-shadow: 2px 2px 0 var(--tinta);
 }
-#estadoNivel .senda {
-    font-size: 11px; letter-spacing: .22em; text-indent: .22em;
-    color: var(--oroViejo);
+/* El dibujo con que firma la comarca. Lo trae su ficha en biomas.js y sale
+   en currentColor, así que el color se lo da el tinte que vista.js le pone
+   al vuelo: cada comarca se reconoce por el suyo sin una sola regla aquí. */
+#estadoNivel .emblema {
+    flex: none; width: 30px; height: 30px;
+    opacity: .95;
 }
-/* el nombre de la comarca lo pone biomas.js: va en mincho, como los
-   titulares del santuario, para que se lea de un golpe de vista */
+#estadoNivel .emblema svg { display: block; width: 100%; height: 100%; }
+
+#estadoNivel .letras {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 2px;
+}
+/* Arriba y en pequeño, el nombre del sitio. El nowrap no sobra: el cuadro
+   tiene el ancho clavado a la barra de vida, así que si un nombre largo se
+   partiera en dos renglones crecería de alto y arrastraría con él a la
+   cédula, que se estira a su misma fila. El interletraje es corto -antes iba
+   muy abierto- porque el emblema se ha quedado con parte del ancho: es lo
+   que se cedió para que quepa sin encoger la letra. Antes de tocar tamaño o
+   espaciado, comprobar que «Patios exteriores» -el más largo del juego-
+   sigue cabiendo de una pieza. */
 #estadoNivel .comarca {
-    font-family: "Shippori Mincho B1", "Yu Mincho", serif;
-    font-size: 19px; line-height: 1.1; letter-spacing: .06em;
+    font-size: 15px; letter-spacing: .06em; text-indent: .06em;
+    white-space: nowrap;
     color: var(--sakuraSuave);
+}
+/* Y debajo la senda en grande, en mincho y en el oro viejo de la casa: es
+   lo que de verdad se mira, por dónde se va.
+   El número va con ceros delante -«Senda 007»- y con cifras de ancho fijo.
+   Las dos cosas hacen falta para lo mismo: que el rótulo no dé un tirón al
+   pasar de una senda a otra. Los ceros fijan cuántos dígitos hay; las cifras
+   tabulares, lo que ocupa cada uno, porque en esta mincho un 1 no mide lo
+   mismo que un 8 y el texto va alineado por la derecha. */
+#estadoNivel .senda {
+    font-family: "Shippori Mincho B1", "Yu Mincho", serif;
+    font-size: 26px; line-height: 1.05; letter-spacing: .04em;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    color: var(--oroViejo);
 }
 
 /* ---------- la tablilla de los enemigos ---------- */
-/* Cuelga del borde de arriba, como la de un torii: sin filete por el lado
-   de fuera y con solo las esquinas de abajo redondeadas, para que se lea
-   como algo colgado y no como una caja suelta. El margen negativo le come
-   el padding del hud, que es lo que la separaba del borde. */
+/* Flota igual que la cédula del héroe: la misma tablilla entera, con su
+   filete por los cuatro lados y separada del borde por el padding del hud.
+   Colgaba del canto de arriba, como la de un torii, pero al lado de las
+   otras dos -que sí flotan- se leía como una pieza de otro juego. */
 #enemigos {
     justify-self: center;
-    margin-top: -14px;
     display: flex; flex-direction: column; align-items: center;
     padding: 8px 30px 9px;
-    border-top: 0;
-    border-radius: 0 0 6px 6px;
-    box-shadow: 0 5px 0 rgba(0, 0, 0, .5);
 }
 #enemigosCifra {
     font-family: "Shippori Mincho B1", "Yu Mincho", serif;
     font-size: 30px; line-height: 1; letter-spacing: .04em;
     color: var(--hueso);
-    text-shadow: 3px 3px 0 var(--tinta);
 }
 /* el rótulo va flanqueado por los rombos de brasa del «del» de la portada:
    es la firma de la casa, y aquí ata la tablilla al resto del juego */
@@ -210,7 +236,6 @@ canvas#vista {
     margin-top: 4px;
     font-size: 10px; letter-spacing: .2em; text-indent: .2em;
     color: var(--oroViejo);
-    text-shadow: 2px 2px 0 var(--tinta);
 }
 #enemigos .rotulo::before,
 #enemigos .rotulo::after {
@@ -224,19 +249,26 @@ canvas#vista {
 #enemigos.cae #enemigosCifra { animation: latidoEnemigos .55s ease-out; }
 @keyframes latidoEnemigos {
     0%   { transform: scale(1); color: var(--hueso); }
-    20%  { transform: scale(1.28); color: var(--brasa); }
+    20%  { transform: scale(1.28); color: var(--brasa);
+           text-shadow: 0 0 16px rgba(217, 75, 51, .9); }
     100% { transform: scale(1); color: var(--hueso); }
 }
 
 /* sin nadie vivo deja de ser una cuenta y pasa a ser el aviso de que la
    puerta cede: se enciende en el mismo oro que el sello al deshacerse */
-#enemigos.limpia { background: rgba(74, 44, 24, .92); }
+#enemigos.limpia {
+    border-color: rgba(232, 180, 79, .8);
+    box-shadow: 0 10px 28px rgba(12, 6, 14, .55), 0 0 30px rgba(232, 180, 79, .28);
+}
 #enemigos.limpia #enemigosCifra { color: var(--oroViejo); }
 #enemigos.limpia .rotulo { color: var(--oro); }
 #enemigos.limpia .rotulo::before,
 #enemigos.limpia .rotulo::after { background: var(--oro); }
 
 /* ---------- los saldos, abajo a la izquierda ---------- */
+/* Las cifras conservan su color: el jade es verde y los orbes azules porque
+   eso es lo que son, no porque quede del aspecto viejo. Lo que va del ocaso
+   es la tablilla que los sostiene. */
 #monedas {
     position: absolute; left: 18px; bottom: 16px;
     display: flex; gap: 12px;
@@ -247,7 +279,6 @@ canvas#vista {
     display: flex; align-items: center; gap: 6px;
     padding: 6px 12px;
     font-size: 18px; transform-origin: left center;
-    text-shadow: 2px 2px 0 var(--tinta);
 }
 #jade { color: #9fe6d6; }
 #orbes { color: #a8c4ff; }
@@ -285,18 +316,15 @@ canvas#vista {
 /* el tamaño en píxeles lo fija vista.js, a partir de las casillas de la senda */
 #minimapa {
     position: absolute; right: 16px; bottom: 16px;
-    border: 3px solid var(--tinta);
-    border-radius: 4px;
-    background: rgba(12, 8, 24, .9);
-    box-shadow: inset 0 3px 0 rgba(255, 255, 255, .10),
-                0 5px 0 rgba(0, 0, 0, .5);
+    border: 2px solid rgba(232, 180, 79, .45);
+    border-radius: 2px;
+    background: rgba(20, 9, 16, .85);
+    box-shadow: 0 12px 34px rgba(12, 6, 14, .7);
     image-rendering: pixelated;
-    pointer-events: none;
+    opacity: .95; pointer-events: none;
 }
 
 /* ---------- el aviso de la puerta ---------- */
-/* Se le da el mismo cuerpo que a las demás piezas en vez de dejarlo como
-   texto suelto sobre la senda, que era lo único del marcador sin marco */
 #aviso {
     /* Centrado con left/right a cero y márgenes automáticos, no con
        translateX(-50%): el zoom de la regla del hud escala también el
@@ -305,24 +333,23 @@ canvas#vista {
     position: absolute; left: 0; right: 0; bottom: 92px;
     width: max-content; margin-inline: auto;
     padding: 9px 22px;
-    background: rgba(23, 34, 74, .92);
-    border: 3px solid var(--tinta);
-    border-radius: 4px;
-    box-shadow: inset 0 3px 0 rgba(255, 255, 255, .14),
-                0 5px 0 rgba(0, 0, 0, .5);
+    background: rgba(28, 14, 22, .78);
+    border: 2px solid rgba(232, 180, 79, .45);
+    border-radius: 2px;
+    box-shadow: 0 10px 28px rgba(12, 6, 14, .55);
     font-size: 15px; font-weight: 700;
     letter-spacing: .16em; text-indent: .16em;
     color: var(--oroViejo);
-    text-shadow: 2px 2px 0 var(--tinta);
     white-space: nowrap;
     pointer-events: none; opacity: 0;
     transition: opacity .2s;
 }
-/* la puerta sigue sellada: el aviso se pone de brasa, que es el color con
-   que este juego dice que no */
+/* la puerta sigue sellada: el aviso arde, que es el color con que este
+   juego dice que no */
 #aviso.trabado {
-    color: var(--sakuraSuave);
-    background: rgba(74, 26, 34, .92);
+    color: #ff8a7a;
+    border-color: rgba(217, 75, 51, .5);
+    background: rgba(58, 26, 32, .88);
 }
 
 #muerte {
@@ -451,16 +478,6 @@ body.juego #mjSalir:hover { background: rgba(217, 75, 51, .38); border-color: va
     font-size: 11.5px; line-height: 1.5; color: var(--sakuraSuave);
 }
 
-.ayuda {
-    font-size: 12.5px; color: #8ea3c8; margin-top: 14px;
-    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.6);
-}
-.ayuda b {
-    color: var(--oro); font-weight: bold;
-    padding: 1px 5px; border-radius: 3px;
-    background: rgba(23, 19, 43, 0.65);
-}
-
 /* ============================================================
    Portada (index.html): fondo pintado en canvas y botones al centro
    ============================================================ */
@@ -472,14 +489,6 @@ body.menu {
     padding: 24px 0;
     box-sizing: border-box;
 }
-
-#fondoMenu {
-    position: fixed; inset: 0;
-    width: 100%; height: 100%;
-    display: block; z-index: -2;
-}
-/* las franjas del opening también aquí, justo por encima del canvas */
-body.menu::before { z-index: -1; }
 
 #portada {
     position: relative;
@@ -503,7 +512,7 @@ body.menu::before { z-index: -1; }
 }
 .lema {
     margin: 18px 0 30px;
-    font-size: 15px; letter-spacing: 1.5px; color: #b9c6e0;
+    font-size: 15px; letter-spacing: 1.5px; color: var(--ceniza);
     text-shadow: 2px 2px 0 var(--tinta);
 }
 
@@ -515,7 +524,7 @@ body.menu::before { z-index: -1; }
     font-family: inherit;
     font-size: 19px; font-weight: bold; letter-spacing: 4px;
     color: var(--papel);
-    background: rgba(23, 34, 74, 0.92);
+    background: rgba(28, 14, 22, .88);
     border: 4px solid var(--tinta);
     border-radius: 4px;
     box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.16),
@@ -524,7 +533,7 @@ body.menu::before { z-index: -1; }
     cursor: pointer;
     transition: transform .08s, background .12s, color .12s;
 }
-.boton:hover { background: #2c4a8c; color: #fff; transform: translateY(-2px); }
+.boton:hover { background: rgba(217, 75, 51, .28); color: #fff; transform: translateY(-2px); }
 .boton:active {
     transform: translateY(3px);
     box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.16);
@@ -538,17 +547,18 @@ body.menu::before { z-index: -1; }
 }
 .boton.principal:hover { background: #ff6a56; }
 
-/* el hueco de controles y créditos: cerrado no ocupa ni marco ni fondo */
+/* el hueco que comparten la hoja de ajustes, la armería y las ranuras:
+   cerrado no ocupa ni marco ni fondo */
 .panel {
     margin-top: 22px; max-width: 430px;
-    color: #cdd8ee; font-size: 14px; line-height: 1.7;
+    color: var(--ceniza); font-size: 14px; line-height: 1.7;
     text-shadow: 1.5px 1.5px 0 var(--tinta);
 }
 .panel.abierto {
     padding: 16px 26px;
     border: 3px solid var(--tinta);
     border-radius: 4px;
-    background: rgba(16, 28, 58, 0.88);
+    background: rgba(28, 14, 22, .88);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.10), 0 10px 26px rgba(0, 0, 0, 0.6);
 }
 .panel h2 {
@@ -653,6 +663,26 @@ body.santuario .panel.ajustes {
     box-shadow: 0 0 0 3px rgba(232, 180, 79, .35);
 }
 
+/* La muesca del valor de casa: una pestaña de oro bajo el riel, en el punto
+   del que se partió, para saber cuánto se ha movido uno y poder volver.
+   El sitio no es el tanto por ciento llano del riel: el pulgar mide 15px y
+   su centro nunca llega a los extremos, se queda a 7,5px de cada uno. Por eso
+   el recorrido real es (100% - 15px) y la cuenta arranca en 7,5px; sin eso la
+   muesca y el pulgar no coincidirían salvo justo en el medio.
+   Va debajo del riel y no encima para no quedar tapada por el pulgar
+   cuando el valor elegido es precisamente el marcado. */
+.ajustes .regla.marcada { position: relative; }
+.ajustes .regla.marcada::after {
+    content: "";
+    position: absolute; pointer-events: none;
+    bottom: 2px;
+    left: calc(7.5px + var(--muesca) * (100% - 15px));
+    margin-left: -1px;
+    width: 2px; height: 5px;
+    border-radius: 1px;
+    background: rgba(232, 180, 79, .65);
+}
+
 /* la lista de controles: lo que se hace a un lado, con qué al otro. En su
    columna angosta va algo más pequeña que el resto de la hoja */
 .ajustes .controles {
@@ -672,7 +702,6 @@ body.santuario .panel.ajustes {
     background: rgba(12, 6, 14, .55);
 }
 
-.ayuda.pie { position: absolute; bottom: 22px; }
 
 /* ---------- Ranuras de guardado (ranura.html) ---------- */
 .panel.ranuras {
@@ -681,11 +710,11 @@ body.santuario .panel.ajustes {
     padding: 18px 22px 16px;
     border: 3px solid var(--tinta);
     border-radius: 4px;
-    background: rgba(16, 28, 58, 0.9);
+    background: rgba(28, 14, 22, .88);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.10), 0 10px 26px rgba(0, 0, 0, 0.6);
 }
 .ranuras .lista { display: flex; flex-direction: column; gap: 8px; }
-.ranuras .nota { margin: 12px 0 0; font-size: 12px; color: #8ea3c8; }
+.ranuras .nota { margin: 12px 0 0; font-size: 12px; color: rgba(242, 228, 214, .55); }
 
 /* una lámina por ranura; la vacía se distingue por el trazo discontinuo */
 .ranura {
@@ -693,28 +722,28 @@ body.santuario .panel.ajustes {
     padding: 9px 12px; text-align: left; cursor: pointer;
     border: 3px solid var(--tinta);
     border-radius: 4px;
-    background: rgba(23, 34, 74, 0.92);
+    background: rgba(28, 14, 22, .88);
     box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.10);
     transition: transform .08s, border-color .12s, background .12s;
 }
-.ranura:hover { transform: translateY(-2px); background: #24396e; border-color: var(--oro); }
-.ranura.vacia { background: rgba(15, 20, 45, 0.8); border-style: dashed; }
+.ranura:hover { transform: translateY(-2px); background: rgba(217, 75, 51, .28); border-color: var(--oro); }
+.ranura.vacia { background: rgba(20, 9, 16, .85); border-style: dashed; }
 .ranura h3 {
     margin: 0 0 3px;
     font-size: 12px; letter-spacing: 3px; color: var(--oro);
     text-shadow: 2px 2px 0 var(--tinta);
 }
 .ranura .resumen { margin: 0; font-size: 14px; color: var(--papel); }
-.ranura.vacia .resumen { color: #7c8cb0; }
-.ranura .fecha { margin: 2px 0 0; font-size: 11.5px; color: #8ea3c8; }
+.ranura.vacia .resumen { color: rgba(242, 228, 214, .5); }
+.ranura .fecha { margin: 2px 0 0; font-size: 11.5px; color: rgba(242, 228, 214, .55); }
 
 /* el borrado se queda en una esquina y pide dos clics */
 .ranura .borrar {
     position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
     font-family: inherit;
     font-size: 10.5px; font-weight: bold; letter-spacing: 1.5px;
-    color: #cdd8ee; padding: 6px 9px;
-    background: rgba(15, 20, 45, 0.9);
+    color: var(--ceniza); padding: 6px 9px;
+    background: rgba(20, 9, 16, .85);
     border: 2px solid var(--tinta);
     border-radius: 3px; cursor: pointer;
 }
@@ -728,7 +757,7 @@ body.santuario .panel.ajustes {
     padding: 18px 24px 20px;
     border: 3px solid var(--tinta);
     border-radius: 4px;
-    background: rgba(16, 28, 58, 0.9);
+    background: rgba(28, 14, 22, .88);
     box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.10), 0 10px 26px rgba(0, 0, 0, 0.6);
 }
 .armeria .saldo { margin: 0 0 14px; letter-spacing: 1px; }
@@ -748,12 +777,12 @@ body.santuario .panel.ajustes {
 
 /* las mejoras del personaje: mismas láminas que las armas, en azul de orbe */
 .arma.mejora { width: 260px; cursor: default; }
-.arma.mejora:hover { transform: none; background: rgba(23, 34, 74, 0.92); }
+.arma.mejora:hover { transform: none; background: rgba(28, 14, 22, .88); }
 .arma.mejora .fichas dd { color: #a8c4ff; }
 .arma.mejora .pips { color: #6b9cf2; }
 .mejorar.orbes { background: #24468f; }
 .mejorar.orbes:hover:not(:disabled) { background: #3a6fd8; }
-.armeria .nota { margin: 14px 0 0; font-size: 12.5px; color: #8ea3c8; }
+.armeria .nota { margin: 14px 0 0; font-size: 12.5px; color: rgba(242, 228, 214, .55); }
 
 .armeria .armas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
 
@@ -763,14 +792,14 @@ body.santuario .panel.ajustes {
     text-align: left; cursor: pointer;
     border: 3px solid var(--tinta);
     border-radius: 4px;
-    background: rgba(23, 34, 74, 0.92);
+    background: rgba(28, 14, 22, .88);
     box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.10);
     transition: transform .08s, border-color .12s, background .12s;
 }
-.arma:hover { transform: translateY(-2px); background: #24396e; }
+.arma:hover { transform: translateY(-2px); background: rgba(217, 75, 51, .28); }
 .arma.elegida {
     border-color: var(--oro);
-    background: #2c4a8c;
+    background: rgba(217, 75, 51, .28);
     box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.18), 0 0 20px rgba(255, 215, 132, 0.28);
 }
 .arma h3 {
@@ -787,21 +816,21 @@ body.santuario .panel.ajustes {
 
 /* el arma que aún no es tuya: apagada, sin el brinco del ratón encima */
 .arma.cerrada {
-    background: rgba(15, 20, 45, 0.85);
+    background: rgba(20, 9, 16, .85);
     border-style: dashed;
     cursor: default;
 }
-.arma.cerrada:hover { transform: none; background: rgba(15, 20, 45, 0.85); }
-.arma.cerrada h3, .arma.cerrada .pie { color: #8493b5; }
-.arma.cerrada .fichas dd { color: #6f86a8; }
+.arma.cerrada:hover { transform: none; background: rgba(20, 9, 16, .85); }
+.arma.cerrada h3, .arma.cerrada .pie { color: rgba(242, 228, 214, .45); }
+.arma.cerrada .fichas dd { color: rgba(242, 228, 214, .4); }
 .arma .marca.cerrado { background: #7fd6c4; }
 .mejorar.comprar { background: #2f7a76; }
 .mejorar.comprar:hover:not(:disabled) { background: #4ea79c; }
-.arma .pie { margin: 0 0 10px; font-size: 12px; line-height: 1.5; color: #a8b8d8; min-height: 54px; }
+.arma .pie { margin: 0 0 10px; font-size: 12px; line-height: 1.5; color: rgba(242, 228, 214, .68); min-height: 54px; }
 
 .arma .fichas { margin: 0 0 10px; display: flex; justify-content: space-between; }
-.arma .fichas dt { font-size: 10.5px; letter-spacing: 1px; color: #8ea3c8; }
-.arma .fichas dd { margin: 2px 0 0; font-size: 17px; font-weight: bold; color: var(--cielo); }
+.arma .fichas dt { font-size: 10.5px; letter-spacing: 1px; color: rgba(242, 228, 214, .55); }
+.arma .fichas dd { margin: 2px 0 0; font-size: 17px; font-weight: bold; color: var(--oroViejo); }
 
 .arma .forja { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .arma .pips { color: var(--oro); font-size: 14px; letter-spacing: 3px; }
@@ -819,8 +848,8 @@ body.santuario .panel.ajustes {
 }
 .mejorar:hover:not(:disabled) { background: #ff6a56; }
 .mejorar:disabled {
-    background: rgba(15, 20, 45, 0.9);
-    color: #6f7fa0; cursor: default;
+    background: rgba(20, 9, 16, .85);
+    color: rgba(242, 228, 214, .38); cursor: default;
     box-shadow: none;
 }
 
@@ -842,10 +871,10 @@ body.santuario .panel.ajustes {
 
 #consola .salida {
     height: 190px; overflow-y: auto;
-    padding: 9px 11px; color: #b9c6e0;
+    padding: 9px 11px; color: var(--ceniza);
     white-space: pre-wrap; word-break: break-word;
 }
-#consola .salida .eco  { color: #7f8fb3; }
+#consola .salida .eco  { color: #b08a86; }
 #consola .salida .bien { color: #7fd6c4; }
 #consola .salida .mal  { color: #ff8a7a; }
 
@@ -899,7 +928,6 @@ body.santuario::before { display: none; }
     overflow: hidden; pointer-events: none; z-index: -2;
     /* el grano rompe las bandas que deja un degradado tan largo */
     background:
-        url("../assets/grano.png") repeat,
         linear-gradient(180deg,
             #15101f 0%, #2a1430 34%, #5c1f35 62%, #a33a30 84%, #d8632f 100%);
 }
@@ -1283,18 +1311,15 @@ body.santuario #btCerrarPanel { margin-top: 16px; font-size: 16px; }
 .enMarco body.santuario #portada h1 { font-size: clamp(26px, 5vw, 36px); }
 .enMarco body.santuario .lema { display: none; }
 .enMarco body.santuario .panel { margin-top: 18px; }
-/* aquí no hay torii que centre nada: los botones vuelven a su ancho de
-   siempre y la hoja se sigue midiendo con ellos */
-.enMarco body.santuario #botones,
-.enMarco body.santuario .panel.ajustes { width: 46%; }
-.enMarco body.santuario #botones { margin-top: 16px; }
-/* al 46% las tres columnas no caben con desahogo: la ventana de la partida
-   es angosta de por sí, así que aquí las secciones van siempre apiladas */
-.enMarco .ajustes .secciones { display: block; }
-.enMarco .ajustes .seccion + .seccion {
-    margin-top: 18px; padding-left: 0; padding-top: 18px;
-    border-left: none; border-top: 1px solid rgba(232, 180, 79, .18);
-}
+/* aquí no hay torii que centre nada: el botón de VOLVER vuelve a su ancho
+   de siempre */
+.enMarco body.santuario #botones { width: 46%; margin-top: 16px; }
+/* La hoja, en cambio, se lleva casi todo el ancho de la ventana. Antes iba
+   al 46% como el botón, y a esa anchura las tres columnas no cabían: por eso
+   dentro de la partida se apilaban y la hoja no se parecía a la de la
+   portada. Ensanchada, las tres caben y es la misma de los dos lados; lo
+   único que las apila ya es el corte de 680px, que vale igual aquí que allí. */
+.enMarco body.santuario .panel.ajustes { width: 94%; }
 .enMarco body.santuario .boton { padding: 12px 0; font-size: 15px; }
 
 /* ============================================================
@@ -1351,7 +1376,7 @@ body.santuario .panel.ranuras {
     width: 460px; max-width: 90vw;
     margin: 26px auto 0;
     border: 2px solid rgba(232, 180, 79, .45);
-    background: url("../assets/tela.png") repeat, rgba(28, 14, 22, .88);
+    background: rgba(28, 14, 22, .88);
     box-shadow: 0 12px 34px rgba(12, 6, 14, .7);
 }
 body.santuario .ranuras .nota { color: rgba(242, 228, 214, .6); text-shadow: none; }
@@ -1533,7 +1558,6 @@ body.santuario .ranura.inmortal h3 { color: #f0c9a5; }
 body.registros .ranura {
     overflow: hidden;
     background:
-        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(58, 26, 32, .88), rgba(20, 9, 16, .92));
     box-shadow:
         inset 0 1px 0 rgba(240, 201, 165, .18),
@@ -1542,14 +1566,12 @@ body.registros .ranura {
 }
 body.registros .ranura.vacia {
     background:
-        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(34, 16, 24, .6), rgba(16, 7, 13, .68));
     box-shadow: inset 0 1px 0 rgba(240, 201, 165, .08);
 }
 /* la sellada arde bajo la veta */
 body.registros .ranura.inmortal {
     background:
-        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(92, 30, 28, .88), rgba(38, 12, 16, .92));
     box-shadow:
         inset 0 1px 0 rgba(240, 201, 165, .3),
@@ -1717,7 +1739,7 @@ body.santuario .panel.armeria {
     margin: 22px auto 0;
     border: 2px solid rgba(232, 180, 79, .45);
     border-radius: 2px;
-    background: url("../assets/tela.png") repeat, rgba(28, 14, 22, .9);
+    background: rgba(28, 14, 22, .9);
     box-shadow: 0 12px 34px rgba(12, 6, 14, .7);
 }
 body.santuario .armeria .saldo b { color: var(--oroViejo); background: none; }
@@ -1728,21 +1750,18 @@ body.santuario .arma {
     border: 2px solid rgba(232, 180, 79, .35);
     border-radius: 2px;
     background:
-        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(58, 26, 32, .88), rgba(20, 9, 16, .92));
     box-shadow: inset 0 1px 0 rgba(240, 201, 165, .18);
     text-shadow: none;
 }
 body.santuario .arma:hover {
     background:
-        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(92, 40, 40, .9), rgba(30, 12, 18, .92));
     border-color: rgba(232, 180, 79, .6);
 }
 body.santuario .arma.elegida {
     border-color: var(--oroViejo);
     background:
-        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(92, 30, 28, .9), rgba(38, 12, 16, .92));
     box-shadow: inset 0 1px 0 rgba(240, 201, 165, .3), 0 0 22px rgba(232, 180, 79, .22);
 }
@@ -1802,7 +1821,6 @@ body.santuario .mejorar.orbes:hover:not(:disabled) {
 body.santuario .arma.mejora:hover {
     transform: none;
     background:
-        url("../assets/veta.png") repeat,
         linear-gradient(180deg, rgba(58, 26, 32, .88), rgba(20, 9, 16, .92));
     border-color: rgba(232, 180, 79, .35);
 }
