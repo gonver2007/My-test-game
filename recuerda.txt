@@ -2,6 +2,17 @@ añadir seccion despegable de armas secundarias justo abajo de armas primarias e
 
 hacer lo de los pergaminos y lo de los amuletos 
 
+añador un bestiario que este en prev.html donde esta ahora el boton de volver y que el boton de volver este abajo a 15 px de separacion por debajo con el tamaño actual
+
+elimina en game.html donde pone el arma equipada mover el contador de enemigos a el centro y que ponga enemigos restantes en lugar de enemigos a secas y decorarlo
+
 IDEAS
 
--amuletos- sole te puedes equipar 1 y se optienen tras matar a un jefe
+-amuletos- 
+sole te puedes equipar 1 y se optienen tras matar a un jefe
+
+-pergaminos- 
+cada 5 niveles "enplan senda 5, senda 15, senda 25 asi" que alla un semi boss pero que sea un mapa normal con los enemigos de ese nivel y que te lo drope el y cuando mures lo pierdes es solo para ese intento que en la secion de pergaminos sea como un historial de cuales as consigido y los que no que parezcan bloqueados
+
+-bestiario- 
+pv de vida, daño, nombre una breve descipcion cuantos as eliminado y cuantas veces te a eliminado el

@@ -76,7 +76,8 @@ addEventListener('message', ev => {
     // el volumen cambiado en la hoja de ajustes, que va enmarcada y no ve
     // esta caja de música
     if (aviso.tipo === 'ajustes') {
-        Ajustes.guardar({ volumen: aviso.volumen, musica: aviso.musica, hud: aviso.hud });
+        Ajustes.guardar({ volumen: aviso.volumen, musica: aviso.musica,
+                          efectos: aviso.efectos, hud: aviso.hud });
         return;
     }
 

@@ -1984,6 +1984,7 @@ function pintar() {
         ctx.globalAlpha = 1;
     }
 
+    dibujarOrbes();
     dibujarHeroe(j);
     dibujarEfectos();
     sombrasDeGeometria(j);
@@ -2216,6 +2217,162 @@ function dibujarEsquirla(px, py, f, k) {
     ctx.restore();
 }
 
+// ============================================================
+//  El tañido del orbe: uno de los mp3 de musica/orbe, al azar.
+//
+//  La lista va escrita a mano y no leída de la carpeta porque no hay
+//  forma de que el navegador la lea: desde file:// no se puede pedir
+//  el índice de un directorio, y fetch está cerrado por origen. Para
+//  añadir un tañido, se deja el mp3 en musica/orbe y se apunta aquí
+//  su nombre; nada más.
+//
+//  Y la escalerilla: mientras no se pare de recoger, cada orbe suena
+//  un semitono por encima del anterior y con un pelo más de brío, así
+//  que llevarse un puñado entero se siente como algo que sube y no
+//  como doce veces lo mismo. En un archivo eso se consigue acelerando
+//  la reproducción, que es lo mismo que subirlo de tono -como la cinta
+//  corrida-, y por eso hay que apagar preservesPitch: viene puesto de
+//  serie justo para impedirlo.
+// ============================================================
+const ORBE_CARPETA = '../musica/orbe/';   // relativo a html/game.html, que es quien carga esto
+const ORBE_SONIDOS = ['orbe 1.mp3', 'orbe 2.mp3', 'orbe 3.mp3'];
+const ORBE_COPIAS = 4;                    // de cada archivo, para que se solapen
+
+const ORBE_ESCALON = 1.0595;     // lo que sube cada peldaño de la tanda: un semitono
+const ORBE_TANDA_TOPE = 12;      // hasta una octava; de ahí para arriba chilla
+const ORBE_TANDA_CORTA = 0.65;   // sin recoger nada durante esto, la tanda se cierra
+const ORBE_BRIO = 0.18;          // lo que gana de volumen de un extremo a otro
+
+// Cada archivo con sus copias. Un <audio> solo suena una vez a la vez y
+// los orbes llegan a puñados, así que con uno de cada el segundo cortaría
+// al primero; se van turnando las copias y ninguno pisa al anterior.
+let orbeVoces = null;
+let tanidoAnterior = -1;         // qué archivo sonó el último, para no repetirlo
+let orbesSeguidos = 0;           // por qué peldaño va la tanda
+let instanteAnterior = -9;       // cuándo cayó el último orbe, en segundos
+
+function prepararTanidos() {
+    orbeVoces = ORBE_SONIDOS.map(nombre => {
+        const copias = [];
+        for (let i = 0; i < ORBE_COPIAS; i++) {
+            // encodeURI porque los nombres llevan espacios
+            const a = new Audio(encodeURI(ORBE_CARPETA + nombre));
+            a.preload = 'auto';
+            // que acelerar suba el tono, en vez de solo correr más deprisa
+            a.preservesPitch = false;
+            if ('mozPreservesPitch' in a) a.mozPreservesPitch = false;
+            if ('webkitPreservesPitch' in a) a.webkitPreservesPitch = false;
+            copias.push(a);
+        }
+        return { copias, turno: 0 };
+    });
+}
+
+// se preparan al cargar y no al primer orbe: montarlas en el momento de
+// sonar deja mudo justo al primero, que es el que se oye con la senda en
+// silencio y el que peor disimula la falta
+prepararTanidos();
+
+function sonarOrbe() {
+    const alto = (typeof Ajustes !== 'undefined') ? Ajustes.volumen('efectos') : 0.5;
+    if (alto <= 0) return;
+    if (!orbeVoces) prepararTanidos();
+    if (!orbeVoces.length) return;
+
+    // ¿seguimos en la misma tanda o esta empieza de cero?
+    const ahora = performance.now() / 1000;
+    orbesSeguidos = (ahora - instanteAnterior > ORBE_TANDA_CORTA)
+                  ? 0 : Math.min(ORBE_TANDA_TOPE, orbesSeguidos + 1);
+    instanteAnterior = ahora;
+    const subida = orbesSeguidos / ORBE_TANDA_TOPE;   // 0 al empezar, 1 en lo alto
+
+    // al azar, pero nunca el mismo dos veces seguidas: la repetición se oye
+    // más que el propio tañido
+    let cual = Math.floor(Math.random() * orbeVoces.length);
+    if (orbeVoces.length > 1 && cual === tanidoAnterior)
+        cual = (cual + 1 + Math.floor(Math.random() * (orbeVoces.length - 1))) % orbeVoces.length;
+    tanidoAnterior = cual;
+
+    const voz = orbeVoces[cual];
+    const a = voz.copias[voz.turno];
+    voz.turno = (voz.turno + 1) % voz.copias.length;
+
+    // el peldaño de la tanda: más agudo y un punto más fuerte cuanto más
+    // arriba. El volumen se pone aquí y no en Ajustes.aplicarValores porque
+    // estas cajas no cuelgan del documento y su querySelectorAll no las ve;
+    // leerlo en cada tañido tiene además su ventaja, y es que la regla de
+    // Efectos se nota según se arrastra, sin esperar a la siguiente senda.
+    a.playbackRate = Math.pow(ORBE_ESCALON, orbesSeguidos);
+    a.volume = Math.min(1, alto * (1 + ORBE_BRIO * subida));
+    try { a.currentTime = 0; } catch (e) { /* aún no ha cargado: sonará desde el principio igual */ }
+
+    // el navegador se niega a sonar hasta que el jugador toca algo, y al
+    // entrar a la senda ya ha tocado; si aun así se niega, no es cosa que
+    // haya que contarle a nadie
+    const suena = a.play();
+    if (suena && suena.catch) suena.catch(() => { /* nada */ });
+}
+
+// ============================================================
+//  Los orbes azules en vuelo: una esfera con su halo y una estela que
+//  se estira en la dirección en que va. Cuanto más corre -y corre al
+//  volverse hacia el héroe-, más larga la cola, que es lo que hace que
+//  el tirón se vea además de notarse.
+// ============================================================
+function dibujarOrbes() {
+    for (const o of J.orbesSueltos) {
+        const px = aPantallaX(o.x), py = aPantallaY(o.y);
+        const v = Math.hypot(o.vx, o.vy);
+        // late despacio mientras flota; al venir disparado se aquieta
+        const r = TILE * 0.17 * (1 + Math.sin(J.tiempo * 9 + o.fase) * 0.09);
+
+        // la cola, hacia atrás: unos cuantos fantasmas cada vez más tenues
+        const cola = Math.min(1, v / ORBE_TOPE);
+        if (cola > 0.1) {
+            const ux = -o.vx / (v || 1), uy = -o.vy / (v || 1);
+            for (let i = 1; i <= 4; i++) {
+                const k = i / 4;
+                ctx.globalAlpha = 0.4 * cola * (1 - k);
+                ctx.fillStyle = ORBE_LUZ;
+                ctx.beginPath();
+                ctx.arc(px + ux * i * 7 * cola, py + uy * i * 7 * cola, r * (1 - k * 0.7), 0, 6.2832);
+                ctx.fill();
+            }
+        }
+
+        // el halo, que es lo que lo hace luz y no canica
+        ctx.globalAlpha = 1;
+        const halo = ctx.createRadialGradient(px, py, 0, px, py, r * 3.2);
+        halo.addColorStop(0, 'rgba(168, 196, 255, 0.55)');
+        halo.addColorStop(1, 'rgba(107, 156, 242, 0)');
+        ctx.fillStyle = halo;
+        ctx.beginPath(); ctx.arc(px, py, r * 3.2, 0, 6.2832); ctx.fill();
+
+        // y la esfera: contorno de tinta, cuerpo y corazón encendido, los
+        // mismos tres planos que el resto de las figuras
+        ctx.strokeStyle = P.tinta; ctx.lineWidth = 2.4;
+        ctx.fillStyle = ORBE_CARA;
+        ctx.beginPath(); ctx.arc(px, py, r, 0, 6.2832); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = ORBE_LUZ;
+        ctx.beginPath(); ctx.arc(px, py + r * 0.06, r * 0.6, 0, 6.2832); ctx.fill();
+        ctx.fillStyle = ORBE_NUCLEO;
+        ctx.beginPath(); ctx.arc(px - r * 0.3, py - r * 0.32, r * 0.26, 0, 6.2832); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+}
+
+// el anillo que se abre al metérselo dentro: dura un suspiro y es lo que
+// remata el sonido
+function dibujarDestelloOrbe(px, py, k) {
+    const abre = 1 - k;
+    ctx.globalAlpha = k * 0.9;
+    ctx.strokeStyle = ORBE_NUCLEO;
+    ctx.lineWidth = 3.5 * k + 0.6;
+    ctx.beginPath();
+    ctx.arc(px, py, TILE * (0.12 + abre * 0.42), 0, 6.2832);
+    ctx.stroke();
+}
+
 function dibujarEfectos() {
     for (const f of J.efectos) {
         const k = 1 - f.t / f.vida;
@@ -2226,6 +2383,8 @@ function dibujarEfectos() {
             ctx.beginPath(); ctx.arc(px, py, 2.8 * k + 0.9, 0, 6.2832); ctx.fill();
             ctx.fillStyle = '#fff';
             ctx.beginPath(); ctx.arc(px, py, 1.2 * k, 0, 6.2832); ctx.fill();
+        } else if (f.tipo === 'destelloOrbe') {
+            dibujarDestelloOrbe(px, py, k);
         } else if (f.tipo === 'esquirla') {
             dibujarEsquirla(px, py, f, k);
         } else {
@@ -2458,11 +2617,11 @@ function pintarLuces(j) {
 // los iconos de los contadores son los mismos dibujos de los paneles
 document.getElementById('jadeIcono').innerHTML =
     (typeof ESQUIRLA_SVG !== 'undefined') ? ESQUIRLA_SVG : '';
-document.getElementById('lapisIcono').innerHTML =
-    (typeof LAPIS_SVG !== 'undefined') ? LAPIS_SVG : '';
+document.getElementById('orbesIcono').innerHTML =
+    (typeof ORBE_SVG !== 'undefined') ? ORBE_SVG : '';
 
 // saldos ya pintados, para saber cuándo hay que celebrar el cambio
-let jadeMostrado = -1, lapisMostrado = -1;
+let jadeMostrado = -1, orbesMostrado = -1;
 
 // el contador solo se toca cuando cambia, y al subir da un brinco
 function contador(caja, cifra, valor, mostrado) {
@@ -2477,6 +2636,38 @@ function contador(caja, cifra, valor, mostrado) {
     return valor;
 }
 
+// La tablilla del centro. Al revés que los saldos, esta cuenta baja: el
+// destello va cuando cae uno, no cuando se gana algo. Y cuando no queda
+// ninguno deja de ser una cuenta y pasa a ser el aviso de que la puerta
+// cede, que es lo que de verdad importa de este número.
+let enemigosMostrado = -1;
+
+function pintarEnemigos() {
+    const quedan = J.enemigos.length;
+    if (quedan === enemigosMostrado) return;
+    const caja = document.getElementById('enemigos');
+    const cifra = document.getElementById('enemigosCifra');
+
+    if (quedan) {
+        cifra.textContent = quedan;
+        caja.querySelector('.rotulo').textContent =
+            quedan === 1 ? 'ENEMIGO RESTANTE' : 'ENEMIGOS RESTANTES';
+    } else {
+        cifra.textContent = '—';
+        caja.querySelector('.rotulo').textContent = 'SENDA DESPEJADA';
+    }
+    caja.classList.toggle('limpia', !quedan);
+
+    // el destello solo al bajar, y no al entrar en una senda nueva, que
+    // sube de golpe y no es cosa de celebrar
+    if (enemigosMostrado > 0 && quedan < enemigosMostrado) {
+        caja.classList.remove('cae');
+        void caja.offsetWidth;              // reinicia la animación en seco
+        caja.classList.add('cae');
+    }
+    enemigosMostrado = quedan;
+}
+
 // si ya está escrita la cuenta de la caída de ahora
 let caidaEscrita = false;
 // lo último que se escribió en el rótulo de la senda, para no rehacerlo cada cuadro
@@ -2486,14 +2677,14 @@ let rotuloNivel = '';
 // entre el rótulo y los botones, con los mismos iconos que el HUD.
 function pintarCaida() {
     const caja = document.getElementById('muertePerdido');
-    const { jade, lapis } = J.perdido;
-    if (!jade && !lapis) { caja.hidden = true; return; }
+    const { jade, orbes } = J.perdido;
+    if (!jade && !orbes) { caja.hidden = true; return; }
 
     const iconoJade = (typeof ESQUIRLA_SVG !== 'undefined') ? ESQUIRLA_SVG : '';
-    const iconoLapis = (typeof LAPIS_SVG !== 'undefined') ? LAPIS_SVG : '';
+    const iconoOrbe = (typeof ORBE_SVG !== 'undefined') ? ORBE_SVG : '';
     const cuentas = [];
     if (jade) cuentas.push(`<span class="jade">${jade}${iconoJade}</span>`);
-    if (lapis) cuentas.push(`<span class="lapis">${lapis}${iconoLapis}</span>`);
+    if (orbes) cuentas.push(`<span class="orbes">${orbes}${iconoOrbe}</span>`);
 
     caja.innerHTML =
         `<span class="rotulo">Perdiste</span>
@@ -2503,7 +2694,10 @@ function pintarCaida() {
 
 function pintarHud() {
     const p = J.jugador;
-    document.getElementById('estadoPv').textContent = `PV ${Math.ceil(p.hp)}/${p.hpMax}`;
+    // dos cajas y no una: así solo se reescribe la cifra que cambia, y el
+    // rótulo «PV» y el tope se quedan con su propio trazo en la hoja de estilo
+    document.getElementById('pvAhora').textContent = Math.ceil(p.hp);
+    document.getElementById('pvTope').textContent = '/' + p.hpMax;
     document.getElementById('vida').style.width = Math.max(0, (p.hp / p.hpMax) * 100) + '%';
 
     const carga = Math.min(1, 1 - Math.max(0, p.cdDash) / ESPERA_DASH);
@@ -2512,16 +2706,19 @@ function pintarHud() {
     dash.parentElement.classList.toggle('lista', carga >= 1);
 
     jadeMostrado = contador('jade', 'jadeCifra', J.esquirlas, jadeMostrado);
-    lapisMostrado = contador('lapis', 'lapisCifra', J.lapis, lapisMostrado);
+    orbesMostrado = contador('orbes', 'orbesCifra', J.orbes, orbesMostrado);
 
     // el rótulo solo se reescribe cuando dice algo distinto: nombre de la
-    // comarca incluido, que sale de biomas.js y no de aquí
-    const rotulo = `Senda ${J.nivel} · <b>${nombreDelBioma()}</b>`
-                 + ` · Enemigos ${J.enemigos.length}<br>${J.arma}`;
+    // comarca incluido, que sale de biomas.js y no de aquí. La cuenta de
+    // enemigos ya no va aquí -tiene su tablilla en el centro- ni el arma,
+    // que se elige antes de entrar y no cambia en toda la senda.
+    const rotulo = `<span class="senda">Senda ${J.nivel}</span>`
+                 + `<span class="comarca">${nombreDelBioma()}</span>`;
     if (rotulo !== rotuloNivel) {
         rotuloNivel = rotulo;
         document.getElementById('estadoNivel').innerHTML = rotulo;
     }
+    pintarEnemigos();
     document.getElementById('muerte').style.display = J.muerto ? 'flex' : 'none';
     // la cuenta de lo dejado atrás se escribe una sola vez, al caer, no en
     // cada cuadro que el velo pasa por delante
@@ -2726,7 +2923,8 @@ addEventListener('message', ev => {
     const aviso = ev.data;
     if (!aviso || aviso.tipo !== 'ajustes') return;
     if (aviso.cerrar) { alternarMenu(true); return; }
-    Ajustes.guardar({ volumen: aviso.volumen, musica: aviso.musica, hud: aviso.hud });
+    Ajustes.guardar({ volumen: aviso.volumen, musica: aviso.musica,
+                      efectos: aviso.efectos, hud: aviso.hud });
 });
 
 // no hay nada que anotar al salir: el arma y las esquirlas se guardan solas
@@ -2751,7 +2949,7 @@ function irAlFinal() {
         sessionStorage.setItem('sendas.final', JSON.stringify({
             arma: J.arma,
             jade: J.esquirlas,
-            lapis: J.lapis,
+            orbes: J.orbes,
             sendas: J.nivel,
             tiempo: Math.round(J.tiempo)
         }));

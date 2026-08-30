@@ -82,82 +82,190 @@ canvas#vista {
     background: var(--carbon); cursor: crosshair;
 }
 
-/* Las cuatro piezas del marcador crecen y menguan con la regla de los ajustes.
+/* ============================================================
+   El marcador de la partida
+   Mismo trazo que el torii y los paneles: laca plana, filete de tinta
+   gruesa, sombra dura sin desenfoque y los rótulos en mincho muy
+   abierto. Antes iba de filete fino, degradado y esquina blanda, que
+   es de otra escuela y se notaba nada más entrar en la senda.
+   ============================================================ */
+
+/* Las piezas del marcador crecen y menguan con la regla de los ajustes.
    Se agrandan con zoom y no con transform: así vuelven a maquetarse y cada una
    sigue pegada a su esquina, en vez de encogerse hacia el centro de la pantalla.
    Los menús (muerte, Esc) no van aquí: esos no son hud. */
 #hud, #monedas, #minimapa, #aviso { zoom: var(--escalaHud); }
 
-/* el marcador no lleva el contorno de tinta por los cuatro lados: sobre la
-   senda basta una sombra honda, que es lo que usa la portada */
+/* La tablilla: el ladrillo con que está hecho todo el marcador. Es el mismo
+   cuerpo que .boton y .panel -laca, tinta y sombra dura-, solo que quieto:
+   aquí nada se pulsa ni se pasa por encima. */
+.tablilla {
+    background: rgba(23, 34, 74, .92);
+    border: 3px solid var(--tinta);
+    border-radius: 4px;
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, .14),
+                0 5px 0 rgba(0, 0, 0, .5);
+    padding: 8px 14px;
+}
+
 #hud {
     position: absolute; left: 0; top: 0; right: 0;
-    display: flex; justify-content: space-between; align-items: flex-start;
-    padding: 14px 18px; font-size: 15px; font-weight: 700;
-    letter-spacing: .08em;
-    text-shadow: 0 2px 8px rgba(12, 6, 14, .95), 0 0 3px rgba(12, 6, 14, .9);
-    pointer-events: none; white-space: pre-line;
+    /* tres columnas, y la de en medio ceñida a su contenido: como las de los
+       lados se reparten lo que sobra a partes iguales, la tablilla cae en el
+       centro de la pantalla y no en el del hueco que dejan la cédula y la
+       comarca, que no miden lo mismo ni de lejos */
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: start;
+    padding: 14px 18px;
+    font-size: 15px; font-weight: 700; letter-spacing: .08em;
+    pointer-events: none;
 }
-#estadoPv { color: var(--hueso); }
 
-/* barras: una ranura de laca con filete de oro viejo y el relleno plano */
+/* ---------- la cédula del héroe ---------- */
+#cedula { justify-self: start; }
+
+#estadoPv {
+    display: flex; align-items: baseline; gap: 6px;
+    margin-bottom: 7px;
+    text-shadow: 2px 2px 0 var(--tinta);
+}
+#estadoPv b {
+    font-size: 11px; letter-spacing: .22em; text-indent: .22em;
+    color: var(--oroViejo); font-weight: 700;
+}
+#pvAhora {
+    font-family: "Shippori Mincho B1", "Yu Mincho", serif;
+    font-size: 22px; line-height: 1; color: var(--hueso);
+}
+#pvTope { font-style: normal; font-size: 13px; color: #9fb0d4; }
+
+/* barras: ranura de laca honda con el mismo filete de tinta que todo lo
+   demás, y el relleno plano, sin degradados */
 .barra {
-    width: 200px; height: 13px;
-    border: 2px solid rgba(232, 180, 79, .5);
-    background: rgba(20, 9, 16, .8);
-    margin-top: 7px; border-radius: 2px; overflow: hidden;
-    box-shadow: 0 4px 14px rgba(12, 6, 14, .6);
+    width: 190px; height: 12px;
+    border: 3px solid var(--tinta);
+    border-radius: 3px;
+    background: rgba(12, 8, 24, .9);
+    box-shadow: inset 0 2px 0 rgba(0, 0, 0, .5);
+    overflow: hidden;
 }
 .barra > div {
     height: 100%;
-    background: linear-gradient(180deg, var(--brasa), var(--brasaHonda));
+    background: var(--brasa);
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, .22);
     transition: width .12s linear;
 }
 .barra.dash {
-    height: 7px; width: 200px; margin-top: 6px;
-    border-color: rgba(232, 180, 79, .32);
-    background: rgba(20, 9, 16, .8);
+    height: 8px; width: 190px; margin-top: 6px;
 }
 /* mientras se recarga es ceniza apagada; llena, se enciende en oro */
-.barra.dash > div { background: rgba(232, 180, 79, .38); }
+.barra.dash > div { background: #4a5687; box-shadow: none; }
 .barra.dash.lista > div {
     background: var(--oroViejo);
-    box-shadow: 0 0 12px rgba(232, 180, 79, .85);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .35);
 }
-#estadoNivel { text-align: right; color: var(--oroViejo); }
-/* el nombre de la comarca, que lo pone biomas.js, va en su propio tono para
-   que se lea de un golpe de vista junto al número de senda */
-#estadoNivel b { color: var(--sakuraSuave); font-weight: 700; letter-spacing: .1em; }
 
-/* contadores de jade y lapislázuli, en el rincón de abajo a la izquierda */
+/* ---------- la comarca, a la derecha ---------- */
+#estadoNivel {
+    justify-self: end;
+    display: flex; flex-direction: column; align-items: flex-end; gap: 3px;
+    text-align: right;
+    text-shadow: 2px 2px 0 var(--tinta);
+}
+#estadoNivel .senda {
+    font-size: 11px; letter-spacing: .22em; text-indent: .22em;
+    color: var(--oroViejo);
+}
+/* el nombre de la comarca lo pone biomas.js: va en mincho, como los
+   titulares del santuario, para que se lea de un golpe de vista */
+#estadoNivel .comarca {
+    font-family: "Shippori Mincho B1", "Yu Mincho", serif;
+    font-size: 19px; line-height: 1.1; letter-spacing: .06em;
+    color: var(--sakuraSuave);
+}
+
+/* ---------- la tablilla de los enemigos ---------- */
+/* Cuelga del borde de arriba, como la de un torii: sin filete por el lado
+   de fuera y con solo las esquinas de abajo redondeadas, para que se lea
+   como algo colgado y no como una caja suelta. El margen negativo le come
+   el padding del hud, que es lo que la separaba del borde. */
+#enemigos {
+    justify-self: center;
+    margin-top: -14px;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 8px 30px 9px;
+    border-top: 0;
+    border-radius: 0 0 6px 6px;
+    box-shadow: 0 5px 0 rgba(0, 0, 0, .5);
+}
+#enemigosCifra {
+    font-family: "Shippori Mincho B1", "Yu Mincho", serif;
+    font-size: 30px; line-height: 1; letter-spacing: .04em;
+    color: var(--hueso);
+    text-shadow: 3px 3px 0 var(--tinta);
+}
+/* el rótulo va flanqueado por los rombos de brasa del «del» de la portada:
+   es la firma de la casa, y aquí ata la tablilla al resto del juego */
+#enemigos .rotulo {
+    display: flex; align-items: center; gap: 9px;
+    margin-top: 4px;
+    font-size: 10px; letter-spacing: .2em; text-indent: .2em;
+    color: var(--oroViejo);
+    text-shadow: 2px 2px 0 var(--tinta);
+}
+#enemigos .rotulo::before,
+#enemigos .rotulo::after {
+    content: ""; width: 5px; height: 5px; flex: none;
+    background: var(--brasa); transform: rotate(45deg);
+    text-indent: 0;
+}
+
+/* cae uno: la cifra da un latido de brasa. Es la única señal de que el
+   golpe ha contado cuando el bicho muere fuera de lo que alumbra el farol */
+#enemigos.cae #enemigosCifra { animation: latidoEnemigos .55s ease-out; }
+@keyframes latidoEnemigos {
+    0%   { transform: scale(1); color: var(--hueso); }
+    20%  { transform: scale(1.28); color: var(--brasa); }
+    100% { transform: scale(1); color: var(--hueso); }
+}
+
+/* sin nadie vivo deja de ser una cuenta y pasa a ser el aviso de que la
+   puerta cede: se enciende en el mismo oro que el sello al deshacerse */
+#enemigos.limpia { background: rgba(74, 44, 24, .92); }
+#enemigos.limpia #enemigosCifra { color: var(--oroViejo); }
+#enemigos.limpia .rotulo { color: var(--oro); }
+#enemigos.limpia .rotulo::before,
+#enemigos.limpia .rotulo::after { background: var(--oro); }
+
+/* ---------- los saldos, abajo a la izquierda ---------- */
 #monedas {
     position: absolute; left: 18px; bottom: 16px;
-    display: flex; gap: 18px;
+    display: flex; gap: 12px;
     font-weight: 700; letter-spacing: .06em;
-    text-shadow: 0 2px 8px rgba(12, 6, 14, .95), 0 0 3px rgba(12, 6, 14, .9);
     pointer-events: none;
 }
-#jade, #lapis {
-    display: flex; align-items: center; gap: 3px;
-    font-size: 17px; transform-origin: left center;
+#jade, #orbes {
+    display: flex; align-items: center; gap: 6px;
+    padding: 6px 12px;
+    font-size: 18px; transform-origin: left center;
+    text-shadow: 2px 2px 0 var(--tinta);
 }
 #jade { color: #9fe6d6; }
-#lapis { color: #a8c4ff; }
-#jade .esquirla, #lapis .esquirla { margin-left: 0; }
+#orbes { color: #a8c4ff; }
+#jade .esquirla, #orbes .esquirla { margin-left: 0; }
 
 /* al ganar una, el contador da un brinco y se enciende un momento */
 #jade.gana { animation: brincoJade .7s ease-out; }
 @keyframes brincoJade {
     0%   { transform: scale(1); color: #9fe6d6; }
-    22%  { transform: scale(1.45); color: #fff; }
-    60%  { transform: scale(1.05); }
+    22%  { transform: scale(1.3); color: #fff; }
+    60%  { transform: scale(1.04); }
     100% { transform: scale(1); color: #9fe6d6; }
 }
-#lapis.gana { animation: brincoLapis .7s ease-out; }
-@keyframes brincoLapis {
+#orbes.gana { animation: brincoOrbes .7s ease-out; }
+@keyframes brincoOrbes {
     0%   { transform: scale(1); color: #a8c4ff; }
-    22%  { transform: scale(1.45); color: #fff; }
-    60%  { transform: scale(1.05); }
+    22%  { transform: scale(1.3); color: #fff; }
+    60%  { transform: scale(1.04); }
     100% { transform: scale(1); color: #a8c4ff; }
 }
 #jade.gana .esquirla { animation: fulgorJade .7s ease-out; }
@@ -166,34 +274,56 @@ canvas#vista {
     25%  { filter: drop-shadow(0 0 9px rgba(127, 214, 196, 0.95)); }
     100% { filter: none; }
 }
-#lapis.gana .esquirla { animation: fulgorLapis .7s ease-out; }
-@keyframes fulgorLapis {
+#orbes.gana .esquirla { animation: fulgorOrbes .7s ease-out; }
+@keyframes fulgorOrbes {
     0%   { filter: none; }
     25%  { filter: drop-shadow(0 0 9px rgba(107, 156, 242, 0.95)); }
     100% { filter: none; }
 }
 
+/* ---------- el minimapa ---------- */
 /* el tamaño en píxeles lo fija vista.js, a partir de las casillas de la senda */
 #minimapa {
     position: absolute; right: 16px; bottom: 16px;
-    border: 2px solid rgba(232, 180, 79, .45);
-    border-radius: 2px;
-    background: rgba(20, 9, 16, .85);
-    box-shadow: 0 12px 34px rgba(12, 6, 14, .75);
+    border: 3px solid var(--tinta);
+    border-radius: 4px;
+    background: rgba(12, 8, 24, .9);
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, .10),
+                0 5px 0 rgba(0, 0, 0, .5);
     image-rendering: pixelated;
-    opacity: 0.92; pointer-events: none;
+    pointer-events: none;
 }
 
-
+/* ---------- el aviso de la puerta ---------- */
+/* Se le da el mismo cuerpo que a las demás piezas en vez de dejarlo como
+   texto suelto sobre la senda, que era lo único del marcador sin marco */
 #aviso {
+    /* Centrado con left/right a cero y márgenes automáticos, no con
+       translateX(-50%): el zoom de la regla del hud escala también el
+       desplazamiento del transform, y el aviso se iría de centro en cuanto
+       el marcador dejara de estar al 100%. Así queda simétrico y le da igual. */
     position: absolute; left: 0; right: 0; bottom: 92px;
-    text-align: center; font-size: 17px; font-weight: 700;
-    letter-spacing: .14em; text-indent: .14em; color: var(--oroViejo);
-    text-shadow: 0 2px 10px rgba(12, 6, 14, .95), 0 0 4px rgba(12, 6, 14, .9);
+    width: max-content; margin-inline: auto;
+    padding: 9px 22px;
+    background: rgba(23, 34, 74, .92);
+    border: 3px solid var(--tinta);
+    border-radius: 4px;
+    box-shadow: inset 0 3px 0 rgba(255, 255, 255, .14),
+                0 5px 0 rgba(0, 0, 0, .5);
+    font-size: 15px; font-weight: 700;
+    letter-spacing: .16em; text-indent: .16em;
+    color: var(--oroViejo);
+    text-shadow: 2px 2px 0 var(--tinta);
+    white-space: nowrap;
     pointer-events: none; opacity: 0;
     transition: opacity .2s;
 }
-#aviso.trabado { color: #ff8a7a; }
+/* la puerta sigue sellada: el aviso se pone de brasa, que es el color con
+   que este juego dice que no */
+#aviso.trabado {
+    color: var(--sakuraSuave);
+    background: rgba(74, 26, 34, .92);
+}
 
 #muerte {
     position: absolute; inset: 0; display: none;
@@ -225,7 +355,7 @@ canvas#vista {
     text-shadow: 0 2px 8px rgba(12, 6, 14, .9);
 }
 #muerte .perdido .jade { color: #9fe6d6; }
-#muerte .perdido .lapis { color: #a8c4ff; }
+#muerte .perdido .orbes { color: #a8c4ff; }
 /* apagadas: son esquirlas que ya no se tienen. El hueco lo pone el gap, así
    que la sangría propia del icono sobra aquí */
 #muerte .perdido .esquirla {
@@ -610,17 +740,19 @@ body.santuario .panel.ajustes {
     vertical-align: -0.2em; margin-left: 0.35em;
     overflow: visible;
 }
+/* el orbe es redondo: cuadrado y algo mayor, para que no se lea aplastado */
+.esquirla.orbe { width: 1.1em; height: 1.1em; vertical-align: -0.18em; }
 .armeria .saldo .esquirla { filter: drop-shadow(0 0 6px rgba(127, 214, 196, 0.55)); }
-.armeria .saldo .esquirla.lapis { filter: drop-shadow(0 0 6px rgba(107, 156, 242, 0.6)); }
+.armeria .saldo .esquirla.orbe { filter: drop-shadow(0 0 6px rgba(107, 156, 242, 0.6)); }
 .mejorar:disabled .esquirla { opacity: 0.45; }
 
-/* las mejoras del personaje: mismas láminas que las armas, en azul de lapislázuli */
+/* las mejoras del personaje: mismas láminas que las armas, en azul de orbe */
 .arma.mejora { width: 260px; cursor: default; }
 .arma.mejora:hover { transform: none; background: rgba(23, 34, 74, 0.92); }
 .arma.mejora .fichas dd { color: #a8c4ff; }
 .arma.mejora .pips { color: #6b9cf2; }
-.mejorar.lapislazuli { background: #24468f; }
-.mejorar.lapislazuli:hover:not(:disabled) { background: #3a6fd8; }
+.mejorar.orbes { background: #24468f; }
+.mejorar.orbes:hover:not(:disabled) { background: #3a6fd8; }
 .armeria .nota { margin: 14px 0 0; font-size: 12.5px; color: #8ea3c8; }
 
 .armeria .armas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
@@ -990,7 +1122,7 @@ body.final .lema { max-width: 620px; margin-left: auto; margin-right: auto; }
     text-shadow: 0 3px 8px rgba(12, 6, 14, .85);
 }
 .recuento .cuentas .jade { color: #9fe6d6; }
-.recuento .cuentas .lapis { color: #a8c4ff; }
+.recuento .cuentas .orbes { color: #a8c4ff; }
 .recuento .cuentas .esquirla { margin-left: 0; }
 
 /* ============================================================
@@ -1659,11 +1791,11 @@ body.santuario .mejorar.comprar {
 body.santuario .mejorar.comprar:hover:not(:disabled) {
     background: linear-gradient(180deg, #4ea79c, #2c6b64);
 }
-body.santuario .mejorar.lapislazuli {
+body.santuario .mejorar.orbes {
     background: linear-gradient(180deg, #3a6fd8, #24468f);
     border-color: #b9cffb;
 }
-body.santuario .mejorar.lapislazuli:hover:not(:disabled) {
+body.santuario .mejorar.orbes:hover:not(:disabled) {
     background: linear-gradient(180deg, #4f85f0, #2b57ad);
 }
 

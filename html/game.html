@@ -12,21 +12,39 @@
 
 <div id="escena">
     <canvas id="vista"></canvas>
+    <!-- El marcador entero habla el idioma del resto del juego: tablillas de
+         laca con filete de tinta gruesa, sombra dura sin desenfoque y los
+         títulos en mincho muy abierto, como el rótulo del torii. Nada de
+         filetes finos ni esquinas blandas, que era lo que lo delataba como
+         de otra parte. -->
     <div id="hud">
-        <div>
-            <span id="estadoPv"></span>
+        <!-- lo que el héroe aguanta y lo que le queda de impulso -->
+        <div id="cedula" class="tablilla">
+            <div id="estadoPv"><b>PV</b><span id="pvAhora">0</span><i id="pvTope">/0</i></div>
             <div class="barra"><div id="vida"></div></div>
             <div class="barra dash"><div id="dash"></div></div>
         </div>
-        <div id="estadoNivel"></div>
+
+        <!-- La cuenta de lo que queda vivo preside el marcador: es lo que
+             decide cuándo se abre la puerta, así que va en el centro y
+             colgada del borde de arriba, como la tablilla de un torii. -->
+        <div id="enemigos" class="tablilla">
+            <span id="enemigosCifra">0</span>
+            <span class="rotulo">ENEMIGOS RESTANTES</span>
+        </div>
+
+        <!-- dónde se anda: la senda y el nombre de la comarca, que lo pone
+             biomas.js y no esta página -->
+        <div id="estadoNivel" class="tablilla"></div>
     </div>
     <canvas id="minimapa"></canvas>
 
     <!-- los saldos van en el rincón que dejó el registro de mensajes;
-         los iconos los pone vista.js, que los comparte con los paneles -->
+         los iconos los pone vista.js, que los comparte con los paneles.
+         Cada uno en su tablilla, como el resto del marcador. -->
     <div id="monedas">
-        <div id="jade"><span id="jadeIcono"></span><span id="jadeCifra">0</span></div>
-        <div id="lapis"><span id="lapisIcono"></span><span id="lapisCifra">0</span></div>
+        <div id="jade" class="tablilla"><span id="jadeIcono"></span><span id="jadeCifra">0</span></div>
+        <div id="orbes" class="tablilla"><span id="orbesIcono"></span><span id="orbesCifra">0</span></div>
     </div>
     <div id="aviso"></div>
     <!-- al caer no se reinicia solo: el jugador elige si vuelve a prepararse
@@ -37,7 +55,7 @@
         <div id="muertePerdido" class="perdido" hidden></div>
         <div class="opciones">
             <button id="mtContinuar" class="boton principal">CONTINUAR</button>
-            <button id="mtSalir" class="boton">SALIR</button>
+            <button id="mtSalir" class="boton">VOLVER AL INICIO</button>
         </div>
     </div>
 

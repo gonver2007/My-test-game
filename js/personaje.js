@@ -1,6 +1,6 @@
 /* ============================================================
-personaje.js - el lapislázuli y lo que compra
-Si el jade afila el acero, el lapislázuli endurece al que lo lleva:
+personaje.js - los orbes azules y lo que compran
+Si el jade afila el acero, los orbes azules endurecen al que los lleva:
 aguante y filo del propio héroe, que no se pierden al cambiar de arma.
 Vive en la ranura, junto al resto de la partida. La clave guardada
 sigue llamándose 'dones' para no dejar atrás las partidas ya jugadas.
@@ -26,15 +26,16 @@ const MEJORAS = [
 const COSTES_MEJORA = [50, 150, 500, 750, 1000];
 const MEJORA_TOPE = COSTES_MEJORA.length;
 
-const INICIAL_PERSONAJE = { lapis: 0, dones: {} };
+const INICIAL_PERSONAJE = { orbes: 0, dones: {} };
 
-// el lapislázuli: la misma talla que la esquirla de jade, en azul de noche
-// con su veta clara
-const LAPIS_SVG = `
-    <svg class="esquirla lapis" viewBox="0 0 16 20" aria-hidden="true">
-        <path d="M8 1 L14.5 6.5 L10 19 L3 14.5 Z" fill="#24468f"
-              stroke="#17132b" stroke-width="1.7" stroke-linejoin="round"/>
-        <path d="M8 2.4 L10.2 8.6 L4.6 13.6 Z" fill="#6b9cf2"/>
+// el orbe azul: una esfera de noche con el corazón encendido y el brillo alto
+// de siempre, que es lo que la hace leerse redonda y no plana
+const ORBE_SVG = `
+    <svg class="esquirla orbe" viewBox="0 0 18 18" aria-hidden="true">
+        <circle cx="9" cy="9" r="7.1" fill="#24468f"
+                stroke="#17132b" stroke-width="1.7"/>
+        <circle cx="9" cy="9.4" r="4.3" fill="#3a6fd8"/>
+        <circle cx="6.8" cy="6.5" r="1.9" fill="#a8c4ff"/>
     </svg>`;
 
 const Personaje = {
@@ -48,17 +49,17 @@ const Personaje = {
 
     guardar(estado) {
         if (typeof Partidas !== 'undefined') {
-            Partidas.guardarActual({ lapis: estado.lapis, dones: estado.dones });
+            Partidas.guardarActual({ orbes: estado.orbes, dones: estado.dones });
         }
     },
 
     nivel(id) { return Math.min(MEJORA_TOPE, (this.leer().dones || {})[id] || 0); },
 
-    lapis() { return this.leer().lapis; },
+    orbes() { return this.leer().orbes; },
 
     premiar(cuantas) {
         const estado = this.leer();
-        estado.lapis += cuantas;
+        estado.orbes += cuantas;
         this.guardar(estado);
     },
 
@@ -66,8 +67,8 @@ const Personaje = {
     subir(id) {
         const estado = this.leer();
         const n = (estado.dones || {})[id] || 0;
-        if (n >= MEJORA_TOPE || estado.lapis < COSTES_MEJORA[n]) return false;
-        estado.lapis -= COSTES_MEJORA[n];
+        if (n >= MEJORA_TOPE || estado.orbes < COSTES_MEJORA[n]) return false;
+        estado.orbes -= COSTES_MEJORA[n];
         estado.dones = Object.assign({}, estado.dones, { [id]: n + 1 });
         this.guardar(estado);
         return true;
@@ -88,7 +89,7 @@ const Personaje = {
         const estado = Personaje.leer();
         const n = Personaje.nivel(mejora.id);
         const coste = n < MEJORA_TOPE ? COSTES_MEJORA[n] : null;
-        const alcanza = coste !== null && estado.lapis >= coste;
+        const alcanza = coste !== null && estado.orbes >= coste;
         const total = mejora.base + mejora.suma * n;
 
         return `
@@ -101,9 +102,9 @@ const Personaje = {
             </dl>
             <div class="forja">
                 <span class="pips">${'●'.repeat(n)}${'○'.repeat(MEJORA_TOPE - n)}</span>
-                <button class="mejorar lapislazuli" data-subir="${mejora.id}"
+                <button class="mejorar orbes" data-subir="${mejora.id}"
                         ${alcanza ? '' : 'disabled'}>
-                    ${coste === null ? 'AL MÁXIMO' : `SUBIR · ${coste}${LAPIS_SVG}`}
+                    ${coste === null ? 'AL MÁXIMO' : `SUBIR · ${coste}${ORBE_SVG}`}
                 </button>
             </div>
         </div>`;
@@ -112,9 +113,9 @@ const Personaje = {
     function pintar() {
         caja.innerHTML = `
             <h2>PERSONAJE</h2>
-            <p class="saldo">Esquirlas de lapislázuli: <b>${Personaje.lapis()}${LAPIS_SVG}</b></p>
+            <p class="saldo">Orbes azules: <b>${Personaje.orbes()}${ORBE_SVG}</b></p>
             <div class="armas">${MEJORAS.map(tarjeta).join('')}</div>
-            <p class="nota">Cada enemigo caído deja una esquirla de lapislázuli.
+            <p class="nota">Cada enemigo caído suelta un orbe azul, que vuela solo hacia ti.
             Lo que compra queda en el héroe, no en el arma.</p>`;
     }
 

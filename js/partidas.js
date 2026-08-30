@@ -17,9 +17,9 @@ function partidaNueva() {
         arma: 'katana',
         compradas: ['katana'],  // lo demás se paga en la armería
         niveles: {},            // peldaños de forja por arma
-        dones: {},              // vigor y filo, comprados con lapislázuli
+        dones: {},              // vigor y filo, comprados con orbes azules
         esquirlas: 0,
-        lapis: 0,
+        orbes: 0,
         god: false,             // inmortalidad, que solo enciende la consola
         cheat: false,           // el permiso de abrir la consola dentro de la partida
         hondo: 1,               // la senda más honda a la que ha llegado esta ranura
@@ -122,7 +122,7 @@ const Partidas = {
     };
 
     const jade = () => (typeof ESQUIRLA_SVG !== 'undefined' ? ESQUIRLA_SVG : '');
-    const lapis = () => (typeof LAPIS_SVG !== 'undefined' ? LAPIS_SVG : '');
+    const orbes = () => (typeof ORBE_SVG !== 'undefined' ? ORBE_SVG : '');
 
     function fila(p, i) {
         if (!p) return `
@@ -144,7 +144,7 @@ const Partidas = {
                 ${sello}
                 <h3>RANURA ${i + 1}</h3>
                 <p class="resumen">${nombreArma(p)}</p>
-                <p class="monedas">${p.esquirlas}${jade()} · ${p.lapis || 0}${lapis()}</p>
+                <p class="monedas">${p.esquirlas}${jade()} · ${p.orbes || 0}${orbes()}</p>
                 <p class="hondura"><b>${p.hondo || 1}</b><span>senda</span></p>
                 <p class="fecha">Última vez: ${fecha(p.jugada)}</p>
                 <button class="borrar${confirmando ? ' confirmar' : ''}" data-borrar="${i}">

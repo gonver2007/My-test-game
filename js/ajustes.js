@@ -15,6 +15,7 @@ function ajustesNuevos() {
     return {
         volumen: 50,    // 0..100, el maestro: de él cuelga todo lo que suena
         musica: 70,     // 0..100, y este solo la música, colgando del maestro
+        efectos: 80,    // 0..100, y este los golpes y los orbes, también colgando
         hud: 100        // 60..160, el tamaño del marcador dentro de la partida
     };
 }
@@ -23,6 +24,16 @@ function ajustesNuevos() {
 function acotar(n, a, b) {
     n = Number(n);
     return Number.isFinite(n) ? Math.min(b, Math.max(a, Math.round(n))) : null;
+}
+
+// Lo que le toca sonar a un canal, de 0 a 1, sobre unos ajustes ya leídos.
+// Va suelto y no dentro de Ajustes porque aplicarValores recibe los suyos de
+// fuera -la partida se los pasa por la ventana- y no puede releerlos.
+function volumenDeCanal(a, canal) {
+    const maestro = a.volumen / 100;
+    if (canal === 'musica') return maestro * (a.musica / 100);
+    if (canal === 'efectos') return maestro * (a.efectos / 100);
+    return maestro;
 }
 
 const Ajustes = {
@@ -36,6 +47,7 @@ const Ajustes = {
         return {
             volumen: acotar(guardado.volumen, 0, 100) ?? base.volumen,
             musica: acotar(guardado.musica, 0, 100) ?? base.musica,
+            efectos: acotar(guardado.efectos, 0, 100) ?? base.efectos,
             hud: acotar(guardado.hud, HUD_MIN, HUD_MAX) ?? base.hud
         };
     },
@@ -47,13 +59,10 @@ const Ajustes = {
         return nuevos;
     },
 
-    // 0..1, que es como lo quieren los elementos de audio. El canal 'musica'
-    // cuelga del maestro: bajar el maestro baja la música, pero no al revés
-    volumen(canal) {
-        const a = this.leer();
-        const maestro = a.volumen / 100;
-        return canal === 'musica' ? maestro * (a.musica / 100) : maestro;
-    },
+    // 0..1, que es como lo quieren los elementos de audio. Los canales
+    // cuelgan del maestro: bajar el maestro baja la música y los efectos,
+    // pero no al revés. Lo que no diga canal se queda solo con el maestro.
+    volumen(canal) { return volumenDeCanal(this.leer(), canal); },
 
     // Se llama al cargar cada pantalla y con cada tirón de las reglas. El hud
     // se agranda con zoom y no con scale: así el marcador sigue pegado a sus
@@ -63,16 +72,11 @@ const Ajustes = {
     // Aparte, porque la partida los recibe de su ventana de ajustes ya
     // medidos y no puede fiarse de releerlos del almacén: el marco no siempre
     // lo comparte con quien lo abre. Cada caja de sonido dice de qué canal es
-    // con data-canal; lo que no lo diga se queda solo con el maestro, que es
-    // lo que querrán los golpes y las puertas cuando los haya.
+    // con data-canal.
     aplicarValores(a) {
         document.documentElement.style.setProperty('--escalaHud', a.hud / 100);
-        const maestro = a.volumen / 100;
-        for (const sonido of document.querySelectorAll('audio, video')) {
-            sonido.volume = sonido.dataset.canal === 'musica'
-                ? maestro * (a.musica / 100)
-                : maestro;
-        }
+        for (const sonido of document.querySelectorAll('audio, video'))
+            sonido.volume = volumenDeCanal(a, sonido.dataset.canal);
     }
 };
 
@@ -125,9 +129,10 @@ const CONTROLES = [
 // Las reglas de cada sección. Tres columnas, en este orden: pantalla, sonido
 // y controles al final, que es lo que menos hace falta tocar.
 const SECCIONES = [
-    ['PANTALLA', [['hud', 'Tamaño del HUD', HUD_MIN, HUD_MAX, 5]]],
+    ['GENERAL', [['hud', 'Tamaño del HUD', HUD_MIN, HUD_MAX, 5]]],
     ['SONIDO',   [['volumen', 'Volumen maestro', 0, 100, 1],
-                  ['musica', 'Música', 0, 100, 1]]]
+                  ['musica', 'Música', 0, 100, 1],
+                  ['efectos', 'Efectos', 0, 100, 1]]]
 ];
 
 (function montarAjustes() {

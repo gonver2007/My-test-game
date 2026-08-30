@@ -50,7 +50,7 @@ sale de este navegador.
     //
     // cada moneda dice cómo se llama en la ranura y cómo se lee en voz alta
     const MONEDAS = {
-        lapis: { campo: 'lapis', nombre: 'lapislázuli' },
+        orbes: { campo: 'orbes', nombre: 'orbes azules' },
         jade:  { campo: 'esquirlas', nombre: 'jade' }
     };
 
@@ -58,7 +58,7 @@ sale de este navegador.
     function repartir(que, ranuras, cuantas, signo, orden) {
         const moneda = MONEDAS[(que || '').toLowerCase()];
         if (!moneda)
-            return decir(`Monedas: jade, lapis. Así: ${orden} jade "1,3" 50`, 'mal');
+            return decir(`Monedas: jade, orbes. Así: ${orden} jade "1,3" 50`, 'mal');
 
         const n = parseInt(cuantas, 10);
         if (!n) return decir(`Di cuántas: ${orden} ${que} "1,3" 50`, 'mal');
@@ -147,8 +147,8 @@ sale de este navegador.
     // cada orden con su forma de escribirla y lo que hace: es la lista que
     // se recita con «gon info ver»
     const AYUDA = [
-        ['give <moneda> <ranuras> <cuántas>',   'añade jade o lapislázuli a esas ranuras'],
-        ['ungive <moneda> <ranuras> <cuántas>', 'quita jade o lapislázuli de esas ranuras'],
+        ['give <moneda> <ranuras> <cuántas>',   'añade jade u orbes azules a esas ranuras'],
+        ['ungive <moneda> <ranuras> <cuántas>', 'quita jade u orbes azules de esas ranuras'],
         ['god <ranuras>',                       'el personaje de esas ranuras se vuelve inmortal'],
         ['ungod <ranuras>',                     'les devuelve la carne y el hueso'],
         ['cheat on <ranuras>',                  'deja abrir esta consola desde el menú de Esc de la partida'],
@@ -161,7 +161,7 @@ sale de este navegador.
     function recitarOrdenes() {
         decir('Órdenes del santuario:', 'bien');
         for (const orden of AYUDA) decir('  ' + orden[0] + ' — ' + orden[1]);
-        decir('  monedas: jade, lapis · ranuras: "1,3" entre comillas, o todas', 'eco');
+        decir('  monedas: jade, orbes · ranuras: "1,3" entre comillas, o todas', 'eco');
     }
 
     const ORDENES = {
@@ -181,12 +181,12 @@ sale de este navegador.
             puesto = 0;
         },
 
-        // give jade "1,3" 50   ·   give lapis todas 50
+        // give jade "1,3" 50   ·   give orbes todas 50
         give(que, ranuras, cuantas) {
             repartir(que, ranuras, cuantas, 1, 'give');
         },
 
-        // ungive jade "1,3" 50   ·   ungive lapis todas 50
+        // ungive jade "1,3" 50   ·   ungive orbes todas 50
         ungive(que, ranuras, cuantas) {
             repartir(que, ranuras, cuantas, -1, 'ungive');
         },

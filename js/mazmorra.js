@@ -50,6 +50,7 @@ const J = {
     objetos: [],
     trampas: [],         // las que planta el bioma, si es que planta alguna
     efectos: [],         // chispas y números de daño, solo decorativos
+    orbesSueltos: [],    // los orbes azules que aún van por el aire
     explorado: null,     // 1 = casilla ya vista; lo que recuerda el minimapa
     puerta: { x: 0, y: 0, apertura: 0 },   // apertura: 0 cerrada, 1 abierta del todo
     nivel: 1,
@@ -59,12 +60,12 @@ const J = {
     tiempo: 0,
     arma: 'katana',      // nombre del acero equipado, solo para el HUD
     esquirlas: 0,        // saldo de jade, copiado de la ranura al empezar
-    lapis: 0,            // y el de lapislázuli, que paga las mejoras
+    orbes: 0,            // y el de orbes azules, que pagan las mejoras
     // lo juntado en la senda de ahora: no llega a la ranura hasta cruzar su
     // puerta, y se pierde entero si el héroe cae antes
-    pendiente: { jade: 0, lapis: 0 },
+    pendiente: { jade: 0, orbes: 0 },
     // y lo que se quedó en el suelo al caer, para poder decírselo al jugador
-    perdido: { jade: 0, lapis: 0 }
+    perdido: { jade: 0, orbes: 0 }
 };
 
 const azar = (min, max) => Math.random() * (max - min) + min;
@@ -302,6 +303,7 @@ function nuevoNivel() {
     J.objetos = [];
     J.trampas = [];
     J.efectos = [];
+    J.orbesSueltos = [];
     J.explorado = new Uint8Array(ANCHO * ALTO);
     descubrir();
 
@@ -506,6 +508,7 @@ function actualizar(dt, entrada) {
         chispas(o.x, o.y, '#ff8fae', 10);
     }
 
+    actualizarOrbes(dt);
     abrirPuertaSiToca(dt);
 }
 
@@ -555,8 +558,8 @@ function golpear() {
         if (e.hp <= 0) {
             J.enemigos = J.enemigos.filter(o => o !== e);
             chispas(e.x, e.y, '#803030', 14);
-            // cada caído suelta su lapislázuli, sin más aviso que el contador
-            premiarLapis(1);
+            // cada caído suelta su orbe, que sale despedido y luego vuela al héroe
+            soltarOrbes(e.x, e.y, 1);
             mensaje(`${sujeto(e)} muere.`);
         }
     }
@@ -635,9 +638,22 @@ function cruzar() {
             : 'La puerta todavía se está abriendo.');
         return false;
     }
+
+    // Los orbes que todavía venían por el aire cruzan contigo: haberlos
+    // ganado ya los tenías, y perderlos por no esperarlos quieto delante de
+    // la puerta sería castigar la prisa. No se mudan tal cual, eso sí: sus
+    // coordenadas son las de la senda que se deja atrás, y en la de al lado
+    // caerían en cualquier parte, hasta dentro de la roca. Se apunta cuántos
+    // eran y se sueltan de nuevo junto al héroe, ya en su entrada.
+    const enVuelo = J.orbesSueltos.length;
+    J.orbesSueltos = [];
+
     // la última puerta no lleva a otra senda: detrás está el final del camino.
     // Quien la cruza se lleva lo juntado y sale del santuario por arriba.
     if (typeof Biomas !== 'undefined' && Biomas.ultima(J.nivel)) {
+        // aquí no hay senda al otro lado donde volver a soltarlos, así que
+        // los que volaban se cobran en el sitio antes de cerrar la cuenta
+        if (enVuelo) premiarOrbes(enVuelo);
         asentarBotin();
         apuntarFinal();
         J.completado = true;
@@ -647,7 +663,7 @@ function cruzar() {
 
     J.nivel++;
     apuntarHondura();
-    // el umbral paga a cara o cruz, y solo en jade: el lapislázuli lo dejan
+    // el umbral paga a cara o cruz, y solo en jade: los orbes azules los dejan
     // los enemigos al caer
     const jade = Math.random() < 0.5;
     if (jade) {
@@ -656,9 +672,11 @@ function cruzar() {
     }
     asentarBotin();
     nuevoNivel();
-    // el efecto va después de la mudanza: nuevoNivel lo limpia y planta al
+    // esto va después de la mudanza: nuevoNivel lo limpia todo y planta al
     // héroe en la senda siguiente, que es donde debe verse
-    if (jade) esquirlaGanada(J.jugador.x, J.jugador.y, 'jade');
+    if (jade) esquirlaGanada(J.jugador.x, J.jugador.y);
+    // y los rezagados entran detrás de él, como si hubieran pasado la puerta
+    if (enVuelo) soltarOrbes(J.jugador.x, J.jugador.y, enVuelo);
     return true;
 }
 
@@ -671,20 +689,84 @@ function chispas(x, y, color, cuantas) {
     }
 }
 
-// la esquirla ganada: sube girando delante del héroe mientras se apaga.
-// Solo la anuncia así el jade, que cae de uno en uno al cruzar el umbral; el
-// lapislázuli, que lo sueltan todos los enemigos, se ve solo en el contador.
-const COLORES_ESQUIRLA = {
-    jade:  { cara: '#2f7a76', luz: '#7fd6c4' },
-    lapis: { cara: '#24468f', luz: '#6b9cf2' }
-};
+// la esquirla de jade ganada en el umbral: sube girando delante del héroe
+// mientras se apaga. Los orbes azules tienen lo suyo, más abajo.
+const JADE_CARA = '#2f7a76', JADE_LUZ = '#7fd6c4';
 
-function esquirlaGanada(x, y, clase) {
-    const tinte = COLORES_ESQUIRLA[clase] || COLORES_ESQUIRLA.jade;
+function esquirlaGanada(x, y) {
     J.efectos.push({ tipo: 'esquirla', x, y: y - 0.5, vy: -0.75, vida: 1.5, t: 0,
-                     giro: azar(-0.4, 0.4), cara: tinte.cara, luz: tinte.luz });
-    chispas(x, y - 0.5, tinte.luz, 10);
-    numero(x, y - 1.35, '+1', tinte.luz);
+                     giro: azar(-0.4, 0.4), cara: JADE_CARA, luz: JADE_LUZ });
+    chispas(x, y - 0.5, JADE_LUZ, 10);
+    numero(x, y - 1.35, '+1', JADE_LUZ);
+}
+
+// ============================================================
+//  Orbes azules: lo que suelta cada caído. Salen despedidos del cuerpo,
+//  se quedan un instante flotando y entonces el héroe tira de ellos
+//  hasta metérselos dentro. No chocan con la roca -son luz, no piedra-,
+//  así que ninguno se queda trabado al otro lado de un muro.
+// ============================================================
+const ORBE_CARA = '#24468f', ORBE_LUZ = '#6b9cf2', ORBE_NUCLEO = '#a8c4ff';
+
+const ORBE_ESTALLIDO = 0.34;   // lo que sale despedido antes de volverse
+const ORBE_ARRANQUE = 4;       // a qué velocidad emprende la vuelta
+const ORBE_TIRON = 34;         // y cuánto gana por segundo de camino
+const ORBE_TOPE = 16;          // sin pasar de aquí, que si no ni se ve
+const ORBE_DENTRO = 0.45;      // a esta distancia se da por recogido
+
+function soltarOrbes(x, y, cuantos) {
+    for (let i = 0; i < cuantos; i++) {
+        const a = azar(0, Math.PI * 2), v = azar(3, 6);
+        J.orbesSueltos.push({
+            x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0,
+            vel: ORBE_ARRANQUE,
+            // no se vuelven todos a la vez: así llegan en fila y no en bloque
+            espera: ORBE_ESTALLIDO + azar(0, 0.2),
+            fase: azar(0, Math.PI * 2)          // cada uno con su propio latido
+        });
+    }
+}
+
+function actualizarOrbes(dt) {
+    const j = J.jugador;
+    for (const o of J.orbesSueltos.slice()) {
+        o.t += dt;
+
+        // primero sale despedido del cuerpo, frenando hasta quedarse quieto
+        if (o.t < o.espera) {
+            const freno = Math.max(0, 1 - dt * 5);
+            o.vx *= freno;
+            o.vy *= freno;
+            o.x += o.vx * dt;
+            o.y += o.vy * dt;
+            continue;
+        }
+
+        // y desde que se vuelve va derecho, sin inercia ninguna: se apunta al
+        // héroe cada cuadro y anda lo que puede en esa línea. Antes acumulaba
+        // velocidad y eso le hacía pasarse de largo y ponerse a dar vueltas;
+        // así la distancia solo baja, y siempre acaba entrando.
+        const dx = j.x - o.x, dy = j.y - o.y;
+        const d = Math.hypot(dx, dy) || 1e-6;
+        if (d < ORBE_DENTRO) { recogerOrbe(o); continue; }
+
+        o.vel = Math.min(ORBE_TOPE, o.vel + ORBE_TIRON * dt);
+        const paso = Math.min(d, o.vel * dt);
+        o.x += dx / d * paso;
+        o.y += dy / d * paso;
+        // la estela lee vx/vy: aquí son la línea que acaba de seguir
+        o.vx = dx / d * o.vel;
+        o.vy = dy / d * o.vel;
+    }
+}
+
+// entrar en el héroe es lo que cuenta: mientras vuela, el orbe no es de nadie
+function recogerOrbe(o) {
+    J.orbesSueltos = J.orbesSueltos.filter(p => p !== o);
+    premiarOrbes(1);
+    chispas(o.x, o.y, ORBE_NUCLEO, 6);
+    J.efectos.push({ tipo: 'destelloOrbe', x: o.x, y: o.y, vida: 0.32, t: 0 });
+    if (typeof sonarOrbe === 'function') sonarOrbe();
 }
 
 function numero(x, y, valor, color) {
@@ -714,9 +796,9 @@ function premiar(esquirlas) {
     J.pendiente.jade += esquirlas;
 }
 
-function premiarLapis(esquirlas) {
-    J.lapis += esquirlas;
-    J.pendiente.lapis += esquirlas;
+function premiarOrbes(cuantos) {
+    J.orbes += cuantos;
+    J.pendiente.orbes += cuantos;
 }
 
 // la senda más honda a la que ha llegado esta ranura queda apuntada en ella:
@@ -736,18 +818,20 @@ function apuntarFinal() {
 // se escribe nada en la ranura
 function asentarBotin() {
     if (typeof Forja !== 'undefined' && J.pendiente.jade) Forja.premiar(J.pendiente.jade);
-    if (typeof Personaje !== 'undefined' && J.pendiente.lapis) Personaje.premiar(J.pendiente.lapis);
-    J.pendiente.jade = J.pendiente.lapis = 0;
+    if (typeof Personaje !== 'undefined' && J.pendiente.orbes) Personaje.premiar(J.pendiente.orbes);
+    J.pendiente.jade = J.pendiente.orbes = 0;
 }
 
 // y morir lo deja todo en el suelo de la senda
 function perderBotin() {
-    const jade = J.pendiente.jade, lapis = J.pendiente.lapis;
+    const jade = J.pendiente.jade, orbes = J.pendiente.orbes;
     J.esquirlas -= jade;
-    J.lapis -= lapis;
-    J.pendiente.jade = J.pendiente.lapis = 0;
-    J.perdido = { jade, lapis };
-    if (jade || lapis) mensaje(`Se quedan en la senda ${jade} de jade y ${lapis} de lapislázuli.`);
+    J.orbes -= orbes;
+    J.pendiente.jade = J.pendiente.orbes = 0;
+    J.perdido = { jade, orbes };
+    // los que aún volaban se apagan con él: nunca llegaron a ser suyos
+    J.orbesSueltos = [];
+    if (jade || orbes) mensaje(`Se quedan en la senda ${jade} de jade y ${orbes} orbes azules.`);
 }
 
 function equiparArma(j) {
@@ -781,9 +865,9 @@ function iniciarPartida() {
     equiparArma(J.jugador);
     aplicarMejoras(J.jugador);
     J.esquirlas = (typeof Forja !== 'undefined') ? Forja.esquirlas() : 0;
-    J.lapis = (typeof Personaje !== 'undefined') ? Personaje.lapis() : 0;
-    J.pendiente = { jade: 0, lapis: 0 };
-    J.perdido = { jade: 0, lapis: 0 };
+    J.orbes = (typeof Personaje !== 'undefined') ? Personaje.orbes() : 0;
+    J.pendiente = { jade: 0, orbes: 0 };
+    J.perdido = { jade: 0, orbes: 0 };
     // la ranura puede venir marcada como inmortal desde la consola
     J.jugador.inmortal = !!(typeof Partidas !== 'undefined' && Partidas.actual().god);
     // la ranura guarda el acero y el jade, no el camino: siempre se entra por
@@ -796,6 +880,7 @@ function iniciarPartida() {
     J.objetos = [];
     J.trampas = [];
     J.efectos = [];
+    J.orbesSueltos = [];
     J.tiempo = 0;
     mensaje('Cruzas el portal del santuario.');
     nuevoNivel();
