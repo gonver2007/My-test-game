@@ -1776,77 +1776,747 @@ function prepararSprites() {
     };
 }
 
-// La puerta al siguiente recinto: dos hojas de papel en marco bermellón,
-// como un shoji. Se dibuja en directo porque late y se mueve.
+// ============================================================
+//  La puerta de la senda
+//
+//  No es un agujero redondo: es un vano con sus jambas, su solera y su
+//  remate, y ese remate cambia con la comarca -la cripta lo apunta, la
+//  alcantarilla lo rebaja, el bosque lo levanta como un torii-. Todo
+//  sale de la ficha del bioma: los colores son los suyos, y la tabla de
+//  aquí abajo solo dice qué forma toma la piedra en cada tramo.
+//
+//  Y al otro lado no hay negro: hay comarca. La que viene, no la que se
+//  deja, porque una puerta enseña a dónde lleva y no de dónde vienes.
+//  Ese asomo se pinta una vez en su propio lienzo y se guarda mientras
+//  el destino no cambie; lo único que se mueve por encima es el menudeo
+//  del aire, que es lo que impide que parezca una lámina pegada.
+// ============================================================
+const PORTAL_ANCHO = TILE * 1.62;    // el hueco, de jamba a jamba
+const PORTAL_ALTO = TILE * 2.05;     // de la solera a la clave
+const PORTAL_BASE = TILE * 0.62;     // lo que cae la solera bajo el centro de la casilla
+
+// Qué forma toma el vano y de qué está hecho en cada comarca. El color no
+// se escribe aquí salvo cuando la comarca lo pide a gritos -el bermellón
+// de los torii, el oro del santuario-: para el resto se toma el del zócalo
+// del bioma, que es la piedra que ya se está pisando.
+const PORTALES = {
+    catacumbas:    { arco: 'apuntado', hoja: 'losa',   clave: 'calavera' },
+    alcantarillas: { arco: 'rebajado', hoja: 'reja',   clave: 'goteron' },
+    bambu:         { arco: 'torii',    hoja: 'canas',  clave: 'hoja',
+                     marco: '#9a7b46', luz: '#c4a066', sombra: '#5e4a28' },
+    patios:        { arco: 'medio',    hoja: 'shoji',  clave: 'sol' },
+    mansion:       { arco: 'dintel',   hoja: 'shoji',  clave: 'teja' },
+    plaza:         { arco: 'medio',    hoja: 'tablas', clave: 'grieta' },
+    foso:          { arco: 'dintel',   hoja: 'reja',   clave: 'hierro' },
+    torreones:     { arco: 'apuntado', hoja: 'tablas', clave: 'almena' },
+    torii:         { arco: 'torii',    hoja: 'noren',  clave: 'shimenawa',
+                     marco: '#c8402f', luz: '#e8705a', sombra: '#7d2419' },
+    santuario:     { arco: 'torii',    hoja: 'velo',   clave: 'espejo',
+                     marco: '#c89a3e', luz: '#ffd784', sombra: '#7d5c1e' }
+};
+
+// la de siempre, por si se juega sin biomas o llega una ficha sin portal
+const PORTAL_DE_SERIE = { arco: 'medio', hoja: 'shoji', clave: 'sol' };
+
+function fichaPortal() {
+    const base = (BIOMA && PORTALES[BIOMA.id]) || PORTAL_DE_SERIE;
+    return {
+        arco: base.arco, hoja: base.hoja, clave: base.clave,
+        marco: base.marco || T.zocalo || P.piedra,
+        luz: base.luz || T.zocaloLuz || P.piedraLuz,
+        sombra: base.sombra || T.zocaloSombra || P.piedraSombra
+    };
+}
+
+// El hueco por el que se pasa, como trazado cerrado. Sirve de recorte para
+// el asomo y las hojas, y de guía para el marco: uno y otro no pueden
+// desdecirse, así que salen los dos de aquí.
+function trazarVano(g, cx, cy, tipo, escala = 1) {
+    const an = PORTAL_ANCHO * escala, al = PORTAL_ALTO * escala;
+    const izq = cx - an / 2, der = cx + an / 2;
+    const base = cy + PORTAL_BASE * escala, techo = base - al;
+
+    g.beginPath();
+    if (tipo === 'torii' || tipo === 'dintel') {
+        // aquí el hueco es limpio: lo que lo corona va por encima, no dentro
+        g.rect(izq, techo, an, al);
+    } else if (tipo === 'apuntado') {
+        const arranque = techo + an * 0.42;
+        g.moveTo(izq, base);
+        g.lineTo(izq, arranque);
+        g.quadraticCurveTo(izq + an * 0.16, techo + an * 0.06, cx, techo);
+        g.quadraticCurveTo(der - an * 0.16, techo + an * 0.06, der, arranque);
+        g.lineTo(der, base);
+    } else if (tipo === 'rebajado') {
+        // la bóveda de la alcantarilla: ancha y aplastada, como un caño
+        const arranque = techo + an * 0.28;
+        g.moveTo(izq, base);
+        g.lineTo(izq, arranque);
+        g.quadraticCurveTo(izq, techo, cx, techo);
+        g.quadraticCurveTo(der, techo, der, arranque);
+        g.lineTo(der, base);
+    } else {
+        // medio punto: el arranque queda a un radio de la clave
+        const arranque = techo + an / 2;
+        g.moveTo(izq, base);
+        g.lineTo(izq, arranque);
+        g.arc(cx, arranque, an / 2, Math.PI, 0);
+        g.lineTo(der, base);
+    }
+    g.closePath();
+    return { izq, der, base, techo, an, al };
+}
+
 function dibujarPuerta(cx, cy) {
-    const r = TILE * 0.75;
     const a = J.puerta.apertura;
     const pulso = 0.85 + Math.sin(J.tiempo * 2.5) * 0.15;
+    const f = fichaPortal();
 
-    if (a > 0) {                                       // ya franqueable: respira luz
-        const halo = ctx.createRadialGradient(cx, cy, r * 0.2, cx, cy, r * 2.3);
-        halo.addColorStop(0, `rgba(150, 210, 255, ${0.4 * a * pulso})`);
+    // el halo que la anuncia cuando ya deja pasar
+    if (a > 0) {
+        const hy = cy + PORTAL_BASE - PORTAL_ALTO * 0.5;
+        const alcance = PORTAL_ALTO * 1.25;
+        const halo = ctx.createRadialGradient(cx, hy, alcance * 0.1, cx, hy, alcance);
+        halo.addColorStop(0, `rgba(150, 210, 255, ${0.38 * a * pulso})`);
         halo.addColorStop(1, 'rgba(150, 210, 255, 0)');
         ctx.fillStyle = halo;
-        ctx.beginPath(); ctx.arc(cx, cy, r * 2.3, 0, 6.2832); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx, hy, alcance, 0, 6.2832); ctx.fill();
     }
 
-    ctx.fillStyle = '#0c1024';                         // el vano al otro lado
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.fill();
-
+    // ---- el otro lado, recortado al hueco ----
     ctx.save();
-    ctx.beginPath(); ctx.arc(cx, cy, r, 0, 6.2832); ctx.clip();
-    const corrida = a * r * 1.08;
-    hojaShoji(cx - corrida, cy, r, -1);
-    hojaShoji(cx + corrida, cy, r, 1);
-
-    if (a < 1) {                                       // el sello, mientras aguanta
-        ctx.globalAlpha = 1 - a;
-        ctx.fillStyle = '#f2e4c8';
-        ctx.save(); ctx.translate(cx, cy); ctx.rotate(0.25);
-        ctx.fillRect(-5, -r * 0.62, 10, r * 1.24);
-        ctx.strokeStyle = P.bermellon; ctx.lineWidth = 1.6;
-        ctx.strokeRect(-5, -r * 0.62, 10, r * 1.24);
-        ctx.fillStyle = `rgba(210, 70, 55, ${pulso})`;
-        for (let i = -1; i <= 1; i++) { ctx.beginPath(); ctx.arc(0, i * 8, 2, 0, 6.2832); ctx.fill(); }
-        ctx.restore();
-        ctx.globalAlpha = 1;
-    }
+    const v = trazarVano(ctx, cx, cy, f.arco);
+    ctx.clip();
+    dibujarAsomo(v);
+    hojasDelPortal(v, f, a, pulso);
     ctx.restore();
 
-    ctx.strokeStyle = P.tinta;                         // marco entintado
-    ctx.lineWidth = 7;
-    ctx.beginPath(); ctx.arc(cx, cy, r + 3, 0, 6.2832); ctx.stroke();
-    ctx.strokeStyle = a >= 1 ? P.bermellon : '#7a4a58';
-    ctx.lineWidth = 4;
-    ctx.beginPath(); ctx.arc(cx, cy, r + 3, 0, 6.2832); ctx.stroke();
+    // ---- la obra: jambas, solera y remate ----
+    marcoDelPortal(cx, cy, v, f, a, pulso);
+}
+
+// ------------------------------------------------------------
+//  Lo que se ve al otro lado: la comarca siguiente, no la de ahora.
+//  Se guarda pintado y solo se rehace cuando cambia el destino, que es
+//  una vez cada diez sendas; repintarlo por fotograma sería tirar el
+//  tiempo en algo que no cambia.
+// ------------------------------------------------------------
+let asomoLienzo = null;
+let asomoClave = '';
+
+// El bioma al que lleva esta puerta. La última no lleva a ninguno: detrás
+// está la salida, y esa tiene cielo propio.
+function destinoDeLaPuerta() {
+    if (typeof Biomas === 'undefined') return null;
+    if (Biomas.ultima(J.nivel)) return 'salida';
+    return Biomas.deNivel(J.nivel + 1);
+}
+
+function dibujarAsomo(v) {
+    const destino = destinoDeLaPuerta();
+    const id = destino === 'salida' ? 'salida' : (destino ? destino.id : 'nada');
+    const an = Math.ceil(v.an), al = Math.ceil(v.al);
+
+    if (asomoClave !== `${id}:${an}x${al}`) {
+        asomoLienzo = pintarAsomo(destino, an, al);
+        asomoClave = `${id}:${an}x${al}`;
+    }
+    ctx.drawImage(asomoLienzo, v.izq, v.techo);
+
+    // el menudeo del aire de allá, que es lo único que se mueve: sin esto el
+    // asomo se lee como una lámina clavada detrás del hueco
+    const color = destino === 'salida'
+        ? '#ffd784'
+        : ((destino && destino.ambiente && destino.ambiente.color) || T.mota);
+    ctx.save();
+    ctx.fillStyle = color;
+    for (let i = 0; i < 7; i++) {
+        const fase = i * 1.7;
+        const mx = v.izq + ((i * 0.37 + Math.sin(J.tiempo * 0.3 + fase) * 0.12 + 1) % 1) * v.an;
+        const my = v.base - ((J.tiempo * 0.09 + i * 0.21) % 1) * v.al;
+        ctx.globalAlpha = 0.12 + Math.sin(J.tiempo * 1.4 + fase) * 0.1;
+        ctx.beginPath(); ctx.arc(mx, my, 1.6, 0, 6.2832); ctx.fill();
+    }
+    ctx.restore();
+}
+
+// El retrato de la comarca de al lado: su cielo, su horizonte y su suelo,
+// con la silueta que le toque según lo que tenga de afueras. Ni detalle ni
+// falta: se mira por un hueco de metro y medio y desde lejos.
+function pintarAsomo(destino, an, al) {
+    const c = lienzoOculto(an, al), g = c.getContext('2d');
+    const finalDelCamino = destino === 'salida';
+    const q = finalDelCamino
+        ? { fondoAlto: '#3d4a7a', fondoBajo: '#e8a15c', suelo: '#c8b98f',
+            sueloSombra: '#8a7a5a', bordeSombra: '#5a4a6a', mota: '#ffe8b0' }
+        : Object.assign({}, P, destino && destino.paleta);
+    const horizonte = al * 0.72;
+
+    const cielo = g.createLinearGradient(0, 0, 0, horizonte);
+    cielo.addColorStop(0, q.fondoAlto || P.nocheAlta);
+    cielo.addColorStop(1, q.fondoBajo || P.nocheBaja);
+    g.fillStyle = cielo;
+    g.fillRect(0, 0, an, al);
+
+    const tipo = finalDelCamino ? 'salida' : ((destino && destino.afueras) || 'jardin');
+    siluetaDeAsomo(g, an, al, horizonte, tipo, q);
+
+    // el suelo de allá, que arranca donde acaba la silueta y se aclara al
+    // acercarse al umbral: es lo que hace que el camino parezca seguir
+    const piso = g.createLinearGradient(0, horizonte, 0, al);
+    piso.addColorStop(0, q.sueloSombra || '#2a2a34');
+    piso.addColorStop(1, q.suelo || '#4a4657');
+    g.fillStyle = piso;
+    g.fillRect(0, horizonte, an, al - horizonte);
+
+    // la penumbra de los cantos: por un vano se ve el centro, no las esquinas
+    const velo = g.createRadialGradient(an / 2, al * 0.55, an * 0.12, an / 2, al * 0.55, an * 0.95);
+    velo.addColorStop(0, 'rgba(0, 0, 0, 0)');
+    velo.addColorStop(1, 'rgba(0, 0, 0, 0.55)');
+    g.fillStyle = velo;
+    g.fillRect(0, 0, an, al);
+
+    return c;
+}
+
+// Las siluetas van sorteadas con senos y módulos en vez de con azar: así el
+// asomo de una comarca sale siempre igual y no cambia de casa cada vez que
+// hay que rehacer el lienzo.
+function siluetaDeAsomo(g, an, al, horizonte, tipo, q) {
+    const oscuro = q.bordeSombra || '#20242e';
+    const claro = q.mota || '#8f9bb0';
+
+    // una luna o un sol bajos para los que tienen cielo: dan fondo y dicen de
+    // un vistazo que aquello es aire libre y no otra sala
+    const astro = (color, x, y, r) => {
+        const halo = g.createRadialGradient(x, y, 1, x, y, r * 3.4);
+        halo.addColorStop(0, color);
+        halo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        g.globalAlpha = 0.5; g.fillStyle = halo;
+        g.beginPath(); g.arc(x, y, r * 3.4, 0, 6.2832); g.fill();
+        g.globalAlpha = 0.9; g.fillStyle = color;
+        g.beginPath(); g.arc(x, y, r, 0, 6.2832); g.fill();
+        g.globalAlpha = 1;
+    };
+
+    if (tipo === 'roca') {
+        // no hay cielo: hay más piedra, y la galería que se pierde al fondo
+        g.fillStyle = oscuro;
+        g.fillRect(0, 0, an, horizonte);
+        g.globalAlpha = 0.5; g.fillStyle = claro;
+        for (let i = 0; i < 9; i++) {
+            const x = ((i * 37) % 100) / 100 * an, y = ((i * 61) % 100) / 100 * horizonte;
+            g.beginPath();
+            g.ellipse(x, y, an * 0.1, al * 0.03, i * 0.7, 0, 6.2832);
+            g.fill();
+        }
+        g.globalAlpha = 1;
+        const hondo = g.createRadialGradient(an / 2, horizonte * 0.62, 2,
+                                             an / 2, horizonte * 0.62, an * 0.42);
+        hondo.addColorStop(0, `${claro}66`);
+        hondo.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        g.fillStyle = hondo;
+        g.fillRect(0, 0, an, horizonte);
+
+    } else if (tipo === 'canaveral') {
+        astro(claro, an * 0.7, horizonte * 0.3, an * 0.07);
+        g.strokeStyle = oscuro; g.lineCap = 'round';
+        for (let i = 0; i < 11; i++) {
+            const x = (i + 0.5) / 11 * an + Math.sin(i * 2.3) * 4;
+            g.lineWidth = 3 + (i % 3);
+            g.globalAlpha = 0.55 + (i % 3) * 0.15;
+            g.beginPath();
+            g.moveTo(x, al);
+            g.lineTo(x + Math.sin(i) * 6, horizonte * (0.1 + (i % 4) * 0.12));
+            g.stroke();
+        }
+        g.globalAlpha = 1;
+
+    } else if (tipo === 'jardin' || tipo === 'arboleda') {
+        astro('#ffe8c0', an * 0.72, horizonte * 0.26, an * 0.06);
+        g.fillStyle = oscuro;
+        for (let i = 0; i < 6; i++) {
+            const x = (i + 0.5) / 6 * an, r = an * (0.16 + (i % 3) * 0.05);
+            g.globalAlpha = 0.65 + (i % 2) * 0.25;
+            g.beginPath();
+            g.ellipse(x, horizonte - r * 0.35, r, r * 0.8, 0, 0, 6.2832);
+            g.fill();
+        }
+        g.globalAlpha = 1;
+        if (tipo === 'arboleda') {
+            // y los torii de la senda, uno detrás de otro, encogiendo
+            g.strokeStyle = '#a8382c';
+            for (let i = 0; i < 3; i++) {
+                const e = 1 - i * 0.26, w = an * 0.3 * e, h = al * 0.2 * e;
+                const x = an / 2, y = horizonte + al * 0.04;
+                g.globalAlpha = 0.75 - i * 0.2;
+                g.lineWidth = 3 * e;
+                g.beginPath();
+                g.moveTo(x - w / 2, y); g.lineTo(x - w / 2, y - h);
+                g.moveTo(x + w / 2, y); g.lineTo(x + w / 2, y - h);
+                g.moveTo(x - w * 0.62, y - h); g.lineTo(x + w * 0.62, y - h);
+                g.moveTo(x - w * 0.52, y - h * 0.82); g.lineTo(x + w * 0.52, y - h * 0.82);
+                g.stroke();
+            }
+            g.globalAlpha = 1;
+        }
+
+    } else if (tipo === 'pueblo') {
+        astro('#ffd8a0', an * 0.24, horizonte * 0.24, an * 0.055);
+        // tejados a dos aguas, escalonados, con alguna ventana encendida
+        for (let i = 0; i < 5; i++) {
+            const w = an * (0.3 + (i % 3) * 0.08);
+            const x = ((i * 0.27) % 1) * an - w * 0.2;
+            const h = al * (0.16 + (i % 2) * 0.07);
+            const y = horizonte - h * (0.2 + (i % 3) * 0.15);
+            g.globalAlpha = 0.75 + (i % 2) * 0.2;
+            g.fillStyle = oscuro;
+            g.fillRect(x, y, w, horizonte - y + al * 0.1);
+            g.beginPath();                                  // el alero, en punta
+            g.moveTo(x - w * 0.12, y);
+            g.lineTo(x + w / 2, y - h * 0.42);
+            g.lineTo(x + w * 1.12, y);
+            g.closePath(); g.fill();
+            g.fillStyle = '#ffc46a';
+            g.globalAlpha = 0.35 + (i % 2) * 0.35;
+            g.fillRect(x + w * 0.35, y + h * 0.35, w * 0.22, h * 0.28);
+        }
+        g.globalAlpha = 1;
+
+    } else if (tipo === 'vacio') {
+        // bajo el puente no hay comarca: hay noche, jirones y ningún fondo
+        g.fillStyle = 'rgba(4, 6, 12, 0.75)';
+        g.fillRect(0, 0, an, al);
+        g.globalAlpha = 0.5; g.fillStyle = claro;
+        for (let i = 0; i < 16; i++) {
+            const x = ((i * 53) % 100) / 100 * an, y = ((i * 29) % 100) / 100 * al;
+            g.beginPath(); g.arc(x, y, 0.9, 0, 6.2832); g.fill();
+        }
+        g.globalAlpha = 0.12;
+        for (let i = 0; i < 4; i++) {
+            g.beginPath();
+            g.ellipse(an / 2, al * (0.3 + i * 0.18), an * 0.75, al * 0.05, 0, 0, 6.2832);
+            g.fill();
+        }
+        g.globalAlpha = 1;
+
+    } else if (tipo === 'nubes' || tipo === 'salida') {
+        astro(tipo === 'salida' ? '#fff0c4' : '#e8eeff', an * 0.62, horizonte * 0.24, an * 0.08);
+        g.fillStyle = oscuro; g.globalAlpha = 0.6;
+        for (let i = 0; i < 4; i++) {
+            const x = (i + 0.5) / 4 * an, r = an * 0.22;
+            g.beginPath();
+            g.moveTo(x, horizonte - r);
+            g.lineTo(x + r * 0.8, horizonte);
+            g.lineTo(x - r * 0.8, horizonte);
+            g.closePath(); g.fill();
+        }
+        g.fillStyle = tipo === 'salida' ? '#ffe0b0' : '#cddcf0';
+        for (let i = 0; i < 5; i++) {
+            g.globalAlpha = 0.18 + (i % 3) * 0.1;
+            g.beginPath();
+            g.ellipse(an * (0.2 + (i * 0.23) % 0.8), horizonte + al * (0.02 + i * 0.05),
+                      an * 0.42, al * 0.035, 0, 0, 6.2832);
+            g.fill();
+        }
+        g.globalAlpha = 1;
+
+    } else {
+        astro('#e8eeff', an * 0.7, horizonte * 0.28, an * 0.06);
+        g.fillStyle = oscuro; g.globalAlpha = 0.7;
+        g.fillRect(0, horizonte - al * 0.1, an, al * 0.1);
+        g.globalAlpha = 1;
+    }
+}
+
+// ------------------------------------------------------------
+//  Las hojas: lo que cierra el vano y se corre a los lados conforme
+//  el sello cede. Cada comarca cierra con lo suyo.
+// ------------------------------------------------------------
+function hojasDelPortal(v, f, a, pulso) {
+    // 'canto' es por donde se juntan las dos, que es lo que se separa: cerradas
+    // coinciden en el centro y de ahí cada una tira para su lado
+    const cx = (v.izq + v.der) / 2;
+    const corrida = a * (v.an / 2 + 4);
+    hojaPortal(v, f, cx - corrida, -1);
+    hojaPortal(v, f, cx + corrida, 1);
+
+    if (a < 1) {                                       // el sello, mientras aguanta
+        const cy = v.base - v.al * 0.5;
+        const alto = v.al * 0.34;
+        ctx.save();
+        ctx.globalAlpha = 1 - a;
+        ctx.translate(cx, cy); ctx.rotate(0.2);
+        ctx.fillStyle = '#f2e4c8';
+        ctx.fillRect(-6, -alto / 2, 12, alto);
+        ctx.strokeStyle = P.bermellon; ctx.lineWidth = 1.6;
+        ctx.strokeRect(-6, -alto / 2, 12, alto);
+        ctx.fillStyle = `rgba(210, 70, 55, ${pulso})`;
+        for (let i = -1; i <= 1; i++) {
+            ctx.beginPath(); ctx.arc(0, i * alto * 0.26, 2.2, 0, 6.2832); ctx.fill();
+        }
+        ctx.restore();
+    }
+}
+
+// Media hoja, pegada al canto que le toca. Todas ocupan lo mismo y se mueven
+// igual: lo que cambia de una comarca a otra es de qué están hechas.
+function hojaPortal(v, f, canto, lado) {
+    const w = v.an / 2 + 4;
+    const x0 = lado < 0 ? canto - w : canto;
+    const y0 = v.techo, h = v.base - v.techo;
+
+    ctx.save();
+    if (f.hoja === 'reja') {
+        // rastrillo: barrotes y noche entre ellos, que deja ver lo de detrás
+        ctx.fillStyle = 'rgba(10, 14, 20, 0.55)';
+        ctx.fillRect(x0, y0, w, h);
+        ctx.strokeStyle = '#4a4e58'; ctx.lineWidth = 3.4;
+        for (let i = 0; i < 4; i++) {
+            const bx = x0 + (i + 0.5) * w / 4;
+            ctx.beginPath(); ctx.moveTo(bx, y0); ctx.lineTo(bx, v.base); ctx.stroke();
+        }
+        ctx.strokeStyle = '#5e636e'; ctx.lineWidth = 4;
+        for (let i = 0; i < 4; i++) {
+            const by = y0 + (i + 0.5) * h / 4;
+            ctx.beginPath(); ctx.moveTo(x0, by); ctx.lineTo(x0 + w, by); ctx.stroke();
+        }
+
+    } else if (f.hoja === 'losa') {
+        // la losa de la cripta: piedra maciza, sin gracia y con una grieta
+        ctx.fillStyle = f.marco; ctx.fillRect(x0, y0, w, h);
+        ctx.fillStyle = f.sombra; ctx.fillRect(x0, y0 + h * 0.5, w, h * 0.5);
+        ctx.globalAlpha = 0.45; ctx.fillStyle = f.luz;
+        ctx.fillRect(x0, y0, w, h * 0.16);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = 'rgba(12, 10, 20, 0.7)'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(x0 + w * 0.5, y0);
+        ctx.lineTo(x0 + w * 0.32, y0 + h * 0.42);
+        ctx.lineTo(x0 + w * 0.58, v.base);
+        ctx.stroke();
+
+    } else if (f.hoja === 'tablas') {
+        // portón de tablones claveteados
+        for (let i = 0; i < 3; i++) {
+            ctx.fillStyle = i % 2 ? (T.zocaloSombra || P.maderaSombra) : (T.zocalo || P.madera);
+            ctx.fillRect(x0 + i * w / 3, y0, w / 3 + 0.5, h);
+        }
+        ctx.strokeStyle = 'rgba(20, 16, 12, 0.55)'; ctx.lineWidth = 1.4;
+        for (let i = 1; i < 3; i++) {
+            const vx = x0 + i * w / 3;
+            ctx.beginPath(); ctx.moveTo(vx, y0); ctx.lineTo(vx, v.base); ctx.stroke();
+        }
+        ctx.fillStyle = '#4a4e58';                       // los herrajes
+        ctx.fillRect(x0, y0 + h * 0.2, w, 5);
+        ctx.fillRect(x0, y0 + h * 0.72, w, 5);
+        ctx.fillStyle = '#7e838e';
+        for (let i = 0; i < 3; i++) {
+            ctx.beginPath();
+            ctx.arc(x0 + (i + 0.5) * w / 3, y0 + h * 0.2 + 2.5, 2, 0, 6.2832);
+            ctx.fill();
+        }
+
+    } else if (f.hoja === 'canas') {
+        // cortina de cañas atadas: se cuela algo de luz entre ellas
+        ctx.fillStyle = 'rgba(30, 40, 26, 0.55)';
+        ctx.fillRect(x0, y0, w, h);
+        for (let i = 0; i < 7; i++) {
+            const bx = x0 + (i + 0.5) * w / 7;
+            ctx.fillStyle = i % 2 ? '#a88f52' : '#8d7742';
+            ctx.fillRect(bx - 2.4, y0, 4.8, h);
+            ctx.fillStyle = 'rgba(60, 48, 24, 0.6)';
+            for (let k = 1; k < 5; k++) ctx.fillRect(bx - 2.4, y0 + k * h / 5, 4.8, 1.6);
+        }
+        ctx.strokeStyle = '#6b5a30'; ctx.lineWidth = 2;
+        for (const ky of [0.24, 0.72]) {
+            ctx.beginPath();
+            ctx.moveTo(x0, y0 + h * ky); ctx.lineTo(x0 + w, y0 + h * ky);
+            ctx.stroke();
+        }
+
+    } else if (f.hoja === 'noren') {
+        // el paño corto de tela que cuelga: no llega al suelo y ondea
+        ctx.fillStyle = 'rgba(10, 14, 24, 0.5)';
+        ctx.fillRect(x0, y0, w, h);
+        const largo = h * 0.62;
+        ctx.fillStyle = f.marco;
+        ctx.beginPath();
+        ctx.moveTo(x0, y0);
+        ctx.lineTo(x0 + w, y0);
+        ctx.lineTo(x0 + w, y0 + largo);
+        for (let i = 4; i >= 0; i--) {
+            const px = x0 + i * w / 4;
+            ctx.lineTo(px, y0 + largo + Math.sin(J.tiempo * 1.6 + i) * 3);
+        }
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = 'rgba(255, 240, 200, 0.35)';
+        ctx.fillRect(x0, y0 + largo * 0.42, w, 3);
+
+    } else if (f.hoja === 'velo') {
+        // el velo del santuario: luz cuajada, apenas materia
+        const gl = ctx.createLinearGradient(x0, y0, x0, v.base);
+        gl.addColorStop(0, 'rgba(255, 240, 196, 0.75)');
+        gl.addColorStop(1, 'rgba(255, 215, 132, 0.35)');
+        ctx.fillStyle = gl;
+        ctx.fillRect(x0, y0, w, h);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; ctx.lineWidth = 1.2;
+        for (let i = 0; i < 4; i++) {
+            const vx = x0 + (i + 0.5) * w / 4;
+            ctx.globalAlpha = 0.3 + Math.sin(J.tiempo * 2 + i) * 0.25;
+            ctx.beginPath(); ctx.moveTo(vx, y0); ctx.lineTo(vx, v.base); ctx.stroke();
+        }
+        ctx.globalAlpha = 1;
+
+    } else {
+        // shoji: el papel cuadriculado de siempre
+        ctx.fillStyle = '#e8dfc4';
+        ctx.fillRect(x0, y0, w, h);
+        ctx.fillStyle = 'rgba(255, 235, 180, 0.35)';
+        ctx.fillRect(x0, y0, w, h * 0.5);
+        ctx.strokeStyle = 'rgba(90, 60, 45, 0.55)'; ctx.lineWidth = 1.4;
+        for (let i = 1; i < 3; i++) {
+            const vx = x0 + i * w / 3;
+            ctx.beginPath(); ctx.moveTo(vx, y0); ctx.lineTo(vx, v.base); ctx.stroke();
+        }
+        for (let i = 1; i < 5; i++) {
+            const vy = y0 + i * h / 5;
+            ctx.beginPath(); ctx.moveTo(x0, vy); ctx.lineTo(x0 + w, vy); ctx.stroke();
+        }
+    }
+
+    ctx.fillStyle = P.tinta;                           // el canto por donde se juntan
+    ctx.fillRect(lado < 0 ? canto - 2.5 : canto, y0, 2.5, h);
+    ctx.restore();
+}
+
+// ------------------------------------------------------------
+//  La obra de fábrica: jambas, solera y el remate de la comarca. Va por
+//  fuera del recorte, así que puede sobresalir del hueco: es justo lo
+//  que hace que se lea como puerta y no como agujero.
+// ------------------------------------------------------------
+function marcoDelPortal(cx, cy, v, f, a, pulso) {
+    const grueso = TILE * 0.2;
+    const alto = v.base - v.techo;
+
+    if (f.arco === 'torii') {
+        // los dos postes y, encima, el dintel que vuela por los lados
+        const vuelo = v.an * 0.34;
+        ctx.fillStyle = P.tinta;
+        ctx.fillRect(v.izq - grueso - 2, v.techo, grueso + 4, alto + 3);
+        ctx.fillRect(v.der - 2, v.techo, grueso + 4, alto + 3);
+        ctx.fillStyle = f.marco;
+        ctx.fillRect(v.izq - grueso, v.techo, grueso, alto);
+        ctx.fillRect(v.der, v.techo, grueso, alto);
+        ctx.fillStyle = f.sombra;
+        ctx.fillRect(v.izq - grueso * 0.35, v.techo, grueso * 0.35, alto);
+        ctx.fillRect(v.der + grueso * 0.65, v.techo, grueso * 0.35, alto);
+
+        // el travesaño de abajo, recto, y el de arriba, con su alero curvado
+        ctx.fillStyle = f.marco;
+        ctx.fillRect(v.izq - grueso * 1.6, v.techo + v.al * 0.13, v.an + grueso * 3.2, grueso * 0.7);
+        ctx.fillStyle = P.tinta;
+        ctx.beginPath();
+        ctx.moveTo(v.izq - vuelo, v.techo - grueso * 0.2);
+        ctx.quadraticCurveTo(cx, v.techo - grueso * 1.5, v.der + vuelo, v.techo - grueso * 0.2);
+        ctx.lineTo(v.der + vuelo * 0.9, v.techo + grueso * 0.9);
+        ctx.quadraticCurveTo(cx, v.techo - grueso * 0.2, v.izq - vuelo * 0.9, v.techo + grueso * 0.9);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = f.marco;
+        ctx.beginPath();
+        ctx.moveTo(v.izq - vuelo * 0.94, v.techo);
+        ctx.quadraticCurveTo(cx, v.techo - grueso * 1.2, v.der + vuelo * 0.94, v.techo);
+        ctx.lineTo(v.der + vuelo * 0.86, v.techo + grueso * 0.66);
+        ctx.quadraticCurveTo(cx, v.techo + grueso * 0.1, v.izq - vuelo * 0.86, v.techo + grueso * 0.66);
+        ctx.closePath(); ctx.fill();
+
+    } else {
+        // marco corrido: se entinta primero grueso y se rellena de color
+        ctx.save();
+        ctx.lineJoin = 'round';
+        trazarVano(ctx, cx, cy, f.arco);
+        ctx.strokeStyle = P.tinta; ctx.lineWidth = grueso + 7;
+        ctx.stroke();
+        ctx.strokeStyle = f.marco; ctx.lineWidth = grueso;
+        ctx.stroke();
+        // una luz por el canto de dentro, que le da bulto a la piedra
+        ctx.strokeStyle = f.luz; ctx.lineWidth = 2.4;
+        ctx.globalAlpha = 0.5;
+        trazarVano(ctx, cx, cy, f.arco, 0.965);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+        ctx.restore();
+
+        if (f.arco === 'dintel') {
+            // una viga que sobresale a los dos lados
+            ctx.fillStyle = P.tinta;
+            ctx.fillRect(v.izq - grueso * 1.4, v.techo - grueso * 1.5, v.an + grueso * 2.8, grueso * 1.5);
+            ctx.fillStyle = f.marco;
+            ctx.fillRect(v.izq - grueso * 1.2, v.techo - grueso * 1.3, v.an + grueso * 2.4, grueso * 1.1);
+            ctx.fillStyle = f.sombra;
+            ctx.fillRect(v.izq - grueso * 1.2, v.techo - grueso * 0.3, v.an + grueso * 2.4, grueso * 0.3);
+        } else if (f.arco === 'medio') {
+            // las dovelas: las juntas radiales que se le ven a un arco de piedra.
+            // Solo en el de medio punto: son radios de una circunferencia, y en
+            // uno apuntado o rebajado no caerían donde toca
+            ctx.save();
+            ctx.strokeStyle = f.sombra; ctx.lineWidth = 1.6; ctx.globalAlpha = 0.65;
+            const ejeY = v.techo + v.an * 0.45;
+            for (let i = 1; i < 6; i++) {
+                const ang = Math.PI + i * Math.PI / 6;
+                ctx.beginPath();
+                ctx.moveTo(cx + Math.cos(ang) * v.an * 0.5, ejeY + Math.sin(ang) * v.an * 0.45);
+                ctx.lineTo(cx + Math.cos(ang) * v.an * 0.62, ejeY + Math.sin(ang) * v.an * 0.58);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+    }
+
+    // la solera, que es lo que asienta la puerta en el suelo
+    ctx.fillStyle = P.tinta;
+    ctx.fillRect(v.izq - grueso * 1.3, v.base, v.an + grueso * 2.6, 5);
+    ctx.fillStyle = f.sombra;
+    ctx.fillRect(v.izq - grueso * 1.1, v.base, v.an + grueso * 2.2, 3.5);
+
+    adornoDeClave(cx, v, f, pulso);
+
+    // el filo que avisa: rojo mientras el sello aguanta, azul al ceder
+    ctx.save();
+    ctx.lineJoin = 'round';
+    trazarVano(ctx, cx, cy, f.arco, 1.075);
     ctx.strokeStyle = a >= 1
         ? `rgba(170, 220, 255, ${0.7 * pulso})`
         : `rgba(230, 120, 100, ${0.45 * pulso})`;
     ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(cx, cy, r + 7, 0, 6.2832); ctx.stroke();
+    ctx.stroke();
+    ctx.restore();
 }
 
-// Media hoja de shoji: papel translúcido cuadriculado por listones
-function hojaShoji(x, y, r, lado) {
-    const x0 = lado < 0 ? x - r : x;
-    ctx.fillStyle = '#e8dfc4';
-    ctx.fillRect(x0, y - r, r, r * 2);
-    ctx.fillStyle = 'rgba(255, 235, 180, 0.35)';
-    ctx.fillRect(x0, y - r, r, r);
+// El detalle que firma la comarca, en la clave del arco o colgando del
+// dintel: es lo que impide que dos puertas de la misma forma se confundan.
+function adornoDeClave(cx, v, f, pulso) {
+    const y = v.techo;
+    ctx.save();
 
-    ctx.strokeStyle = 'rgba(90, 60, 45, 0.55)';
-    ctx.lineWidth = 1.4;
-    for (let i = 1; i < 3; i++) {
-        const vx = x0 + (r * i) / 3;
-        ctx.beginPath(); ctx.moveTo(vx, y - r); ctx.lineTo(vx, y + r); ctx.stroke();
+    if (f.clave === 'calavera') {
+        ctx.fillStyle = '#d8d2c0';
+        ctx.beginPath(); ctx.arc(cx, y - 8, 7, 0, 6.2832); ctx.fill();
+        ctx.fillRect(cx - 4, y - 4, 8, 6);
+        ctx.fillStyle = '#1c1826';
+        ctx.beginPath(); ctx.arc(cx - 2.6, y - 9, 2, 0, 6.2832); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx + 2.6, y - 9, 2, 0, 6.2832); ctx.fill();
+
+    } else if (f.clave === 'goteron') {
+        // el agua que rezuma la bóveda: cae, y vuelve a caer
+        ctx.fillStyle = 'rgba(168, 196, 138, 0.8)';
+        for (let i = 0; i < 3; i++) {
+            const t = (J.tiempo * 0.6 + i * 0.33) % 1;
+            ctx.globalAlpha = 0.7 * (1 - t);
+            ctx.beginPath();
+            ctx.ellipse(cx + (i - 1) * 11, y + 6 + t * v.al * 0.5, 1.6, 3, 0, 0, 6.2832);
+            ctx.fill();
+        }
+
+    } else if (f.clave === 'hoja') {
+        ctx.fillStyle = T.hoja || '#2b6b3e';
+        for (const s of [-1, 1]) {
+            ctx.beginPath();
+            ctx.ellipse(cx + s * 13, y - 10, 11, 4, s * 0.5, 0, 6.2832);
+            ctx.fill();
+        }
+
+    } else if (f.clave === 'sol') {
+        ctx.strokeStyle = `rgba(255, 215, 132, ${0.5 + pulso * 0.4})`;
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(cx, y - 9, 5.5, 0, 6.2832); ctx.stroke();
+        for (let i = 0; i < 8; i++) {
+            const ang = i * 0.7854;
+            ctx.beginPath();
+            ctx.moveTo(cx + Math.cos(ang) * 7.5, y - 9 + Math.sin(ang) * 7.5);
+            ctx.lineTo(cx + Math.cos(ang) * 10.5, y - 9 + Math.sin(ang) * 10.5);
+            ctx.stroke();
+        }
+
+    } else if (f.clave === 'teja') {
+        // un tejadillo sobre el dintel, como los portalones de la mansión
+        ctx.fillStyle = P.tinta;
+        ctx.beginPath();
+        ctx.moveTo(cx - v.an * 0.68, y - 12);
+        ctx.lineTo(cx, y - 26);
+        ctx.lineTo(cx + v.an * 0.68, y - 12);
+        ctx.closePath(); ctx.fill();
+        ctx.fillStyle = T.bordeBase || P.teja;
+        ctx.beginPath();
+        ctx.moveTo(cx - v.an * 0.6, y - 13);
+        ctx.lineTo(cx, y - 24);
+        ctx.lineTo(cx + v.an * 0.6, y - 13);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = T.bordeSombra || P.tejaSombra; ctx.lineWidth = 1.2;
+        for (let i = -2; i <= 2; i++) {
+            ctx.beginPath();
+            ctx.moveTo(cx + i * v.an * 0.22, y - 13);
+            ctx.lineTo(cx + i * v.an * 0.09, y - 22);
+            ctx.stroke();
+        }
+
+    } else if (f.clave === 'grieta') {
+        ctx.strokeStyle = 'rgba(20, 16, 24, 0.7)'; ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(cx - 3, y - 2);
+        ctx.lineTo(cx + 4, y - 11);
+        ctx.lineTo(cx - 2, y - 18);
+        ctx.lineTo(cx + 6, y - 26);
+        ctx.stroke();
+
+    } else if (f.clave === 'hierro') {
+        // las cadenas del puente levadizo, tirantes a los dos lados
+        ctx.strokeStyle = '#5e636e'; ctx.lineWidth = 3;
+        for (const s of [-1, 1]) {
+            ctx.beginPath();
+            ctx.moveTo(cx + s * v.an * 0.5, y - 8);
+            ctx.lineTo(cx + s * v.an * 0.78, y - v.al * 0.18);
+            ctx.stroke();
+        }
+
+    } else if (f.clave === 'almena') {
+        ctx.fillStyle = f.marco;
+        for (let i = -2; i <= 2; i++) ctx.fillRect(cx + i * 13 - 5, y - 20, 10, 12);
+        ctx.fillStyle = P.tinta;
+        for (let i = -2; i <= 2; i++) ctx.fillRect(cx + i * 13 - 5, y - 20, 10, 2.5);
+
+    } else if (f.clave === 'shimenawa') {
+        // la maroma sagrada, con sus tiras de papel colgando
+        ctx.strokeStyle = '#d8cfa8'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(cx - v.an * 0.48, y + 14);
+        ctx.quadraticCurveTo(cx, y + 26, cx + v.an * 0.48, y + 14);
+        ctx.stroke();
+        ctx.fillStyle = '#f4efe0';
+        for (let i = -1; i <= 1; i++) {
+            const px = cx + i * v.an * 0.26;
+            const py = y + 20 - Math.abs(i) * 3;
+            ctx.beginPath();
+            ctx.moveTo(px - 4, py);
+            ctx.lineTo(px + 4, py);
+            ctx.lineTo(px + 2, py + 14 + Math.sin(J.tiempo * 1.5 + i) * 2);
+            ctx.lineTo(px - 2, py + 13);
+            ctx.closePath(); ctx.fill();
+        }
+
+    } else if (f.clave === 'espejo') {
+        // el espejo del santuario: lo que se ve al final del camino
+        const r = 9 + pulso * 2;
+        const gl = ctx.createRadialGradient(cx, y - 4, 1, cx, y - 4, r * 2.2);
+        gl.addColorStop(0, `rgba(255, 240, 196, ${0.85 * pulso})`);
+        gl.addColorStop(1, 'rgba(255, 215, 132, 0)');
+        ctx.fillStyle = gl;
+        ctx.beginPath(); ctx.arc(cx, y - 4, r * 2.2, 0, 6.2832); ctx.fill();
+        ctx.strokeStyle = '#ffe8b0'; ctx.lineWidth = 2.2;
+        ctx.beginPath(); ctx.arc(cx, y - 4, r * 0.7, 0, 6.2832); ctx.stroke();
     }
-    for (let i = 1; i < 5; i++) {
-        const vy = y - r + (r * 2 * i) / 5;
-        ctx.beginPath(); ctx.moveTo(x0, vy); ctx.lineTo(x0 + r, vy); ctx.stroke();
-    }
-    ctx.fillStyle = P.tinta;                           // canto por donde se juntan
-    ctx.fillRect(lado < 0 ? x - 2.5 : x, y - r, 2.5, r * 2);
+
+    ctx.restore();
 }
 
 // ============================================================
@@ -1962,6 +2632,7 @@ function pintar() {
     dibujarAdornos();
     dibujarTrampas();
     dibujarPuerta(aPantallaX(J.puerta.x), aPantallaY(J.puerta.y));
+    dibujarCharcos();
 
     for (const o of J.objetos) {
         const flot = Math.sin(J.tiempo * 3 + o.giro) * 2.5;
@@ -2013,6 +2684,89 @@ function vinetear() {
         g.fillRect(0, 0, AN, AL);
     }
     ctx.drawImage(capaVineta, 0, 0);
+}
+
+// ============================================================
+//  El elixir derramado. La mancha se traza con los radios que el charco
+//  trae sorteados desde que se rompió la botella, unidos por curvas para
+//  que el contorno sea irregular pero blando: nada de picos, que esto es
+//  un líquido y no una mancha de tinta.
+//
+//  Y se lee de un vistazo lo que le queda: pierde cuerpo según se bebe
+//  -el brillo interior se apaga con lo que va quedando- y al agotarse se
+//  encoge y se aclara hasta desaparecer, como secándose en la piedra.
+// ============================================================
+function trazarMancha(px, py, rx, ry, forma, giro) {
+    const n = forma.length;
+    const punto = i => {
+        const a = giro + i / n * 6.2832;
+        return [px + Math.cos(a) * rx * forma[i % n], py + Math.sin(a) * ry * forma[i % n]];
+    };
+    // se pasa por los medios de cada par y el vértice queda de tirador de la
+    // curva: es la forma corriente de cerrar un contorno redondeado sin costura
+    ctx.beginPath();
+    let [ax, ay] = punto(0);
+    let [bx, by] = punto(1);
+    ctx.moveTo((ax + bx) / 2, (ay + by) / 2);
+    for (let i = 1; i <= n; i++) {
+        const [cx, cy] = punto(i);
+        const [dx, dy] = punto(i + 1);
+        ctx.quadraticCurveTo(cx, cy, (cx + dx) / 2, (cy + dy) / 2);
+    }
+    ctx.closePath();
+}
+
+function dibujarCharcos() {
+    for (const c of J.charcos) {
+        const px = aPantallaX(c.x), py = aPantallaY(c.y);
+        // el secado: mengua y se va en lo que dura CHARCO_SECADO
+        const seco = c.secando > 0 ? Math.min(1, c.secando / CHARCO_SECADO) : 0;
+        const k = 1 - seco;
+        if (k <= 0.01) continue;
+        const jugo = Math.max(0, c.queda / CHARCO_CURA);   // lo que aún da, de 1 a 0
+
+        // se aplasta en vertical: el suelo se mira de refilón, no desde arriba
+        const rx = TILE * c.r * (0.92 + jugo * 0.08) * (1 - seco * 0.25);
+        const ry = rx * 0.62;
+
+        ctx.save();
+        ctx.globalAlpha = 0.85 * k;
+
+        // el cuerpo, más claro en el centro y más oscuro en el filo
+        trazarMancha(px, py, rx, ry, c.forma, c.giro);
+        const g = ctx.createRadialGradient(px, py - ry * 0.15, rx * 0.05, px, py, rx);
+        g.addColorStop(0, `rgba(255, 156, 186, ${0.55 + jugo * 0.35})`);
+        g.addColorStop(0.55, `rgba(224, 79, 122, ${0.45 + jugo * 0.3})`);
+        g.addColorStop(1, 'rgba(120, 32, 62, 0.55)');
+        ctx.fillStyle = g;
+        ctx.fill();
+
+        // el borde: la orilla siempre queda más subida de color que el centro
+        ctx.strokeStyle = `rgba(168, 52, 88, ${0.55 * k})`;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        // el reflejo, que es lo que lo delata como líquido y no como pintura.
+        // Late despacio, y va perdiendo fuerza a la vez que el charco
+        const brillo = (0.5 + Math.sin(J.tiempo * 2.6 + c.giro) * 0.5) * jugo;
+        ctx.globalAlpha = (0.15 + 0.3 * brillo) * k;
+        ctx.fillStyle = '#ffe2f0';
+        ctx.beginPath();
+        ctx.ellipse(px - rx * 0.28, py - ry * 0.3, rx * 0.3, ry * 0.26, -0.5, 0, 6.2832);
+        ctx.fill();
+
+        // y unas gotas sueltas alrededor, las que saltaron al romperse
+        ctx.globalAlpha = 0.4 * k * jugo;
+        ctx.fillStyle = '#e04f7a';
+        for (let i = 0; i < 3; i++) {
+            const a = c.giro + i * 2.0944;
+            ctx.beginPath();
+            ctx.ellipse(px + Math.cos(a) * rx * 1.25, py + Math.sin(a) * ry * 1.25,
+                        2.4 - i * 0.5, 1.6 - i * 0.3, 0, 0, 6.2832);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
 }
 
 // El aura que delata un elixir: un halo que late, el anillo que se abre y se
@@ -2314,6 +3068,117 @@ function sonarOrbe() {
 }
 
 // ============================================================
+//  Los otros sonidos de la senda: el sello de la puerta al deshacerse,
+//  la puerta al cruzarla y el vidrio de la botella al saltar en pedazos. Van por el mismo camino que los tañidos del
+//  orbe -lista escrita a mano, porque desde file:// no hay forma de
+//  leer una carpeta- pero sin escalerilla: estos no llegan a puñados
+//  ni suben de tono, suenan sueltos y se acabó.
+//
+//  Para añadir variantes se deja el mp3 en su carpeta y se apunta el
+//  nombre en la lista; si hay varios, cada vez sale uno al azar sin
+//  repetir el anterior. Con las listas vacías, o con los archivos sin
+//  poner, el juego sigue igual y calla: no se rompe nada por faltar
+//  un sonido.
+// ============================================================
+// la puerta suena dos veces y por motivos distintos: una al deshacerse el
+// sello, que es un aviso -ya puedes irte-, y otra al cruzarla de verdad
+const PUERTA_CARPETA = '../musica/puerta/';
+const ABRIR_SONIDOS = ['abrir_puerta.mp3'];
+const CRUZAR_SONIDOS = ['cruzar_puerta.mp3'];
+
+const CRISTAL_CARPETA = '../musica/cristal/';
+const CRISTAL_SONIDOS = ['cristal.mp3'];
+
+const VOZ_COPIAS = 2;   // menos que los orbes: estos rara vez se solapan
+
+// Un banco de voces: cada archivo con sus copias, para que dos seguidos
+// no se corten el uno al otro, y la memoria de cuál sonó el último.
+function nuevoBanco(carpeta, nombres) {
+    return {
+        voces: nombres.map(nombre => {
+            const copias = [];
+            for (let i = 0; i < VOZ_COPIAS; i++) {
+                const a = new Audio(encodeURI(carpeta + nombre));  // encodeURI: los nombres pueden llevar espacios
+                a.preload = 'auto';
+                copias.push(a);
+            }
+            return { copias, turno: 0 };
+        }),
+        anterior: -1
+    };
+}
+
+// se montan al cargar por lo mismo que los tañidos: hacerlo en el momento
+// de sonar deja mudo justo al primero
+const bancoAbrir = nuevoBanco(PUERTA_CARPETA, ABRIR_SONIDOS);
+const bancoCruzar = nuevoBanco(PUERTA_CARPETA, CRUZAR_SONIDOS);
+const bancoCristal = nuevoBanco(CRISTAL_CARPETA, CRISTAL_SONIDOS);
+
+function sonarBanco(banco) {
+    if (!banco || !banco.voces.length) return;
+    // el volumen se lee en cada golpe y no se guarda: así la regla de
+    // Efectos se nota según se arrastra, y estas cajas no cuelgan del
+    // documento, de modo que Ajustes.aplicarValores no las alcanza
+    const alto = (typeof Ajustes !== 'undefined') ? Ajustes.volumen('efectos') : 0.5;
+    if (alto <= 0) return;
+
+    let cual = Math.floor(Math.random() * banco.voces.length);
+    if (banco.voces.length > 1 && cual === banco.anterior)
+        cual = (cual + 1 + Math.floor(Math.random() * (banco.voces.length - 1))) % banco.voces.length;
+    banco.anterior = cual;
+
+    const voz = banco.voces[cual];
+    const a = voz.copias[voz.turno];
+    voz.turno = (voz.turno + 1) % voz.copias.length;
+
+    a.volume = Math.min(1, alto);
+    try { a.currentTime = 0; } catch (e) { /* aún no ha cargado: sonará desde el principio igual */ }
+    const suena = a.play();
+    if (suena && suena.catch) suena.catch(() => { /* falta el archivo o el navegador se niega: se calla y ya */ });
+}
+
+function sonarAbrirPuerta() { sonarBanco(bancoAbrir); }
+function sonarCruzarPuerta() { sonarBanco(bancoCruzar); }
+function sonarCristal() { sonarBanco(bancoCristal); }
+
+// ------------------------------------------------------------
+//  Beber del charco no es un golpe, es un rato: mientras se está
+//  encima suena en bucle y calla al salir. Por eso no va por el banco
+//  de arriba, que dispara y se olvida; aquí hace falta una sola voz a
+//  la que se le pueda decir cuándo parar.
+//
+//  Se le pide sonar en cada fotograma que cura, así que lo primero es
+//  mirar si ya sonaba: volver a llamar a play() sobre algo que ya está
+//  sonando no lo reinicia, pero devuelve promesas que nadie recoge.
+// ------------------------------------------------------------
+const CURAR_SONIDO = '../musica/cristal/curar.mp3';
+let vozCurar = null;
+let curando = false;
+
+function sonarCurando(activo) {
+    const alto = (typeof Ajustes !== 'undefined') ? Ajustes.volumen('efectos') : 0.5;
+
+    if (!activo || alto <= 0) {
+        if (curando && vozCurar) { vozCurar.pause(); vozCurar.currentTime = 0; }
+        curando = false;
+        return;
+    }
+
+    if (!vozCurar) {
+        vozCurar = new Audio(encodeURI(CURAR_SONIDO));
+        vozCurar.loop = true;      // el charco se bebe despacio: lo corto se repite
+        vozCurar.preload = 'auto';
+    }
+    vozCurar.volume = Math.min(1, alto);   // por si se mueve la regla mientras dura
+    if (curando) return;
+
+    curando = true;
+    try { vozCurar.currentTime = 0; } catch (e) { /* aún no ha cargado: da igual */ }
+    const suena = vozCurar.play();
+    if (suena && suena.catch) suena.catch(() => { curando = false; });
+}
+
+// ============================================================
 //  Los orbes azules en vuelo: una esfera con su halo y una estela que
 //  se estira en la dirección en que va. Cuanto más corre -y corre al
 //  volverse hacia el héroe-, más larga la cola, que es lo que hace que
@@ -2541,6 +3406,13 @@ function sombrasDeGeometria(j) {
         abrirClaro(sctx, lx, ly, alcance, 0.62 * o.mezLuz);
     }
 
+    // lo derramado alumbra menos que la botella entera, pero alumbra: sin esto
+    // un charco en un rincón oscuro no se encuentra ni sabiendo que está
+    for (const c of J.charcos) {
+        const k = c.secando > 0 ? 1 - Math.min(1, c.secando / CHARCO_SECADO) : 1;
+        abrirClaro(sctx, aPantallaX(c.x), aPantallaY(c.y), TILE * 1.5, 0.4 * k);
+    }
+
     ctx.drawImage(lienzoSombra, -m, -m);
 }
 
@@ -2585,6 +3457,18 @@ function pintarLuces(j) {
         const halo = ctx.createRadialGradient(lx, ly, 1, lx, ly, alcance);
         halo.addColorStop(0, `rgba(255, 130, 175, ${0.34 * pulso * o.mezLuz})`);
         halo.addColorStop(0.4, `rgba(224, 79, 122, ${0.12 * pulso * o.mezLuz})`);
+        halo.addColorStop(1, 'rgba(224, 79, 122, 0)');
+        ctx.fillStyle = halo;
+        ctx.beginPath(); ctx.arc(lx, ly, alcance, 0, 6.2832); ctx.fill();
+    }
+
+    for (const c of J.charcos) {
+        const k = c.secando > 0 ? 1 - Math.min(1, c.secando / CHARCO_SECADO) : 1;
+        const jugo = Math.max(0, c.queda / CHARCO_CURA);
+        const lx = aPantallaX(c.x), ly = aPantallaY(c.y);
+        const alcance = TILE * 1.5;
+        const halo = ctx.createRadialGradient(lx, ly, 1, lx, ly, alcance);
+        halo.addColorStop(0, `rgba(255, 130, 175, ${0.2 * k * (0.5 + jugo * 0.5)})`);
         halo.addColorStop(1, 'rgba(224, 79, 122, 0)');
         ctx.fillStyle = halo;
         ctx.beginPath(); ctx.arc(lx, ly, alcance, 0, 6.2832); ctx.fill();
@@ -2849,6 +3733,12 @@ function pintarMinimapa() {
         puntoMini(o.x, o.y, P.elixirLuz, 4);
         mctx.globalAlpha = 1;
         puntoMini(o.x, o.y, P.elixir, 2);
+    }
+    for (const c of J.charcos) {
+        if (!limpia && !aLaVista(c)) continue;
+        mctx.globalAlpha = c.secando > 0 ? 0.3 : 0.75;
+        puntoMini(c.x, c.y, P.elixir, 3);
+        mctx.globalAlpha = 1;
     }
     for (const e of J.enemigos)
         if (aLaVista(e)) puntoMini(e.x, e.y, e.tipo === 'oni' ? '#b07bd0' : '#5f8fd8', 2.2);

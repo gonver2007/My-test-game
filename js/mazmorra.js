@@ -37,6 +37,17 @@ const RADIO_VISION = 8.5;
 
 const VEL_PUERTA = 1.4;           // lo que tardan en separarse las hojas
 
+// El elixir no se bebe de un trago al pasarle por encima: la botella hay que
+// romperla a golpes, igual que a un enemigo, y lo que llevaba se derrama en el
+// suelo. Ese charco cura mientras se está encima -no se lleva puesto- y no
+// espera: dura lo que dura y luego se seca. Quien lo rompe con la vida llena
+// desperdicia media botella, y esa es justamente la decisión que se le pide.
+const CHARCO_VIDA = 5;       // segundos que aguanta antes de empezar a secarse
+const CHARCO_CURA = 10;      // PV que da entero, como mucho
+const CHARCO_RITMO = 4;      // PV por segundo mientras se pisa: los 10 en 2,5 s
+const CHARCO_SECADO = 0.9;   // lo que tarda en irse del todo una vez agotado
+const CHARCO_RADIO = 0.8;    // el círculo que hay que pisar, en casillas
+
 // Cuánta compaña hay en cada senda. Como la puerta no se abre hasta que no
 // queda nadie, este número es también lo larga que se hace la planta.
 const ENEMIGOS_BASE = 12;         // los de la primera senda
@@ -51,6 +62,7 @@ const J = {
     trampas: [],         // las que planta el bioma, si es que planta alguna
     efectos: [],         // chispas y números de daño, solo decorativos
     orbesSueltos: [],    // los orbes azules que aún van por el aire
+    charcos: [],         // lo derramado por las botellas rotas, curando en el suelo
     explorado: null,     // 1 = casilla ya vista; lo que recuerda el minimapa
     puerta: { x: 0, y: 0, apertura: 0 },   // apertura: 0 cerrada, 1 abierta del todo
     nivel: 1,
@@ -301,6 +313,7 @@ function nuevoNivel() {
 
     J.enemigos = [];
     J.objetos = [];
+    J.charcos = [];
     J.trampas = [];
     J.efectos = [];
     J.orbesSueltos = [];
@@ -449,7 +462,10 @@ function actualizar(dt, entrada) {
     // el hierro sigue subiendo y bajando aunque el héroe haya caído: lo que se
     // para es que muerda, no que se mueva
     actualizarTrampas(dt);
-    if (J.muerto) return;
+    if (J.muerto) {
+        if (typeof sonarCurando === 'function') sonarCurando(false);
+        return;
+    }
 
     const j = J.jugador;
     j.mira = entrada.mira;
@@ -510,16 +526,7 @@ function actualizar(dt, entrada) {
         }
     }
 
-    // --- elixires: se recogen al pasar por encima ---
-    for (const o of J.objetos.slice()) {
-        if (Math.hypot(o.x - j.x, o.y - j.y) > j.r + o.r) continue;
-        J.objetos = J.objetos.filter(p => p !== o);
-        const cura = Math.min(12, j.hpMax - j.hp);
-        j.hp += cura;
-        mensaje(`Bebes un elixir y recuperas ${cura} PV.`);
-        chispas(o.x, o.y, '#ff8fae', 10);
-    }
-
+    actualizarCharcos(dt);
     actualizarOrbes(dt);
     abrirPuertaSiToca(dt);
 }
@@ -531,6 +538,7 @@ function abrirPuertaSiToca(dt) {
     if (J.puerta.apertura === 0) {
         mensaje('Cae el último enemigo: el sello se deshace y la puerta se abre.');
         mensaje('Sin nada que temer, reconoces la senda entera.');
+        if (typeof sonarAbrirPuerta === 'function') sonarAbrirPuerta();
         chispas(J.puerta.x, J.puerta.y, '#a8dcff', 18);
         J.explorado.fill(1);     // ya no hay peligro: se levanta la niebla del mapa
     }
@@ -552,6 +560,16 @@ function golpear() {
     const j = J.jugador;
     j.cdAtaque = j.cadencia;
     j.golpe = 0.18;
+
+    // el mismo arco rompe las botellas que pille de paso: no hay que apuntarlas
+    // aparte ni pulsar otra tecla, basta con dar un tajo donde están
+    for (const o of J.objetos.slice()) {
+        const dx = o.x - j.x, dy = o.y - j.y;
+        const d = Math.hypot(dx, dy);
+        if (d > j.alcance + o.r) continue;
+        if (Math.abs(difAngulo(Math.atan2(dy, dx), j.mira)) > j.arco) continue;
+        romperBotella(o);
+    }
 
     for (const e of J.enemigos.slice()) {
         const dx = e.x - j.x, dy = e.y - j.y;
@@ -651,6 +669,9 @@ function cruzar() {
         return false;
     }
 
+    // suena el umbral: solo aquí, cuando ya no hay vuelta atrás
+    if (typeof sonarCruzarPuerta === 'function') sonarCruzarPuerta();
+
     // Los orbes que todavía venían por el aire cruzan contigo: haberlos
     // ganado ya los tenías, y perderlos por no esperarlos quieto delante de
     // la puerta sería castigar la prisa. No se mudan tal cual, eso sí: sus
@@ -690,6 +711,97 @@ function cruzar() {
     // y los rezagados entran detrás de él, como si hubieran pasado la puerta
     if (enVuelo) soltarOrbes(J.jugador.x, J.jugador.y, enVuelo);
     return true;
+}
+
+// ============================================================
+//  La botella y su charco
+//
+//  La botella salta de un solo tajo -aguantar golpes la volvería un
+//  enemigo más, y no lo es- y lo que llevaba dentro cae al suelo.
+//
+//  El charco tiene dos cuerpos distintos a propósito: para la partida
+//  es un círculo limpio, porque saber si pisas o no pisas no puede
+//  depender de un contorno caprichoso; para la vista es una mancha
+//  irregular trazada por código, que se sortea aquí una vez -al
+//  derramarse- y viaja con el charco, de modo que ni dos charcos son
+//  iguales ni el mismo tiembla de un fotograma a otro.
+// ============================================================
+function romperBotella(o) {
+    if (o.roto) return;          // dos filos en el mismo tajo no la rompen dos veces
+    o.roto = true;
+    J.objetos = J.objetos.filter(p => p !== o);
+
+    if (typeof sonarCristal === 'function') sonarCristal();
+    chispas(o.x, o.y, '#ffd8e6', 14);    // los vidrios
+    chispas(o.x, o.y, '#e04f7a', 10);    // y lo que llevaban
+    mensaje('La botella salta en pedazos y el elixir se derrama. Ponte encima.');
+
+    J.charcos.push({
+        x: o.x, y: o.y,
+        r: CHARCO_RADIO,
+        t: 0,                    // lo que lleva derramado
+        queda: CHARCO_CURA,      // PV que aún puede dar
+        secando: 0,              // 0 mientras sirve; sube al agotarse
+        forma: formaDeCharco(),
+        giro: azar(0, 6.2832)
+    });
+}
+
+// El contorno de la mancha: un puñado de radios sorteados alrededor del
+// centro. Se guardan como números y no como trazado para poder estirarlos
+// al secarse sin volver a sortear nada.
+function formaDeCharco() {
+    const puntas = azarEnt(7, 10);
+    const radios = [];
+    for (let i = 0; i < puntas; i++) radios.push(azar(0.62, 1.12));
+    // se liman los saltos entre vecinos: sin esto salen estrellas de mar,
+    // y lo que se derrama no pincha, se extiende
+    for (let v = 0; v < 2; v++)
+        for (let i = 0; i < puntas; i++) {
+            const a = radios[(i - 1 + puntas) % puntas], b = radios[(i + 1) % puntas];
+            radios[i] = radios[i] * 0.6 + (a + b) * 0.2;
+        }
+    return radios;
+}
+
+function actualizarCharcos(dt) {
+    const j = J.jugador;
+    let bebiendo = false;
+    for (const c of J.charcos.slice()) {
+        if (c.secando > 0) {
+            c.secando += dt;
+            if (c.secando > CHARCO_SECADO) J.charcos = J.charcos.filter(p => p !== c);
+            continue;
+        }
+
+        c.t += dt;
+        // encima de verdad: cuenta el centro del héroe, no rozarlo con el hombro
+        if (Math.hypot(c.x - j.x, c.y - j.y) < c.r && j.hp < j.hpMax) {
+            const cura = Math.min(CHARCO_RITMO * dt, c.queda, j.hpMax - j.hp);
+            j.hp += cura;
+            c.queda -= cura;
+            c.bebido = (c.bebido || 0) + cura;
+            bebiendo = true;
+        }
+
+        // el registro se entera al final y de una vez: contarlo mientras se
+        // bebe llenaría diez líneas con el mismo aviso, y la barra de vida ya
+        // está diciendo lo que pasa mucho mejor que cualquier renglón
+        if (c.t >= CHARCO_VIDA || c.queda <= 0.001) {
+            c.secando = 0.0001;
+            const total = Math.round(c.bebido || 0);
+            mensaje(!total
+                ? 'El elixir derramado se seca en la piedra sin que lo aproveches.'
+                : c.queda <= 0.001
+                    ? `Apuras el elixir derramado: ${total} PV.`
+                    : `El elixir derramado te devuelve ${total} PV; el resto se seca en la piedra.`);
+        }
+    }
+
+    // el sonido de beber se enciende y se apaga aquí, y no al pisar el charco:
+    // así calla solo cuando deja de curar, sea porque te apartas, porque el
+    // charco se agota o porque ya no te falta vida que reponer
+    if (typeof sonarCurando === 'function') sonarCurando(bebiendo);
 }
 
 // ---------- Efectos decorativos ----------
@@ -890,6 +1002,7 @@ function iniciarPartida() {
     J.completado = false;
     J.enemigos = [];
     J.objetos = [];
+    J.charcos = [];
     J.trampas = [];
     J.efectos = [];
     J.orbesSueltos = [];
