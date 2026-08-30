@@ -20,5 +20,3 @@ pv de vida, daño, nombre una breve descipcion cuantos as eliminado y cuantas ve
 
 
 
-
-PREGUNTAR A CLAUDE POR COMO USAR GODOT

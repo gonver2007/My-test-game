@@ -57,6 +57,19 @@
     background:linear-gradient(180deg,#e85a3f,#b52d20);border-color:#ffe6c8;
     box-shadow:0 10px 26px rgba(12,6,14,.5),0 0 46px rgba(217,75,51,.75);}
 
+  /* Cerrar el juego se avisa en brasa, para no pulsarlo de paso. Es el mismo
+     gesto que #mjSalir en el menú de la partida (body.juego #mjSalir, en
+     estilos.css): letra salmón, filete rojo y, al pasar por encima, la laca
+     se tiñe en vez de encenderse en oro. Los dos botones que cierran el juego
+     se reconocen a la primera, se llegue por donde se llegue. El ID gana al
+     .boton:hover, así que el salmón se queda también con el ratón encima,
+     igual que en la partida. */
+  #btSalir{color:#e8a99e;border-color:rgba(217,75,51,.5);}
+  #btSalir:hover,#btSalir:focus-visible{
+    background:rgba(217,75,51,.38);border-color:#d94b33;
+    box-shadow:0 8px 22px rgba(12,6,14,.55),0 0 22px rgba(217,75,51,.35);}
+  #btSalir:focus-visible{outline-color:#d94b33;}
+
   /* la pasada de luz: una franja inclinada que barre el botón una sola vez */
   .boton::before{content:'';position:absolute;top:0;bottom:0;left:-60%;width:45%;
     transform:skewX(-18deg);opacity:0;pointer-events:none;
@@ -164,7 +177,11 @@
   <div id="menuBotones" style="position:absolute;left:50%;transform:translateX(-50%);top:425px;width:396px;max-width:80%;display:flex;flex-direction:column;gap:14px;">
     <button id="btJugar" type="button" class="boton principal">CONTINUAR</button>
     <button id="btAjustes" type="button" class="boton">AJUSTES</button>
+    <button id="btSalir" type="button" class="boton">CERRAR JUEGO</button>
     <button type="button" class="boton">CRÉDITOS</button>
+    <!-- lo enseña menu.js si el cierre no ha podido ser; el mismo apaño que
+         el menú de la partida, y con el mismo aviso -->
+    <p id="salirNota" hidden>El navegador no deja cerrar esta pestaña: ciérrala tú.</p>
   </div>
 
 

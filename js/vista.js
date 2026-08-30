@@ -2937,12 +2937,9 @@ document.getElementById('mjInicio').addEventListener('click', () => {
     location.href = '../index.html';
 });
 
-document.getElementById('mjSalir').addEventListener('click', () => {
-    window.close();
-    // los navegadores solo cierran las pestañas que ellos abrieron: si seguimos
-    // aquí un instante después, se lo decimos al jugador en vez de callar
-    setTimeout(() => { document.getElementById('mjNota').hidden = false; }, 250);
-});
+// el mismo cierre que usa el botón de la portada, en ajustes.js: así los dos
+// hacen exactamente lo mismo y no hay dos maneras de cerrar el juego
+document.getElementById('mjSalir').addEventListener('click', () => cerrarJuego('mjNota'));
 
 // ---------- El final del camino ----------
 // Cruzada la última puerta se deja anotado el recuento de la partida y se

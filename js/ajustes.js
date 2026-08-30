@@ -114,6 +114,33 @@ function avisarAlPadre(mensaje) {
 
 function cerrarMarco() { avisarAlPadre({ cerrar: true }); }
 
+// ---------- Cerrar el juego ----------
+// Lo piden dos botones -el de la portada y el del menú de la partida- y
+// antes cada uno lo hacía a su manera. Ahora comparten esta función, que es
+// la única forma de asegurar que se comporten igual.
+//
+// Quien puede cerrar la ventana es siempre el documento de arriba. La partida
+// lo es (sale del marco a pantalla completa), así que se cierra ella misma;
+// la portada no (vive dentro del marco del armazón), así que se lo pide a
+// index.html, que es quien manda sobre la ventana.
+//
+// La ventana de ajustes de la partida no entra aquí: esa va enmarcada de otro
+// marco y no tiene botón de cerrar el juego.
+//
+// En los dos casos, si un cuarto de segundo después seguimos vivos es que el
+// navegador no ha dejado cerrar, y se le dice al jugador en vez de callar.
+// Si el cierre sí ocurre no queda nadie para enseñar nada.
+function cerrarJuego(idNota) {
+    const enArmazon = hayPadre && !enMarco;
+    if (enArmazon) parent.postMessage({ tipo: 'armazon', cerrarJuego: true }, '*');
+    else window.close();
+
+    setTimeout(() => {
+        const nota = document.getElementById(idNota);
+        if (nota) nota.hidden = false;
+    }, 250);
+}
+
 // la marca la lleva el <html>, para que el css recorte el rótulo: dentro del
 // marco hay bastante menos alto que en una pantalla entera
 if (enMarco) document.documentElement.classList.add('enMarco');

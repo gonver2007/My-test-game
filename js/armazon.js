@@ -86,6 +86,12 @@ addEventListener('message', ev => {
     // la partida no cabe en el marco: se sale a pantalla completa
     if (aviso.salir) { location.href = aviso.salir; return; }
 
+    // El botón de cerrar de la portada. Dentro del marco nadie puede cerrar la
+    // ventana, así que la pantalla lo pide y se hace aquí, que es el documento
+    // de arriba. En el navegador esto no siempre se permite; quien lo pidió ya
+    // se encarga de avisar al jugador si sigue vivo un instante después.
+    if (aviso.cerrarJuego) { window.close(); return; }
+
     // el primer toque del jugador desbloquea el sonido
     if (aviso.toque) { if (esperandoToque) sonar(); return; }
 

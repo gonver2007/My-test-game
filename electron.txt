@@ -1,0 +1,8 @@
+Para empaquetar 
+cd "C:\Users\gonver\Desktop\Desktop\vscode\game\senda-electron"; npm run empaquetar
+
+
+Para compartir o subirlo
+copiar la carpeta win-unpacked
+que esta en C:\Users\gonver\Desktop\Desktop\vscode\game\senda-electron\salida
+renombrar la carpeta y pasarlo

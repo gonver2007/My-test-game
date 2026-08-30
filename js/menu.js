@@ -56,6 +56,7 @@ function volver() {
 }
 function irAjustes() { irA(document.body.dataset.ajustes || 'ajustes.html'); }
 
+
 // los huecos que se abren en el sitio del menú: armería, personaje,
 // habilidades, pergaminos y amuletos, todos del zaguán. Cada pantalla trae
 // los suyos y los que no existen sencillamente no se abren
@@ -102,6 +103,7 @@ function enlazar(id, accion) {
 enlazar('btJugar', continuar);
 enlazar('btVolver', volver);
 enlazar('btAjustes', irAjustes);
+enlazar('btSalir', () => cerrarJuego('salirNota'));   // la de ajustes.js
 enlazar('btHabilidades', () => alternar('habilidades'));
 enlazar('btPergaminos', () => alternar('pergaminos'));
 enlazar('btAmuletos', () => alternar('amuletos'));
