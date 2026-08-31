@@ -46,8 +46,8 @@ const ESTAMINA_RITMO = 2;         // puntos por segundo andando: 10 cada 5 segun
 const ESTAMINA_QUIETO = 2;        // y el doble plantado, sin dar un paso
 const ESTAMINA_CURANDO = 5;       // y a cinco veces con los pies en el elixir
 
-// Lo que el héroe alcanza a ver y recuerda. Algo menos que RADIO_LUZ, la
-// antorcha que dibuja la vista, para que el minimapa no se adelante a los ojos.
+// Hasta dónde llegan los ojos del héroe. Algo menos que RADIO_LUZ, la antorcha
+// que dibuja la vista: se alumbra más terreno del que de verdad se abarca.
 const RADIO_VISION = 8.5;
 
 const VEL_PUERTA = 1.4;           // lo que tardan en separarse las hojas
@@ -78,7 +78,6 @@ const J = {
     efectos: [],         // chispas y números de daño, solo decorativos
     orbesSueltos: [],    // los orbes azules que aún van por el aire
     charcos: [],         // lo derramado por las botellas rotas, curando en el suelo
-    explorado: null,     // 1 = casilla ya vista; lo que recuerda el minimapa
     puerta: { x: 0, y: 0, apertura: 0 },   // apertura: 0 cerrada, 1 abierta del todo
     nivel: 1,
     log: [],
@@ -122,19 +121,6 @@ function libre(x, y, r) {
 function moverEntidad(e, dx, dy) {
     if (dx && libre(e.x + dx, e.y, e.r)) e.x += dx;
     if (dy && libre(e.x, e.y + dy, e.r)) e.y += dy;
-}
-
-// Marca como vista la redonda de casillas alrededor del héroe. No hay línea
-// de visión: lo que queda cerca se da por conocido, aunque medie una pared.
-function descubrir() {
-    const j = J.jugador;
-    const r = Math.ceil(RADIO_VISION);
-    const y0 = Math.max(0, Math.floor(j.y - r)), y1 = Math.min(ALTO - 1, Math.floor(j.y + r));
-    const x0 = Math.max(0, Math.floor(j.x - r)), x1 = Math.min(ANCHO - 1, Math.floor(j.x + r));
-    for (let cy = y0; cy <= y1; cy++)
-        for (let cx = x0; cx <= x1; cx++)
-            if (Math.hypot(cx + 0.5 - j.x, cy + 0.5 - j.y) <= RADIO_VISION)
-                J.explorado[cy * ANCHO + cx] = 1;
 }
 
 // ============================================================
@@ -314,6 +300,9 @@ function distanciasDesde(ox, oy) {
 // ============================================================
 function nuevoNivel() {
     const { region, salas } = generarSalas();
+    // la planta es otra: el campo por el que se guiaban los bichos ya no vale,
+    // y se traza de nuevo en cuanto haga falta
+    olvidarCampo();
 
     // Se entra siempre por la sala de abajo, pegado a su pared del fondo...
     const entrada = salas[0];
@@ -334,8 +323,6 @@ function nuevoNivel() {
     J.trampas = [];
     J.efectos = [];
     J.orbesSueltos = [];
-    J.explorado = new Uint8Array(ANCHO * ALTO);
-    descubrir();
 
     // ni enemigos ni elixires encima de la puerta, ni en las narices del héroe
     const dist = distanciasDesde(Math.floor(J.jugador.x), Math.floor(J.jugador.y));
@@ -461,7 +448,11 @@ function casillaLibreCercaDe(region, px, py, r) {
 
 function crearEnemigo(x, y) {
     const duro = Math.random() < Math.min(0.15 + J.nivel * 0.08, 0.6);
-    const base = { x, y, ex: 0, ey: 0, cd: azar(0, 1), herido: 0, mira: 0 };
+    // alerta: lo que le queda de ir a por el héroe; a cero, se va de ronda.
+    // ronda y alto son el tramo que anda mientras tanto y lo que se para al
+    // acabarlo -desacompasado de salida, para que no arranquen todos a la vez-.
+    const base = { x, y, ex: 0, ey: 0, cd: azar(0, 1), herido: 0, mira: azar(0, 6.2832),
+                   alerta: 0, ronda: null, alto: azar(0, 1.5) };
     return duro
         ? { ...base, tipo: 'oni', art: 'el', nombre: 'oni', r: 0.38, vel: 2.1,
             hp: 30, hpMax: 30, dano: 10, alcance: 0.85, cadencia: 1.3 }
@@ -513,7 +504,6 @@ function actualizar(dt, entrada) {
         j.corriendo = false;
     }
     aplicarEmpuje(j, dt);
-    descubrir();
 
     // El aliento vuelve solo, sin descanso previo que haya que buscarse, pero
     // no siempre al mismo paso: el doble plantado que en marcha, y a cinco
@@ -543,26 +533,184 @@ function actualizar(dt, entrada) {
     if (entrada.dash && j.cdDash <= 0 && j.estamina >= COSTE_DASH) impulsar();
     if (entrada.atacar && !j.cubriendo && j.cdAtaque <= 0 && j.estamina >= COSTE_GOLPE) golpear();
 
-    // --- enemigos ---
+    actualizarEnemigos(dt);
+    actualizarCharcos(dt);
+    actualizarOrbes(dt);
+    abrirPuertaSiToca(dt);
+}
+
+// ============================================================
+//  El seso de los adversarios
+//
+//  Tienen dos estados y nada más: de ronda y a por el héroe.
+//
+//  De ronda andan sus tramos y se paran a ratos, en vez de esperar
+//  plantados a que alguien pase por delante. Una senda con doce bichos
+//  quietos es un museo; con doce bichos que se mueven, se cruzan y se
+//  paran, la misma sala ya no se recorre igual: no se sabe de antemano
+//  quién va a estar dónde.
+//
+//  Y cuando van a por ti no van en línea recta contra las paredes: hay
+//  un campo de distancias -un solo BFS desde el héroe, compartido por
+//  todos- y cada uno lo baja como si fuera cuesta abajo, así que doblan
+//  las esquinas y salen de las salas por donde se sale. Solo van derechos
+//  cuando de verdad no hay nada en medio, que es cuando ir derecho es lo
+//  natural. Antes se quedaban raspando el muro que los separaba de ti.
+// ============================================================
+const VISTA_ENEMIGO = 13;         // hasta dónde se da uno por enterado, en pasos de camino
+const MEMORIA_ENEMIGO = 3.5;      // segundos que sigue buscando después de perderte
+const PASO_RONDA = 0.5;           // lo que anda de ronda, sobre su paso de perseguir
+const RONDA_RADIO = 9;            // lo más lejos que se busca el siguiente tramo
+const RONDA_MINIMO = 2.5;         // y lo más cerca, para que el tramo valga la pena
+const RONDA_ALTO = [0.4, 1.8];    // lo que se para al terminar uno
+const RONDA_ATASCO = 1.2;         // sin acercarse a su destino, se busca otro
+
+// El campo de distancias hasta el héroe. Es uno solo para todos los bichos y
+// se rehace únicamente cuando el héroe cambia de casilla: perseguir a doce a
+// la vez cuesta entonces lo mismo que perseguir a uno.
+let campoHeroe = null;
+let campoEn = -1;                 // la casilla desde la que está trazado
+
+function olvidarCampo() { campoHeroe = null; campoEn = -1; }
+
+function campoHastaHeroe() {
+    const cx = Math.floor(J.jugador.x), cy = Math.floor(J.jugador.y);
+    const clave = cy * ANCHO + cx;
+    if (clave === campoEn) return campoHeroe;
+    if (esMuro(cx, cy)) return campoHeroe;         // empotrado en la roca: vale el de antes
+    campoHeroe = distanciasDesde(cx, cy);
+    campoEn = clave;
+    return campoHeroe;
+}
+
+// ¿Se ven dos puntos sin roca de por medio? Se va probando la recta que los
+// une a tres muestras por casilla: no es un trazado exacto, pero para decidir
+// si se va derecho o se dobla la esquina sobra, y cuesta casi nada.
+function hayVision(x0, y0, x1, y1) {
+    const dx = x1 - x0, dy = y1 - y0;
+    const pasos = Math.ceil(Math.hypot(dx, dy) * 3);
+    for (let i = 1; i < pasos; i++) {
+        const t = i / pasos;
+        if (esMuro(Math.floor(x0 + dx * t), Math.floor(y0 + dy * t))) return false;
+    }
+    return true;
+}
+
+// Lo que hay que apartarse de los demás para no acabar todos en el mismo
+// punto. Se usa igual persiguiendo que de ronda.
+function separacionEnemigos(e) {
+    let sx = 0, sy = 0;
+    for (const o of J.enemigos) {
+        if (o === e) continue;
+        const ox = e.x - o.x, oy = e.y - o.y;
+        const od = Math.hypot(ox, oy);
+        if (od > 0 && od < e.r + o.r + 0.2) { sx += ox / od * 0.9; sy += oy / od * 0.9; }
+    }
+    return [sx, sy];
+}
+
+// Hacia dónde tirar para llegar al héroe. Con el camino despejado, derecho a
+// él; si no, a la casilla vecina que menos pasos deje, que es lo que hace que
+// rodeen los muros en vez de empujarlos.
+function rumboAlHeroe(e) {
+    const j = J.jugador;
+    if (hayVision(e.x, e.y, j.x, j.y)) return [j.x - e.x, j.y - e.y];
+
+    const campo = campoHastaHeroe();
+    if (!campo) return [j.x - e.x, j.y - e.y];
+
+    const cx = Math.floor(e.x), cy = Math.floor(e.y);
+    let mejor = campo[cy * ANCHO + cx], bx = -1, by = -1;
+    for (let ny = cy - 1; ny <= cy + 1; ny++)
+        for (let nx = cx - 1; nx <= cx + 1; nx++) {
+            if ((nx === cx && ny === cy) || esMuro(nx, ny)) continue;
+            // en diagonal no se cortan esquinas: los dos lados han de estar libres
+            if (nx !== cx && ny !== cy && (esMuro(nx, cy) || esMuro(cx, ny))) continue;
+            const d = campo[ny * ANCHO + nx];
+            if (d < 0 || (mejor >= 0 && d >= mejor)) continue;   // -1 = allí no se llega
+            mejor = d; bx = nx; by = ny;
+        }
+    // ninguna vecina mejora: se tira derecho, que es lo único que queda
+    if (bx < 0) return [j.x - e.x, j.y - e.y];
+    return [bx + 0.5 - e.x, by + 0.5 - e.y];
+}
+
+// El siguiente tramo de ronda: cerca, libre y a la vista desde donde se está,
+// para que se pueda andar de una tirada sin acabar de morros contra una
+// esquina. Si tras unos cuantos tanteos no sale ninguno, se queda parado y
+// vuelve a probar al rato: mejor eso que empeñarse en un sitio imposible.
+function tramoDeRonda(e) {
+    for (let i = 0; i < 12; i++) {
+        const a = azar(0, 6.2832), r = azar(RONDA_MINIMO, RONDA_RADIO);
+        const x = e.x + Math.cos(a) * r, y = e.y + Math.sin(a) * r;
+        if (!libre(x, y, e.r + 0.1)) continue;
+        if (!hayVision(e.x, e.y, x, y)) continue;
+        return { x, y, resto: Math.hypot(x - e.x, y - e.y), sinAvanzar: 0 };
+    }
+    return null;
+}
+
+// La ronda de uno que no tiene a nadie a quien ir a buscar.
+function rondar(e, dt) {
+    if (e.alto > 0) { e.alto -= dt; return; }       // parado al final del tramo
+    if (!e.ronda) {
+        e.ronda = tramoDeRonda(e);
+        if (!e.ronda) { e.alto = azar(0.5, 1.2); return; }
+    }
+
+    const vx = e.ronda.x - e.x, vy = e.ronda.y - e.y;
+    const d = Math.hypot(vx, vy);
+    // llegado, o atascado contra algo que no estaba previsto: tramo nuevo
+    if (d < 0.45 || e.ronda.sinAvanzar > RONDA_ATASCO) {
+        e.ronda = null;
+        e.alto = azar(RONDA_ALTO[0], RONDA_ALTO[1]);
+        return;
+    }
+    // se cuenta el tiempo que lleva sin recortar camino, no el que lleva
+    // andando: quien avanza aunque sea despacio no está atascado
+    if (d < e.ronda.resto - 0.05) { e.ronda.resto = d; e.ronda.sinAvanzar = 0; }
+    else e.ronda.sinAvanzar += dt;
+
+    const [sx, sy] = separacionEnemigos(e);
+    const mx = vx / d + sx, my = vy / d + sy;
+    const m = Math.hypot(mx, my) || 1;
+    const paso = e.vel * PASO_RONDA;
+    moverEntidad(e, mx / m * paso * dt, my / m * paso * dt);
+    e.mira = Math.atan2(my, mx);
+}
+
+function actualizarEnemigos(dt) {
+    const j = J.jugador;
+    const campo = campoHastaHeroe();
+
     for (const e of J.enemigos) {
         e.cd -= dt;
         e.herido -= dt;
+        e.alerta -= dt;
         aplicarEmpuje(e, dt);
+
+        // Se cuenta por pasos de camino y no a vuelo de pájaro: al otro lado
+        // de un muro se puede estar a tres casillas y a cuarenta de camino, y
+        // entonces no hay nada de que enterarse. Un tajo despierta igual,
+        // venga de donde venga: a quien le pegan, mira.
+        const paso = campo ? campo[Math.floor(e.y) * ANCHO + Math.floor(e.x)] : -1;
+        if ((paso >= 0 && paso <= VISTA_ENEMIGO) || e.herido > 0) e.alerta = MEMORIA_ENEMIGO;
+
+        if (e.alerta <= 0) { rondar(e, dt); continue; }
+
+        // a por él: en cuanto se alerta, la ronda que llevara ya no vale
+        e.ronda = null;
+        e.alto = 0;
 
         const vx = j.x - e.x, vy = j.y - e.y;
         const d = Math.hypot(vx, vy) || 1e-6;
         e.mira = Math.atan2(vy, vx);
-        if (d > 13) continue;                       // aún no te ha visto
 
         if (d > e.alcance + j.r) {
-            // avanzar hacia el héroe, apartándose de los otros bichos
-            let mx = vx / d, my = vy / d;
-            for (const o of J.enemigos) {
-                if (o === e) continue;
-                const ox = e.x - o.x, oy = e.y - o.y;
-                const od = Math.hypot(ox, oy);
-                if (od > 0 && od < e.r + o.r + 0.2) { mx += ox / od * 0.9; my += oy / od * 0.9; }
-            }
+            const [rx, ry] = rumboAlHeroe(e);
+            const rd = Math.hypot(rx, ry) || 1;
+            const [sx, sy] = separacionEnemigos(e);
+            const mx = rx / rd + sx, my = ry / rd + sy;
             const m = Math.hypot(mx, my) || 1;
             moverEntidad(e, mx / m * e.vel * dt, my / m * e.vel * dt);
         } else if (e.cd <= 0) {
@@ -570,22 +718,15 @@ function actualizar(dt, entrada) {
             danarJugador(e);
         }
     }
-
-    actualizarCharcos(dt);
-    actualizarOrbes(dt);
-    abrirPuertaSiToca(dt);
 }
-
 // El sello cede cuando no queda nada vivo en la senda. Las hojas tardan un
 // momento en separarse: hasta que no acaban, la puerta no deja pasar.
 function abrirPuertaSiToca(dt) {
     if (J.enemigos.length) return;
     if (J.puerta.apertura === 0) {
         mensaje(TR('msg.selloRoto'));
-        mensaje(TR('msg.sendaEntera'));
         if (typeof sonarAbrirPuerta === 'function') sonarAbrirPuerta();
         chispas(J.puerta.x, J.puerta.y, '#a8dcff', 18);
-        J.explorado.fill(1);     // ya no hay peligro: se levanta la niebla del mapa
     }
     J.puerta.apertura = Math.min(1, J.puerta.apertura + dt * VEL_PUERTA);
 }
@@ -1083,13 +1224,8 @@ function iniciarPartida() {
     J.log = [];
     J.muerto = false;
     J.completado = false;
-    J.enemigos = [];
-    J.objetos = [];
-    J.charcos = [];
-    J.trampas = [];
-    J.efectos = [];
-    J.orbesSueltos = [];
     J.tiempo = 0;
+    // las listas de la senda no se tocan aquí: nuevoNivel las deja vacías
     mensaje(TR('msg.portal'));
     nuevoNivel();
 }

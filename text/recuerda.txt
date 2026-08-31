@@ -10,7 +10,7 @@ añador un bestiario que este en prev.html donde esta ahora el boton de volver y
 
 testear y balancear las armas sus mejoras y su precio mas animaciones de ataque
 
-sonido de armas tanto y katana añadido
+sonido de armas: tanto y katana añadido
 
 IDEAS
 

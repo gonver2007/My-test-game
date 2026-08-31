@@ -189,6 +189,23 @@ function margenAfueras() {
     return Math.ceil((Math.max(sobraX, sobraY) + TILE * 2) / TILE);
 }
 
+// Todo borde entre suelo y muro, en un solo camino y a la escala que se pida.
+// Con él se entinta el recinto en la vista -a tamaño de casilla- y se perfila
+// la planta en el plano de la senda -a tamaño de píxel-.
+function caminoDeBordes(paso) {
+    const p = new Path2D();
+    for (let y = 0; y < ALTO; y++)
+        for (let x = 0; x < ANCHO; x++) {
+            if (J.mapa[y][x] !== 0) continue;
+            const px = x * paso, py = y * paso;
+            if (esMuro(x, y - 1)) { p.moveTo(px, py); p.lineTo(px + paso, py); }
+            if (esMuro(x, y + 1)) { p.moveTo(px, py + paso); p.lineTo(px + paso, py + paso); }
+            if (esMuro(x - 1, y)) { p.moveTo(px, py); p.lineTo(px, py + paso); }
+            if (esMuro(x + 1, y)) { p.moveTo(px + paso, py); p.lineTo(px + paso, py + paso); }
+        }
+    return p;
+}
+
 function construirLienzoNivel() {
     // lo primero es saber en qué comarca se anda: de ahí salen los colores,
     // el suelo, lo que corona los muros y lo que se ve más allá
@@ -210,16 +227,7 @@ function construirLienzoNivel() {
 
     // 2) El camino que recorre todo borde entre suelo y muro: con él se trazan
     //    el tejado de fuera, la tarima de dentro y la línea de tinta
-    const bordes = new Path2D();
-    for (let y = 0; y < ALTO; y++)
-        for (let x = 0; x < ANCHO; x++) {
-            if (J.mapa[y][x] !== 0) continue;
-            const px = x * TILE, py = y * TILE;
-            if (esMuro(x, y - 1)) { bordes.moveTo(px, py); bordes.lineTo(px + TILE, py); }
-            if (esMuro(x, y + 1)) { bordes.moveTo(px, py + TILE); bordes.lineTo(px + TILE, py + TILE); }
-            if (esMuro(x - 1, y)) { bordes.moveTo(px, py); bordes.lineTo(px, py + TILE); }
-            if (esMuro(x + 1, y)) { bordes.moveTo(px + TILE, py); bordes.lineTo(px + TILE, py + TILE); }
-        }
+    const bordes = caminoDeBordes(TILE);
 
     const nivel = lienzoOculto(WT, HT), ng = nivel.getContext('2d');
     pintarExterior(ng, WT, HT, dist);                  // lo que hay más allá del recinto
@@ -287,21 +295,46 @@ function pintarExterior(g, W, H, dist) {
 
 // ---------- Herramientas que comparten todas las afueras ----------
 
+// Sembrar es lo que hacen todas las comarcas, y todas lo hacían escrito a mano:
+// se tantean tantos sitios como pida la densidad -que se ajusta sola al tamaño
+// del lienzo-, se descartan los que caen sobre el recinto o demasiado cerca, y
+// en los que quedan se llama al pintor con el lienzo guardado y devuelto luego
+// a su sitio. Lo único propio de cada comarca es ese pintor.
+function sembrar(A, densidad, holgura, pintar) {
+    const veces = Math.round(densidad * A.escala);
+    for (let i = 0; i < veces; i++) {
+        const x = azar(0, A.W), y = azar(0, A.H);
+        if (!A.despejado(x, y, holgura)) continue;
+        A.g.save();
+        pintar(x, y, A.g);
+        A.g.restore();
+    }
+}
+
+// Copas por todo el margen, más cerradas cuanto más lejos queda el recinto y
+// nunca sobre un solar ya tomado. El bosque y el jardín se diferencian solo en
+// lo tupido, lo grandes que son y lo deprisa que se cierra el monte.
+function arbolado(A, s, espesura, tamano, cierre) {
+    for (let y = -MARGEN; y < ALTO + MARGEN; y++)
+        for (let x = -MARGEN; x < ANCHO + MARGEN; x++) {
+            const dentro = x >= 0 && y >= 0 && x < ANCHO && y < ALTO;
+            const d = dentro ? A.dist[y * ANCHO + x] : 999;
+            if (d < 3 || !s.libre(x, y) || Math.random() > espesura) continue;
+            copaDeArbol(A.g, OFF + x * TILE + azar(3, TILE - 3),
+                        OFF + y * TILE + azar(3, TILE - 3),
+                        azar(TILE * tamano[0], TILE * tamano[1]), Math.min(1, (d - 3) / cierre));
+        }
+}
+
 // Manchas amplias y blandas, para que el fondo no quede liso
 function manchones(A, densidad, color, rx, ry, alfa) {
-    const { g, W, H } = A;
-    const cuantas = Math.round(densidad * A.escala);
-    for (let i = 0; i < cuantas; i++) {
-        const x = azar(0, W), y = azar(0, H);
-        if (!A.despejado(x, y, 2)) continue;
-        g.save();
+    sembrar(A, densidad, 2, (x, y, g) => {
         g.globalAlpha = azar(alfa[0], alfa[1]);
         g.fillStyle = color;
         g.beginPath();
         g.ellipse(x, y, azar(rx[0], rx[1]), azar(ry[0], ry[1]), azar(0, 3.14), 0, 6.2832);
         g.fill();
-        g.restore();
-    }
+    });
 }
 
 // Solares tomados: las claves se corren para que las casillas de las afueras,
@@ -341,46 +374,27 @@ function sembrarCasas(A, intentos, separacion) {
 
 // Helechos y piedras sueltas: el menudeo que llena los claros
 function sotobosque(A, densidad) {
-    const { g, W, H } = A;
-    const cuantas = Math.round(densidad * A.escala);
-    for (let i = 0; i < cuantas; i++) {
-        const x = azar(0, W), y = azar(0, H);
-        if (!A.despejado(x, y, 2)) continue;
-        if (Math.random() < 0.62) {
-            g.save();
-            g.globalAlpha = azar(0.12, 0.3);
-            g.strokeStyle = T.mota || P.hojaFriaLuz;
-            g.lineWidth = 1.6; g.lineCap = 'round';
-            const a = azar(0, 6.28), l = azar(6, 14);
-            g.beginPath(); g.moveTo(x, y);
-            g.quadraticCurveTo(x + Math.cos(a) * l * 0.5 - 4, y + Math.sin(a) * l * 0.5,
-                               x + Math.cos(a) * l, y + Math.sin(a) * l);
-            g.stroke();
-            g.restore();
-        } else {
-            pieza(g, x, y, azar(3, 7), azar(2.5, 5), T.zocaloSombra, null, null, azar(0, 3), 1.6);
-        }
-    }
+    sembrar(A, densidad, 2, (x, y, g) => {
+        if (Math.random() >= 0.62)                     // una de cada tres es piedra
+            return pieza(g, x, y, azar(3, 7), azar(2.5, 5), T.zocaloSombra, null, null, azar(0, 3), 1.6);
+        g.globalAlpha = azar(0.12, 0.3);
+        g.strokeStyle = T.mota || P.hojaFriaLuz;
+        g.lineWidth = 1.6; g.lineCap = 'round';
+        const a = azar(0, 6.28), l = azar(6, 14);
+        g.beginPath(); g.moveTo(x, y);
+        g.quadraticCurveTo(x + Math.cos(a) * l * 0.5 - 4, y + Math.sin(a) * l * 0.5,
+                           x + Math.cos(a) * l, y + Math.sin(a) * l);
+        g.stroke();
+    });
 }
 
 // ---------- Bosque nocturno: pinos en masa y algún tejado de aldea ----------
 function afuerasArboleda(A) {
-    const { g } = A;
     manchones(A, 300, T.hoja, [30, 90], [20, 60], [0.05, 0.14]);
-    const s = sembrarCasas(A, 220, 4);
-
-    // copas apretadas, más frías cuanto más lejos del recinto. En las afueras
-    // la distancia es la que hay hasta el borde, así que el monte se cierra
-    // del todo según se aleja
-    for (let y = -MARGEN; y < ALTO + MARGEN; y++)
-        for (let x = -MARGEN; x < ANCHO + MARGEN; x++) {
-            const dentro = x >= 0 && y >= 0 && x < ANCHO && y < ALTO;
-            const d = dentro ? A.dist[y * ANCHO + x] : 999;
-            if (d < 3 || !s.libre(x, y) || Math.random() > 0.45) continue;
-            copaDeArbol(g, OFF + x * TILE + azar(3, TILE - 3),
-                        OFF + y * TILE + azar(3, TILE - 3),
-                        azar(TILE * 0.6, TILE * 1.15), Math.min(1, (d - 3) / 7));
-        }
+    // copas apretadas, y más cerradas cuanto más lejos del recinto: en las
+    // afueras la distancia es la que hay hasta el borde, así que el monte
+    // acaba tapándolo todo según se aleja
+    arbolado(A, sembrarCasas(A, 220, 4), 0.45, [0.6, 1.15], 7);
     sotobosque(A, 460);
 }
 
@@ -393,12 +407,8 @@ function afuerasRoca(A) {
     manchones(A, 260, T.bordeBase, [24, 70], [16, 44], [0.18, 0.45]);
 
     // caras de roca: polígonos angulosos, que es como se rompe la piedra
-    const bloques = Math.round(300 * A.escala);
-    for (let i = 0; i < bloques; i++) {
-        const x = azar(0, W), y = azar(0, H);
-        if (!A.despejado(x, y, 2)) continue;
+    sembrar(A, 300, 2, (x, y, g) => {
         const r = azar(TILE * 0.35, TILE * 1.1);
-        g.save();
         g.translate(x, y);
         g.rotate(azar(0, 3.14));
         g.globalAlpha = azar(0.2, 0.5);
@@ -410,17 +420,12 @@ function afuerasRoca(A) {
             k ? g.lineTo(px, py) : g.moveTo(px, py);
         }
         g.closePath(); g.fill();
-        g.restore();
-    }
+    });
 
     // grietas y algún filón que devuelve un poco de luz
-    const vetas = Math.round(420 * A.escala);
-    g.lineCap = 'round';
-    for (let i = 0; i < vetas; i++) {
-        const x = azar(0, W), y = azar(0, H);
-        if (!A.despejado(x, y, 2)) continue;
+    sembrar(A, 420, 2, (x, y, g) => {
         const mineral = Math.random() < 0.18;
-        g.save();
+        g.lineCap = 'round';
         g.globalAlpha = mineral ? azar(0.18, 0.4) : azar(0.2, 0.45);
         g.strokeStyle = mineral ? (T.mota || P.piedraLuz) : T.tinta;
         g.lineWidth = mineral ? 1.4 : azar(1.6, 3);
@@ -430,21 +435,14 @@ function afuerasRoca(A) {
         g.lineTo(x + Math.cos(a) * l * 0.5, y + Math.sin(a) * l * 0.5);
         g.lineTo(x + Math.cos(a + azar(-0.7, 0.7)) * l, y + Math.sin(a + azar(-0.7, 0.7)) * l);
         g.stroke();
-        g.restore();
-    }
+    });
 }
 
 // ---------- Cañaveral: bambú tan cerrado que no se ve el suelo ----------
 function afuerasCanaveral(A) {
-    const { g, W, H } = A;
     manchones(A, 340, T.hojaSombra || T.bordeSombra, [34, 96], [24, 64], [0.12, 0.3]);
-
-    const cuantas = Math.round(1200 * A.escala);
-    for (let i = 0; i < cuantas; i++) {
-        const x = azar(0, W), y = azar(0, H);
-        if (!A.despejado(x, y, 2)) continue;
-        matoDeCanas(g, x, y, azar(TILE * 0.35, TILE * 0.8), azar(0, 6.28));
-    }
+    sembrar(A, 1200, 2, (x, y, g) =>
+        matoDeCanas(g, x, y, azar(TILE * 0.35, TILE * 0.8), azar(0, 6.28)));
     sotobosque(A, 300);
 }
 
@@ -494,32 +492,19 @@ function matoDeCanas(g, cx, cy, r, giro) {
 
 // ---------- Jardín: musgo, setos, estanques y algún tejado ----------
 function afuerasJardin(A) {
-    const { g, W, H } = A;
     manchones(A, 320, T.hoja || T.bordeBase, [40, 110], [26, 68], [0.1, 0.26]);
 
     // estanques: lámina oscura con su orilla de piedra y un brillo encima
-    const charcas = Math.round(26 * A.escala);
-    for (let i = 0; i < charcas; i++) {
-        const x = azar(0, W), y = azar(0, H);
-        if (!A.despejado(x, y, 4)) continue;
+    sembrar(A, 26, 4, (x, y, g) => {
         const rx = azar(TILE * 0.9, TILE * 2.2), ry = rx * azar(0.5, 0.8);
         pieza(g, x, y, rx, ry, T.zocaloSombra, null, null, azar(0, 3), 3);
         pieza(g, x, y, rx * 0.86, ry * 0.86, '#1e3a5c', '#2f5c86', '#12243c', 0, 0);
         brillo(g, x - rx * 0.3, y - ry * 0.3, rx * 0.28, ry * 0.16, -0.5, 0.2);
-    }
+    });
 
-    const s = sembrarCasas(A, 60, 5);
-
-    // setos y arbolillos: la vegetación cuidada del jardín
-    for (let y = -MARGEN; y < ALTO + MARGEN; y++)
-        for (let x = -MARGEN; x < ANCHO + MARGEN; x++) {
-            const dentro = x >= 0 && y >= 0 && x < ANCHO && y < ALTO;
-            const d = dentro ? A.dist[y * ANCHO + x] : 999;
-            if (d < 3 || !s.libre(x, y) || Math.random() > 0.3) continue;
-            copaDeArbol(g, OFF + x * TILE + azar(3, TILE - 3),
-                        OFF + y * TILE + azar(3, TILE - 3),
-                        azar(TILE * 0.5, TILE * 0.95), Math.min(1, (d - 3) / 8));
-        }
+    // setos y arbolillos: la vegetación cuidada del jardín, más suelta y más
+    // menuda que el monte cerrado de la arboleda
+    arbolado(A, sembrarCasas(A, 60, 5), 0.3, [0.5, 0.95], 8);
     sotobosque(A, 520);
 }
 
@@ -534,17 +519,12 @@ function afuerasPueblo(A) {
 
 // ---------- El vacío: bajo el puente no hay suelo, hay noche ----------
 function afuerasVacio(A) {
-    const { g, W, H } = A;
     // el fondo ya viene oscuro; aquí solo se hunde más según se aleja del borde
     manchones(A, 300, '#04060c', [60, 160], [40, 100], [0.25, 0.55]);
 
     // espolones de roca que asoman del barranco y se pierden abajo
-    const picos = Math.round(90 * A.escala);
-    for (let i = 0; i < picos; i++) {
-        const x = azar(0, W), y = azar(0, H);
-        if (!A.despejado(x, y, 3)) continue;
+    sembrar(A, 90, 3, (x, y, g) => {
         const r = azar(TILE * 0.6, TILE * 1.8);
-        g.save();
         g.globalAlpha = azar(0.25, 0.6);
         g.fillStyle = T.bordeSombra;
         g.beginPath();
@@ -552,36 +532,24 @@ function afuerasVacio(A) {
         g.lineTo(x + r * azar(0.4, 0.8), y + r * 0.7);
         g.lineTo(x - r * azar(0.4, 0.8), y + r * 0.6);
         g.closePath(); g.fill();
-        g.restore();
-    }
+    });
 
     // jirones de niebla cruzando el foso, que es lo que da la altura
-    const jirones = Math.round(70 * A.escala);
-    for (let i = 0; i < jirones; i++) {
-        const x = azar(0, W), y = azar(0, H);
-        if (!A.despejado(x, y, 2)) continue;
-        g.save();
+    sembrar(A, 70, 2, (x, y, g) => {
         g.globalAlpha = azar(0.05, 0.14);
         g.fillStyle = T.mota || '#8f9bb0';
         g.beginPath();
         g.ellipse(x, y, azar(TILE * 2, TILE * 5), azar(TILE * 0.25, TILE * 0.7),
                   azar(-0.2, 0.2), 0, 6.2832);
         g.fill();
-        g.restore();
-    }
+    });
 }
 
 // ---------- Mar de nubes: se ha subido por encima del tiempo ----------
 function afuerasNubes(A) {
-    const { g, W, H } = A;
-
     // las crestas lejanas, antes que las nubes: quedan detrás
-    const montes = Math.round(40 * A.escala);
-    for (let i = 0; i < montes; i++) {
-        const x = azar(0, W), y = azar(0, H);
-        if (!A.despejado(x, y, 4)) continue;
+    sembrar(A, 40, 4, (x, y, g) => {
         const r = azar(TILE * 1.2, TILE * 3);
-        g.save();
         g.globalAlpha = azar(0.2, 0.4);
         g.fillStyle = T.bordeSombra;
         g.beginPath();
@@ -596,16 +564,11 @@ function afuerasNubes(A) {
         g.lineTo(x + r * 0.3, y - r * 0.4);
         g.lineTo(x - r * 0.3, y - r * 0.4);
         g.closePath(); g.fill();
-        g.restore();
-    }
+    });
 
     // y encima el algodón: lóbulos claros, apilados sin prisa
-    const nubes = Math.round(260 * A.escala);
-    for (let i = 0; i < nubes; i++) {
-        const x = azar(0, W), y = azar(0, H);
-        if (!A.despejado(x, y, 2)) continue;
+    sembrar(A, 260, 2, (x, y, g) => {
         const r = azar(TILE * 0.8, TILE * 2.4);
-        g.save();
         g.globalAlpha = azar(0.08, 0.22);
         g.fillStyle = Math.random() < 0.65 ? '#e8eefc' : (T.mota || '#ffe8b0');
         g.beginPath();
@@ -615,8 +578,7 @@ function afuerasNubes(A) {
             g.arc(x + Math.cos(a) * d, y + Math.sin(a) * d, r * azar(0.4, 0.7), 0, 6.2832);
         }
         g.fill();
-        g.restore();
-    }
+    });
 }
 
 // ============================================================
@@ -753,25 +715,42 @@ function tileTeja() {
     return c;
 }
 
-// Roca viva: manchas irregulares y grietas, sin una sola línea recta
-function tileRoca() {
-    const L = 64;
-    const c = lienzoOculto(L, L), g = c.getContext('2d');
-    for (let i = 0; i < 16; i++) {
-        g.globalAlpha = azar(0.05, 0.2);
-        g.fillStyle = Math.random() < 0.55 ? '#000' : '#fff';
+// Manchas al azar por toda la baldosa: es como casi todas las texturas rompen
+// su propio color liso. El color se pasa como función porque casi siempre se
+// sortea entre dos, y los radios son tramos [de, a] para el ancho y el alto.
+function motas(g, L, cuantas, alfa, color, ancho, alto) {
+    for (let i = 0; i < cuantas; i++) {
+        g.globalAlpha = azar(alfa[0], alfa[1]);
+        g.fillStyle = color();
         g.beginPath();
-        g.ellipse(azar(0, L), azar(0, L), azar(4, 15), azar(3, 11), azar(0, 3), 0, 6.2832);
+        g.ellipse(azar(0, L), azar(0, L), azar(ancho[0], ancho[1]), azar(alto[0], alto[1]),
+                  azar(0, 3), 0, 6.2832);
         g.fill();
     }
-    g.globalAlpha = 0.26;
-    g.strokeStyle = '#000'; g.lineWidth = 1.4; g.lineCap = 'round';
-    for (let i = 0; i < 7; i++) {
-        const x = azar(0, L), y = azar(0, L), a = azar(0, 6.28), l = azar(8, 20);
+}
+
+// Y grietas: rayas cortas y sueltas, la otra manera de gastar una baldosa. Si
+// se le pasa un tramo de alfa, cada raya se apaga por su cuenta; si no, todas
+// van con la opacidad que traiga puesta el lienzo.
+function grietas(g, L, cuantas, largo, alfa) {
+    g.lineCap = 'round';
+    for (let i = 0; i < cuantas; i++) {
+        if (alfa) g.globalAlpha = azar(alfa[0], alfa[1]);
+        const x = azar(0, L), y = azar(0, L), a = azar(0, 6.28), l = azar(largo[0], largo[1]);
         g.beginPath(); g.moveTo(x, y);
         g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
         g.stroke();
     }
+}
+
+// Roca viva: manchas irregulares y grietas, sin una sola línea recta
+function tileRoca() {
+    const L = 64;
+    const c = lienzoOculto(L, L), g = c.getContext('2d');
+    motas(g, L, 16, [0.05, 0.2], () => Math.random() < 0.55 ? '#000' : '#fff', [4, 15], [3, 11]);
+    g.globalAlpha = 0.26;
+    g.strokeStyle = '#000'; g.lineWidth = 1.4;
+    grietas(g, L, 7, [8, 20]);
     return c;
 }
 
@@ -947,16 +926,8 @@ function tileBloques(w, h, desfase) {
     }
 
     // el desgaste: unas pocas grietas y algún canto iluminado
-    g.lineCap = 'round';
-    for (let i = 0; i < 5; i++) {
-        g.globalAlpha = azar(0.1, 0.25);
-        g.strokeStyle = T.tinta;
-        g.lineWidth = 1.2;
-        const x = azar(0, L), y = azar(0, L), a = azar(0, 6.28), l = azar(4, 12);
-        g.beginPath(); g.moveTo(x, y);
-        g.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l);
-        g.stroke();
-    }
+    g.strokeStyle = T.tinta; g.lineWidth = 1.2;
+    grietas(g, L, 5, [4, 12], [0.1, 0.25]);
     return c;
 }
 
@@ -1012,13 +983,9 @@ function tileGrava() {
     g.fillStyle = T.suelo;
     g.fillRect(0, 0, L, L);
 
-    for (let i = 0; i < 420; i++) {                    // el chinarro suelto
-        g.globalAlpha = azar(0.1, 0.35);
-        g.fillStyle = Math.random() < 0.5 ? T.sueloLuz : T.sueloSombra;
-        g.beginPath();
-        g.arc(azar(0, L), azar(0, L), azar(0.7, 1.8), 0, 6.2832);
-        g.fill();
-    }
+    // el chinarro suelto
+    motas(g, L, 420, [0.1, 0.35], () => Math.random() < 0.5 ? T.sueloLuz : T.sueloSombra,
+          [0.7, 1.8], [0.7, 1.8]);
 
     g.globalAlpha = 0.2;
     g.lineWidth = 2;
@@ -1039,20 +1006,10 @@ function tileTierra() {
     g.fillStyle = T.suelo;
     g.fillRect(0, 0, L, L);
 
-    for (let i = 0; i < 60; i++) {                     // el calvero y la sombra
-        g.globalAlpha = azar(0.06, 0.2);
-        g.fillStyle = Math.random() < 0.5 ? T.sueloLuz : T.sueloSombra;
-        g.beginPath();
-        g.ellipse(azar(0, L), azar(0, L), azar(6, 20), azar(4, 14), azar(0, 3), 0, 6.2832);
-        g.fill();
-    }
-    for (let i = 0; i < 34; i++) {                     // hojas caídas
-        g.globalAlpha = azar(0.12, 0.32);
-        g.fillStyle = T.mota;
-        g.beginPath();
-        g.ellipse(azar(0, L), azar(0, L), azar(2.5, 5), azar(1, 2), azar(0, 3), 0, 6.2832);
-        g.fill();
-    }
+    // el calvero y su sombra, y encima las hojas caídas
+    motas(g, L, 60, [0.06, 0.2], () => Math.random() < 0.5 ? T.sueloLuz : T.sueloSombra,
+          [6, 20], [4, 14]);
+    motas(g, L, 34, [0.12, 0.32], () => T.mota, [2.5, 5], [1, 2]);
     return c;
 }
 
@@ -3720,57 +3677,93 @@ function pintarHud() {
 }
 
 // ============================================================
-//  Minimapa: se recuerda lo explorado; los bichos solo salen si los ves
+//  El plano de la senda
+//
+//  No hay niebla que levantar: el plano se ve entero desde el primer
+//  paso, con la puerta, los elixires y todo lo que anda suelto marcado
+//  siempre, esté o no a la vista. Lo que se pierde de misterio se gana
+//  en decisión: se ve dónde está lo que queda y se elige por dónde ir,
+//  que es lo que este juego le pide al jugador.
+//
+//  El trazo es el mismo del resto del marcador: laca de ciruela debajo,
+//  los materiales de la comarca apagados contra ella, el filo del recinto
+//  entintado en oro viejo -como el juego entinta sus bordes- y las
+//  señales en rombo, que es la firma de la casa, en vez de en punto.
 // ============================================================
-const MINI = 3;                     // píxeles por casilla
+const MINI = 4;                     // píxeles por casilla
+const LACA_MINI = '#150b13';        // la laca sobre la que se dibuja todo
+const ORO_MINI = '232, 180, 79';    // el oro viejo del marcador, para teñirlo a voluntad
+
+// A cada adversario, el color con que se le reconoce en la senda: el azul
+// acero del ninja y el púrpura del oni, aclarados lo justo para que salgan de
+// la laca. La forma es la misma para todos -el rombo pequeño-, así que el
+// color es lo único que los separa, y por eso tiene que ser el suyo. El de red
+// es la brasa: un tipo nuevo sin ficha sigue leyéndose como lo que es, peligro.
+const TINTA_ENEMIGO = { ninja: '#5f8fd8', oni: '#b07bd0', otro: '#d94b33' };
+
 const mini = document.getElementById('minimapa');
 const mctx = mini.getContext('2d');
 
-let terrenoMini = null;             // lo ya descubierto, dibujado una sola vez
-let tctx = null;
-let volcado = null;                 // casillas que ya pasaron al lienzo
-let barridoCompleto = false;        // ya se volcó el mapa entero al vaciarse la senda
+let terrenoMini = null;             // la senda entera, dibujada una sola vez por nivel
 
 function prepararMinimapa() {
     mini.width = ANCHO * MINI;
     mini.height = ALTO * MINI;
-    if (!terrenoMini) {
-        terrenoMini = lienzoOculto(mini.width, mini.height);
-        tctx = terrenoMini.getContext('2d');
-    }
-    tctx.clearRect(0, 0, mini.width, mini.height);
-    volcado = new Uint8Array(ANCHO * ALTO);
-    barridoCompleto = false;
+    if (!terrenoMini) terrenoMini = lienzoOculto(mini.width, mini.height);
+    volcarTerreno();
 }
 
-// Pinta solo lo recién descubierto: de ordinario basta con mirar alrededor del
-// héroe, porque más lejos no ha podido cambiar nada. La excepción es el momento
-// en que cae el último enemigo y la senda entera pasa a estar explorada: ahí hay
-// que barrer el mapa completo, y una sola vez.
-function volcarDescubierto() {
-    const j = J.jugador;
-    const deGolpe = !barridoCompleto && J.puerta.apertura > 0;
-    if (deGolpe) barridoCompleto = true;
+// La planta de la senda, de una tacada. Antes se iba destapando casilla a
+// casilla según se andaba; ahora no hay nada que destapar, así que se pinta
+// al entrar en el nivel y no se vuelve a tocar hasta el siguiente.
+function volcarTerreno() {
+    const g = terrenoMini.getContext('2d');
+    const tinta = (BIOMA && BIOMA.minimapa) || { suelo: '#6f9a63', muro: '#1b2c4e' };
 
-    const r = Math.ceil(RADIO_VISION) + 1;
-    const y0 = deGolpe ? 0 : Math.max(0, Math.floor(j.y - r));
-    const y1 = deGolpe ? ALTO - 1 : Math.min(ALTO - 1, Math.floor(j.y + r));
-    const x0 = deGolpe ? 0 : Math.max(0, Math.floor(j.x - r));
-    const x1 = deGolpe ? ANCHO - 1 : Math.min(ANCHO - 1, Math.floor(j.x + r));
+    g.clearRect(0, 0, mini.width, mini.height);
+    g.fillStyle = LACA_MINI;
+    g.fillRect(0, 0, mini.width, mini.height);
 
-    // los colores del plano también son los de la comarca
-    const tintaMini = (BIOMA && BIOMA.minimapa) || { suelo: '#6f9a63', muro: '#1b2c4e' };
-    for (let y = y0; y <= y1; y++)
-        for (let x = x0; x <= x1; x++) {
-            const i = y * ANCHO + x;
-            if (!J.explorado[i] || volcado[i]) continue;
-            volcado[i] = 1;
-            tctx.fillStyle = J.mapa[y][x] === 1 ? tintaMini.muro : tintaMini.suelo;
-            tctx.fillRect(x * MINI, y * MINI, MINI, MINI);
+    // Los dos materiales son los de la comarca, pero apagados contra la laca:
+    // el plano es marcador antes que estampa, y lo que tiene que resaltar son
+    // las señales de encima, no la roca.
+    for (let y = 0; y < ALTO; y++)
+        for (let x = 0; x < ANCHO; x++) {
+            const muro = J.mapa[y][x] === 1;
+            g.globalAlpha = muro ? 0.42 : 0.72;
+            g.fillStyle = muro ? tinta.muro : tinta.suelo;
+            g.fillRect(x * MINI, y * MINI, MINI, MINI);
         }
+    g.globalAlpha = 1;
+
+    // El filo del recinto, entintado en oro tenue: es lo que hace legible la
+    // planta de un vistazo -pasillos, salas y recodos- sin tener que subirle
+    // el contraste a los materiales. El medio píxel es para que la línea caiga
+    // entera dentro de una columna y no repartida entre dos.
+    g.save();
+    g.translate(0.5, 0.5);
+    g.strokeStyle = 'rgba(' + ORO_MINI + ', 0.3)';
+    g.lineWidth = 1;
+    g.stroke(caminoDeBordes(MINI));
+    g.restore();
 }
 
-const aLaVista = e => Math.hypot(e.x - J.jugador.x, e.y - J.jugador.y) <= RADIO_VISION;
+// ============================================================
+//  Las señales, todas del mismo juego de formas
+// ============================================================
+
+// El rombo del marcador: el mismo que flanquea los rótulos del hud y el «del»
+// de la portada. Aquí es el cuerpo de casi todo lo que se señala.
+function romboMini(x, y, r, relleno, filo) {
+    const cx = x * MINI, cy = y * MINI;
+    mctx.beginPath();
+    mctx.moveTo(cx, cy - r); mctx.lineTo(cx + r, cy);
+    mctx.lineTo(cx, cy + r); mctx.lineTo(cx - r, cy);
+    mctx.closePath();
+    mctx.fillStyle = relleno;
+    mctx.fill();
+    if (filo) { mctx.strokeStyle = filo; mctx.lineWidth = 1; mctx.stroke(); }
+}
 
 function puntoMini(x, y, color, r) {
     mctx.fillStyle = color;
@@ -3779,71 +3772,105 @@ function puntoMini(x, y, color, r) {
     mctx.fill();
 }
 
+// La puerta no se marca con un punto: se marca con el torii que es, en
+// pequeño. Es lo único del plano que va a trazo y no a mancha, y por eso no se
+// confunde con nada aunque el mapa esté lleno.
+function toriiMini(x, y, color, brillo) {
+    const a = 5, h = 5.6;                  // medio ancho del dintel y lo que levanta
+    mctx.save();
+    mctx.translate(x * MINI, y * MINI + h * 0.4);
+    mctx.strokeStyle = color;
+    mctx.lineWidth = 1.6;
+    mctx.lineCap = 'round';
+    if (brillo) { mctx.shadowColor = color; mctx.shadowBlur = brillo; }
+    mctx.beginPath();
+    mctx.moveTo(-a, -h);             mctx.lineTo(a, -h);                // el kasagi
+    mctx.moveTo(-a * 0.7, -h * 0.6); mctx.lineTo(a * 0.7, -h * 0.6);    // el nuki
+    mctx.moveTo(-a * 0.62, -h + 1);  mctx.lineTo(-a * 0.74, 0);         // las jambas, abiertas de pie
+    mctx.moveTo(a * 0.62, -h + 1);   mctx.lineTo(a * 0.74, 0);
+    mctx.stroke();
+    mctx.restore();
+}
+
+// Lo que se está viendo en pantalla, marcado solo por las esquinas: un
+// rectángulo entero le hacía sombra al filo dorado de las salas.
+function encuadreMini() {
+    const x0 = cam.x / TILE * MINI, y0 = cam.y / TILE * MINI;
+    const x1 = x0 + AN / TILE * MINI, y1 = y0 + AL / TILE * MINI;
+    const c = Math.min(7, (x1 - x0) / 3, (y1 - y0) / 3);
+
+    mctx.strokeStyle = 'rgba(' + ORO_MINI + ', 0.5)';
+    mctx.lineWidth = 1;
+    mctx.beginPath();
+    mctx.moveTo(x0, y0 + c); mctx.lineTo(x0, y0); mctx.lineTo(x0 + c, y0);
+    mctx.moveTo(x1 - c, y0); mctx.lineTo(x1, y0); mctx.lineTo(x1, y0 + c);
+    mctx.moveTo(x1, y1 - c); mctx.lineTo(x1, y1); mctx.lineTo(x1 - c, y1);
+    mctx.moveTo(x0 + c, y1); mctx.lineTo(x0, y1); mctx.lineTo(x0, y1 - c);
+    mctx.stroke();
+}
+
+// Sigue habiendo diferencia entre lo que se ve con los ojos y lo que solo
+// consta en el plano; ya no es esconder o enseñar, sino un punto de brillo.
+const aLaVista = e => Math.hypot(e.x - J.jugador.x, e.y - J.jugador.y) <= RADIO_VISION;
+
 function pintarMinimapa() {
-    volcarDescubierto();
     const j = J.jugador;
 
     mctx.clearRect(0, 0, mini.width, mini.height);
     mctx.drawImage(terrenoMini, 0, 0);
+    encuadreMini();
 
-    // recuadro de lo que se está viendo en pantalla
-    mctx.strokeStyle = 'rgba(220, 235, 255, 0.2)';
-    mctx.lineWidth = 1;
-    mctx.strokeRect(cam.x / TILE * MINI + 0.5, cam.y / TILE * MINI + 0.5,
-                    AN / TILE * MINI - 1, AL / TILE * MINI - 1);
+    // los farolillos, muy tenues: son sitio, no aviso, y con el plano entero a
+    // la vista desde el primer paso taparían lo que sí hay que mirar
+    for (const L of luces) puntoMini(L.x, L.y, 'rgba(' + ORO_MINI + ', 0.4)', 1.2);
 
-    // los farolillos ya descubiertos, como puntos cálidos
-    for (const L of luces) {
-        const i = Math.floor(L.y) * ANCHO + Math.floor(L.x);
-        if (J.explorado[i]) puntoMini(L.x, L.y, 'rgba(255, 205, 120, 0.85)', 1.6);
-    }
+    // el hierro del suelo: apagado mientras duerme, encendido cuando asoma
+    for (const t of J.trampas)
+        romboMini(t.x, t.y, 2.2,
+                  alturaTrampa(t.fase) > 0.5 ? '#ff5a48' : 'rgba(122, 80, 96, 0.75)');
 
-    // las trampas ya descubiertas quedan marcadas: se pisan una vez, no dos
-    for (const t of J.trampas) {
-        const i = Math.floor(t.y) * ANCHO + Math.floor(t.x);
-        if (!J.explorado[i]) continue;
-        puntoMini(t.x, t.y, alturaTrampa(t.fase) > 0.5 ? '#ff5a48' : '#7a5060', 2);
-    }
-
-    // la puerta, una vez encontrada, ya no se olvida: roja si sigue sellada
-    const iPue = Math.floor(J.puerta.y) * ANCHO + Math.floor(J.puerta.x);
-    if (J.explorado[iPue]) {
-        mctx.globalAlpha = 0.55 + Math.sin(J.tiempo * 2.5) * 0.35;
-        puntoMini(J.puerta.x, J.puerta.y, puertaAbierta() ? '#8fd8ff' : '#e0503f', 3.2);
-        mctx.globalAlpha = 1;
-    }
-
-    // con la senda limpia se ven todos los elixires, por si toca curarse
-    const limpia = !J.enemigos.length;
+    // los elixires y lo que se derramó de ellos, en el rosa que tienen en la
+    // senda; el aura late aquí igual que la botella late en el suelo
     for (const o of J.objetos) {
-        if (!limpia && !aLaVista(o)) continue;
         const pulso = 0.72 + Math.sin(J.tiempo * 3.4 + o.giro) * 0.28;
-        mctx.globalAlpha = 0.35 * pulso;                // el aura, también aquí
-        puntoMini(o.x, o.y, P.elixirLuz, 4);
+        mctx.globalAlpha = 0.3 * pulso;
+        puntoMini(o.x, o.y, P.elixirLuz, 4.5);
         mctx.globalAlpha = 1;
-        puntoMini(o.x, o.y, P.elixir, 2);
+        romboMini(o.x, o.y, 2.6, P.elixir, 'rgba(255, 156, 186, 0.85)');
     }
     for (const c of J.charcos) {
-        if (!limpia && !aLaVista(c)) continue;
-        mctx.globalAlpha = c.secando > 0 ? 0.3 : 0.75;
-        puntoMini(c.x, c.y, P.elixir, 3);
+        mctx.globalAlpha = c.secando > 0 ? 0.28 : 0.6;
+        puntoMini(c.x, c.y, P.elixirLuz, 3.4);
         mctx.globalAlpha = 1;
     }
-    for (const e of J.enemigos)
-        if (aLaVista(e)) puntoMini(e.x, e.y, e.tipo === 'oni' ? '#b07bd0' : '#5f8fd8', 2.2);
 
-    // el héroe: una cuña que apunta a donde mira
-    mctx.save();
-    mctx.translate(j.x * MINI, j.y * MINI);
-    mctx.rotate(j.mira);
-    mctx.fillStyle = J.muerto ? '#8a6a6a' : '#ffffff';
-    mctx.strokeStyle = P.tinta;
-    mctx.lineWidth = 1;
+    // Todo lo que anda suelto, esté a la vista o no. Todos llevan el mismo
+    // rombo, del mismo tamaño y con el mismo filo de tinta: lo que los
+    // distingue es el color, y cada cual lleva el suyo -el de su traje en la
+    // senda-, no un tamaño distinto que obligue a comparar unos con otros.
+    for (const e of J.enemigos) {
+        mctx.globalAlpha = aLaVista(e) ? 1 : 0.78;
+        romboMini(e.x, e.y, 2.4, TINTA_ENEMIGO[e.tipo] || TINTA_ENEMIGO.otro,
+                  'rgba(26, 15, 22, 0.8)');
+        mctx.globalAlpha = 1;
+    }
+
+    // La puerta preside el plano: sellada arde en brasa y quieta; suelta, late
+    // en oro, que es lo que el juego enciende cuando algo cede.
+    const abierta = puertaAbierta();
+    if (abierta) mctx.globalAlpha = 0.6 + Math.sin(J.tiempo * 2.5) * 0.4;
+    toriiMini(J.puerta.x, J.puerta.y, abierta ? '#ffd784' : '#d94b33', abierta ? 9 : 0);
+    mctx.globalAlpha = 1;
+
+    // el héroe: un punto blanco cercado de negro. Es lo único blanco del plano,
+    // así que se encuentra solo por mucho que se llene el mapa alrededor
     mctx.beginPath();
-    mctx.moveTo(5, 0); mctx.lineTo(-3.2, -3.4); mctx.lineTo(-3.2, 3.4);
-    mctx.closePath();
-    mctx.fill(); mctx.stroke();
-    mctx.restore();
+    mctx.arc(j.x * MINI, j.y * MINI, 3.2, 0, 6.2832);
+    mctx.fillStyle = J.muerto ? '#8a6a6a' : '#ffffff';
+    mctx.fill();
+    mctx.strokeStyle = '#1a0f16';
+    mctx.lineWidth = 1.4;
+    mctx.stroke();
 }
 
 // ============================================================

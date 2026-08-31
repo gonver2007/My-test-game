@@ -541,34 +541,11 @@ body.menu {
 
 #botones { display: flex; flex-direction: column; align-items: center; gap: 14px; }
 
-/* botón entintado: relleno plano, contorno grueso y un brillo recto arriba */
-.boton {
-    width: 300px; padding: 13px 0;
-    font-family: inherit;
-    font-size: 19px; font-weight: bold; letter-spacing: 4px;
-    color: var(--papel);
-    background: rgba(28, 14, 22, .88);
-    border: 4px solid var(--tinta);
-    border-radius: 4px;
-    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.16),
-                0 5px 0 rgba(0, 0, 0, 0.5);
-    text-shadow: 2px 2px 0 var(--tinta);
-    cursor: pointer;
-    transition: transform .08s, background .12s, color .12s;
-}
-.boton:hover { background: rgba(217, 75, 51, .28); color: #fff; transform: translateY(-2px); }
-.boton:active {
-    transform: translateY(3px);
-    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.16);
-}
-.boton.principal {
-    background: var(--bermellon);
-    color: #fff5ea;
-    box-shadow: inset 0 3px 0 rgba(255, 255, 255, 0.30),
-                0 5px 0 rgba(120, 25, 25, 0.85),
-                0 0 26px rgba(224, 69, 63, 0.35);
-}
-.boton.principal:hover { background: #ff6a56; }
+/* Aquí vivía el botón del juego viejo: tinta de cuatro píxeles, sombra dura
+   desplazada y sombra de texto. No se veía en ninguna parte -toda página que
+   carga esta hoja lleva body.juego o body.santuario, y las dos lo rehacen
+   entero-, así que se ha ido con lo demás de aquel trazo. El botón del ocaso
+   está dos veces, una por pantalla: body.juego .boton y body.santuario .boton. */
 
 /* el hueco que comparten la hoja de ajustes, la armería y las ranuras:
    cerrado no ocupa ni marco ni fondo */
@@ -1317,6 +1294,7 @@ body.santuario #botones {
 /* ---------- Botones entintados en rojo y oro ---------- */
 body.santuario .boton {
     width: 100%; padding: 16px 0;
+    cursor: pointer;
     font-family: inherit;
     font-size: 18px; font-weight: 900; letter-spacing: .2em;
     color: var(--ceniza);
@@ -1324,14 +1302,14 @@ body.santuario .boton {
     border: 2px solid rgba(232, 180, 79, .55);
     border-radius: 2px;
     box-shadow: none; text-shadow: none;
-    transition: background .14s, border-color .14s, filter .14s, transform .08s;
 }
+/* el color al pasar por encima; lo que se mueve -el salto, la sombra y las
+   letras abriéndose- lo pone la regla de la pasada de luz, más abajo */
 body.santuario .boton:hover {
     background: rgba(217, 75, 51, .28);
     border-color: var(--oroViejo);
-    color: #fff; transform: none;
+    color: #fff;
 }
-body.santuario .boton:active { transform: translateY(2px); box-shadow: none; }
 body.santuario .boton:focus-visible { outline: 2px solid var(--oroViejo); outline-offset: 3px; }
 
 body.santuario .boton.principal {
@@ -1340,10 +1318,7 @@ body.santuario .boton.principal {
     border: 2px solid #f0c9a5;
     box-shadow: 0 0 30px rgba(217, 75, 51, .45);
 }
-body.santuario .boton.principal:hover {
-    filter: brightness(1.12);
-    box-shadow: 0 0 42px rgba(217, 75, 51, .7);
-}
+body.santuario .boton.principal:hover { filter: brightness(1.12); }
 
 /* ============================================================
    Controles, créditos y consola, vestidos del mismo ocaso
@@ -1369,13 +1344,13 @@ body.santuario #consola, body.juego #consola {
     background: rgba(20, 9, 16, .95);
     box-shadow: 0 12px 34px rgba(12, 6, 14, .75);
 }
-body.santuario #consola, body.juego #consola .salida { color: var(--ceniza); }
-body.santuario #consola, body.juego #consola .salida .eco  { color: #b08a86; }
-body.santuario #consola, body.juego #consola .salida .bien { color: #f0c9a5; }
-body.santuario #consola, body.juego #consola .salida .mal  { color: #ff8a7a; }
-body.santuario #consola, body.juego #consola .entrada { border-top: 2px solid rgba(232, 180, 79, .3); }
-body.santuario #consola, body.juego #consola .signo,
-body.santuario #consola, body.juego #consola input { color: var(--oroViejo); caret-color: var(--oroViejo); }
+body.santuario #consola .salida,       body.juego #consola .salida       { color: var(--ceniza); }
+body.santuario #consola .salida .eco,  body.juego #consola .salida .eco  { color: #b08a86; }
+body.santuario #consola .salida .bien, body.juego #consola .salida .bien { color: #f0c9a5; }
+body.santuario #consola .salida .mal,  body.juego #consola .salida .mal  { color: #ff8a7a; }
+body.santuario #consola .entrada,      body.juego #consola .entrada { border-top: 2px solid rgba(232, 180, 79, .3); }
+body.santuario #consola .signo, body.juego #consola .signo,
+body.santuario #consola input,  body.juego #consola input { color: var(--oroViejo); caret-color: var(--oroViejo); }
 
 /* ============================================================
    Pantallas estrechas y bajas

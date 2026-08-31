@@ -54,6 +54,29 @@ sale de este navegador.
         jade:  { campo: 'esquirlas', nombre: 'jade' }
     };
 
+    // El esqueleto de toda orden que toca ranuras: se eligen, se recorren
+    // saltando las que no tienen partida -sin dar la lata una por una cuando se
+    // han pedido todas- y se avisa al final si no había ninguna. Lo propio de
+    // cada orden es solo lo que hace con las que sí valen.
+    function porCadaRanura(ranuras, hacer) {
+        const cuales = elegirRanuras(ranuras);
+        if (!cuales.length)
+            return decir('Ranuras del 1 al 5 entre comillas, o todas.', 'mal');
+
+        const aTodas = cuales.length === 5;
+        let servidas = 0;
+        for (const i of cuales) {
+            const p = Partidas.ranura(i);
+            if (!p) {
+                if (!aTodas) decir(`Ranura ${i + 1}: vacía.`, 'mal');
+                continue;
+            }
+            hacer(i, p);
+            servidas++;
+        }
+        if (!servidas) decir('Ninguna de esas ranuras tiene partida.', 'mal');
+    }
+
     // dar y quitar son lo mismo con el signo cambiado; el saldo nunca baja de 0
     function repartir(que, ranuras, cuantas, signo, orden) {
         const moneda = MONEDAS[(que || '').toLowerCase()];
@@ -63,46 +86,20 @@ sale de este navegador.
         const n = parseInt(cuantas, 10);
         if (!n) return decir(`Di cuántas: ${orden} ${que} "1,3" 50`, 'mal');
 
-        const cuales = elegirRanuras(ranuras);
-        if (!cuales.length)
-            return decir('Ranuras del 1 al 5 entre comillas, o todas.', 'mal');
-
-        const aTodas = cuales.length === 5;
-        let servidas = 0;
-        for (const i of cuales) {
-            const p = Partidas.ranura(i);
-            // en una ranura sin partida no hay nada que tocar
-            if (!p) {
-                if (!aTodas) decir(`Ranura ${i + 1}: vacía.`, 'mal');
-                continue;
-            }
+        porCadaRanura(ranuras, (i, p) => {
             const saldo = Math.max(0, (p[moneda.campo] || 0) + signo * n);
             Partidas.guardarEn(i, { [moneda.campo]: saldo });
             decir(`Ranura ${i + 1}: ${saldo} de ${moneda.nombre}.`, 'bien');
-            servidas++;
-        }
-        if (!servidas) decir('Ninguna de esas ranuras tiene partida.', 'mal');
+        });
     }
 
     // un sí o un no apuntado en las ranuras que se digan; el rótulo cuenta en
     // voz alta cómo queda cada una
     function apuntar(ranuras, campo, si, rotulo) {
-        const cuales = elegirRanuras(ranuras);
-        if (!cuales.length)
-            return decir('Ranuras del 1 al 5 entre comillas, o todas.', 'mal');
-
-        const aTodas = cuales.length === 5;
-        let servidas = 0;
-        for (const i of cuales) {
-            if (!Partidas.ranura(i)) {
-                if (!aTodas) decir(`Ranura ${i + 1}: vacía.`, 'mal');
-                continue;
-            }
+        porCadaRanura(ranuras, i => {
             Partidas.guardarEn(i, { [campo]: si });
             decir(`Ranura ${i + 1}: ${rotulo(si)}.`, 'bien');
-            servidas++;
-        }
-        if (!servidas) decir('Ninguna de esas ranuras tiene partida.', 'mal');
+        });
     }
 
     // la inmortalidad se apunta en la ranura; la partida la lee al empezar

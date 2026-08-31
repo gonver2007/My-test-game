@@ -40,7 +40,6 @@ es: {
     'portada.creditos': 'CRÉDITOS',
 
     // ---------- elegir ranura ----------
-    'ranura.sala': '記録の間',
     'ranura.t1': 'ELIGE',
     'ranura.t2': 'TU',
     'ranura.t3': 'RANURA',
@@ -57,7 +56,6 @@ es: {
     'ranura.nota': 'Cada ranura guarda su arma y sus esquirlas. El santuario se recorre siempre desde la primera senda.',
 
     // ---------- antes de partir ----------
-    'prev.sala': '支度の間',
     'prev.t1': 'ANTES',
     'prev.t2': 'DE',
     'prev.t3': 'PARTIR',
@@ -104,7 +102,6 @@ es: {
     'mejora.energia.efecto': 'Estamina',
 
     // ---------- ajustes ----------
-    'ajustes.sala': '調べの間',
     'ajustes.titulo': 'AJUSTES',
     'ajustes.lema': 'Lo que se oye, lo que se ve y lo que hace cada tecla.',
     'ajustes.general': 'GENERAL',
@@ -153,7 +150,6 @@ es: {
     // ---------- lo que se cuenta en el registro ----------
     'msg.pinchos': 'Los pinchos del suelo te alcanzan.',
     'msg.selloRoto': 'Cae el último enemigo: el sello se deshace y la puerta se abre.',
-    'msg.sendaEntera': 'Sin nada que temer, reconoces la senda entera.',
     'msg.muere': '%s muere.',
     'msg.hasMuerto': 'Has muerto.',
     'msg.puertaSellada1': 'La puerta sigue sellada. Aún queda 1 enemigo.',
@@ -171,7 +167,6 @@ es: {
     'msg.articuloLa': 'La',
 
     // ---------- final ----------
-    'final.sala': '終わりの間',
     'final.t1': 'HAS LLEGADO',
     'final.t2': 'AL',
     'final.t3': 'SANTUARIO',
@@ -207,7 +202,6 @@ en: {
 
     'portada.creditos': 'CREDITS',
 
-    'ranura.sala': '記録の間',
     'ranura.t1': 'CHOOSE',
     'ranura.t2': 'YOUR',
     'ranura.t3': 'SLOT',
@@ -223,7 +217,6 @@ en: {
     'ranura.selloDios': 'Immortal',
     'ranura.nota': 'Each slot keeps its own weapon and shards. The sanctuary is always walked from the first path.',
 
-    'prev.sala': '支度の間',
     'prev.t1': 'BEFORE',
     'prev.t2': 'YOU',
     'prev.t3': 'DEPART',
@@ -267,7 +260,6 @@ en: {
     'mejora.energia.pie': 'The bellows: more dodges in a row and more cuts before running out of air.',
     'mejora.energia.efecto': 'Stamina',
 
-    'ajustes.sala': '調べの間',
     'ajustes.titulo': 'SETTINGS',
     'ajustes.lema': 'What you hear, what you see and what each key does.',
     'ajustes.general': 'GENERAL',
@@ -311,7 +303,6 @@ en: {
 
     'msg.pinchos': 'The spikes in the floor catch you.',
     'msg.selloRoto': 'The last enemy falls: the seal breaks and the door opens.',
-    'msg.sendaEntera': 'With nothing left to fear, you take in the whole path.',
     'msg.muere': '%s dies.',
     'msg.hasMuerto': 'You have died.',
     'msg.puertaSellada1': 'The door is still sealed. 1 enemy remains.',
@@ -328,7 +319,6 @@ en: {
     'msg.articuloEl': 'The',
     'msg.articuloLa': 'The',
 
-    'final.sala': '終わりの間',
     'final.t1': 'YOU HAVE REACHED',
     'final.t2': 'THE',
     'final.t3': 'SANCTUARY',
