@@ -1,0 +1,24 @@
+añadir seccion despegable de armas secundarias justo abajo de armas primarias en el boton de armas de prev.htm "lanza dardos con veneno con daño por segundo"shuriken que si se mejora puede rebotar en mas enemigos"
+
+que en las "senda 10, senda 20, senda 30 asi hasta la 100" alla un semi boss
+
+que en las "senda 5, senda 15, senda 25 asi hasta la 95" alla un semi boss
+
+hacer lo de los pergaminos y lo de los amuletos 
+
+añador un bestiario que este en prev.html donde esta ahora el boton de volver y que el boton de volver este abajo a 15 px de separacion por debajo con el tamaño actual 
+
+testear y balancear las armas y su precio  y animaciones de ataque
+
+IDEAS
+
+-amuletos- 
+sole te puedes equipar como maximo 2 que pordefecto solo te puedas equipar 1 y que para mejorarlo a 2 tengas que usar 20 jade y se optienen tras matar a un jefe
+1. si dejas el click pulsado el daño se va multripicando poco a poco hasta llegar a el triple de su daño que para llegar a su triple tengas que estar con el click mantenido y golpeando a enemigos sin parar durante 5 segundos y para llegar a el doble 4 segundos y los decimales te los dejo a ti 
+
+-pergaminos- 
+cada 5 niveles "enplan senda 5, senda 15, senda 25 asi hasta la 95" que alla un semi boss pero que sea un mapa normal con los enemigos de ese nivel y que te lo drope el y cuando mures lo pierdes es solo para ese intento que en la secion de pergaminos sea como un historial de cuales as consigido y los que no que parezcan bloqueados
+
+-bestiario- 
+pv de vida, daño, nombre una breve descipcion cuantos as eliminado y cuantas veces te a eliminado el 
+

@@ -447,9 +447,9 @@ function crearEnemigo(x, y) {
     const base = { x, y, ex: 0, ey: 0, cd: azar(0, 1), herido: 0, mira: 0 };
     return duro
         ? { ...base, tipo: 'oni', art: 'el', nombre: 'oni', r: 0.38, vel: 2.1,
-            hp: 16, hpMax: 16, dano: 15, alcance: 0.85, cadencia: 1.3 }
+            hp: 30, hpMax: 30, dano: 10, alcance: 0.85, cadencia: 1.3 }
         : { ...base, tipo: 'ninja', art: 'el', nombre: 'ninja', r: 0.26, vel: 3.3,
-            hp: 6, hpMax: 6, dano: 5, alcance: 0.6, cadencia: 0.9 };
+            hp: 10, hpMax: 10, dano: 5, alcance: 0.6, cadencia: 0.9 };
 }
 
 // ============================================================
@@ -561,13 +561,19 @@ function golpear() {
     j.cdAtaque = j.cadencia;
     j.golpe = 0.18;
 
+    // el acero suena al salir, dé o no dé: es el gesto lo que se oye, y un
+    // tajo al aire que callara se sentiría como que no ha llegado a salir
+    if (typeof sonarAtaque === 'function') sonarAtaque(j.armaId);
+
     // el mismo arco rompe las botellas que pille de paso: no hay que apuntarlas
     // aparte ni pulsar otra tecla, basta con dar un tajo donde están
     for (const o of J.objetos.slice()) {
         const dx = o.x - j.x, dy = o.y - j.y;
         const d = Math.hypot(dx, dy);
         if (d > j.alcance + o.r) continue;
-        if (Math.abs(difAngulo(Math.atan2(dy, dx), j.mira)) > j.arco) continue;
+        // a quemarropa el objeto ocupa un cono más ancho que su propio radio
+        // visto desde el héroe: por debajo de ese cono, tocarlo ya basta
+        if (Math.abs(difAngulo(Math.atan2(dy, dx), j.mira)) > j.arco + Math.atan2(o.r + j.r, d)) continue;
         romperBotella(o);
     }
 
@@ -575,9 +581,13 @@ function golpear() {
         const dx = e.x - j.x, dy = e.y - j.y;
         const d = Math.hypot(dx, dy);
         if (d > j.alcance + e.r) continue;
-        if (Math.abs(difAngulo(Math.atan2(dy, dx), j.mira)) > j.arco) continue;
+        // mismo margen que con las botellas: cuanto más pegado el enemigo,
+        // más ancho es el cono que en verdad barre el arma, sea cual sea
+        if (Math.abs(difAngulo(Math.atan2(dy, dx), j.mira)) > j.arco + Math.atan2(e.r + j.r, d)) continue;
 
-        const dano = azarEnt(j.dano - 2, j.dano + 2);
+        // el arma pega lo que dice su ficha, ni más ni menos: lo que se lee en
+        // la armería es lo que se ve salir del enemigo
+        const dano = j.dano;
         e.hp -= dano;
         e.herido = 0.25;
         e.ex += dx / (d || 1) * 6;
@@ -959,8 +969,9 @@ function perderBotin() {
 }
 
 function equiparArma(j) {
-    if (typeof Forja === 'undefined') { J.arma = 'katana'; return; }
+    if (typeof Forja === 'undefined') { j.armaId = 'tanto'; J.arma = 'tanto'; return; }
     const arma = Forja.equipada();
+    j.armaId = arma.id;
     j.dano = arma.dano;
     j.alcance = arma.alcance;
     j.arco = arma.arco;

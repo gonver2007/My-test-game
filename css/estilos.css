@@ -815,6 +815,23 @@ body.santuario .panel.ajustes {
     text-shadow: none;
 }
 
+/* el retrato del acero: el mismo boceto que se empuña en la senda, sobre un
+   hueco hundido para que se lea como una vitrina y no como parte del texto */
+.arma .retrato {
+    height: 62px;
+    margin: 0 0 10px;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid rgba(23, 19, 43, .75);
+    border-radius: 3px;
+    background:
+        radial-gradient(ellipse at 50% 45%, rgba(255, 207, 114, .13), transparent 68%),
+        rgba(12, 6, 14, .5);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, .45);
+}
+.arma .retrato canvas { display: block; }
+/* lo que no es tuyo se ve en sombra, como tras el cristal del mostrador */
+.arma.cerrada .retrato canvas { opacity: .45; filter: grayscale(.55); }
+
 /* el arma que aún no es tuya: apagada, sin el brinco del ratón encima */
 .arma.cerrada {
     background: rgba(20, 9, 16, .85);
@@ -1884,20 +1901,20 @@ body.santuario .panel.vacio .nota { margin: 0; line-height: 1.7; }
    primera cuando sobran, que es lo que hace el center a secas al desbordar */
 body.santuario .armeria .armas {
     flex-wrap: nowrap;
+    /* el flex-start va delante a posta: donde no se entienda el safe, esta
+       línea es la que queda, y más vale empezar por la izquierda que centrar
+       una fila que no cabe y dejar las primeras láminas fuera de alcance */
+    justify-content: flex-start;
     justify-content: safe center;
     overflow-x: auto;
     overflow-y: hidden;
     /* el aire de arriba deja sitio al brinco del ratón; el de abajo, a la barra */
     padding: 6px 2px 12px;
-    scroll-snap-type: x proximity;
     scrollbar-width: thin;
     scrollbar-color: rgba(232, 180, 79, .45) transparent;
 }
 /* ni se encogen ni se estiran: cada lámina mantiene su ancho */
-body.santuario .armeria .armas .arma {
-    flex: 0 0 auto;
-    scroll-snap-align: center;
-}
+body.santuario .armeria .armas .arma { flex: 0 0 auto; }
 body.santuario .armeria .armas::-webkit-scrollbar { height: 10px; }
 body.santuario .armeria .armas::-webkit-scrollbar-track {
     background: rgba(12, 6, 14, .4); border-radius: 6px;

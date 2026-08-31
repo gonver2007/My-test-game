@@ -121,12 +121,18 @@ addEventListener('keydown', e => {
 });
 
 // el renglón de láminas se corre con la rueda: con el ratón nadie tiene por
-// qué ir a buscar la barra de abajo
+// qué ir a buscar la barra de abajo. Ojo con la unidad, que aquí estuvo el
+// fallo: no todos los ratones hablan en píxeles -hay quien manda líneas, y
+// entonces deltaY vale 3-, así que tomarlo a la letra movía el renglón tres
+// míseros píxeles por tirón y no se llegaba nunca al final
 addEventListener('wheel', e => {
     const fila = e.target.closest && e.target.closest('.armas');
     if (!fila || fila.scrollWidth <= fila.clientWidth) return;
     if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;   // ya viene de lado
-    fila.scrollLeft += e.deltaY;
+    const unidad = e.deltaMode === 1 ? 40                   // viene en líneas
+        : e.deltaMode === 2 ? fila.clientWidth              // en páginas enteras
+            : 1;                                            // ya son píxeles
+    fila.scrollLeft += e.deltaY * unidad;
     e.preventDefault();
 }, { passive: false });
 

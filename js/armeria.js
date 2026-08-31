@@ -6,29 +6,44 @@ navegador, así que la elección sobrevive de una noche a otra.
    ============================================================ */
 'use strict';
 
-// La katana viene con el héroe; las otras dos hay que comprarlas en jade
-// antes de poder empuñarlas o forjarlas.
+// El tantō viene con el héroe; la katana hay que comprarla en jade
+// antes de poder empuñarla o forjarla.
 const ARMAS = [
+    {
+        id: 'tanto',
+        nombre: 'TANTŌ',
+        precio: 0,
+        dano: 10, alcance: 1, arco: 0.50, cadencia: 0.2
+    },
     {
         id: 'katana',
         nombre: 'KATANA',
-        pie: 'El corte de siempre: rápida de sacar y honrada de alcance.',
-        precio: 0,
-        dano: 7, alcance: 1.25, arco: 1.00, cadencia: 0.40
-    },
-    {
-        id: 'naginata',
-        nombre: 'NAGINATA',
-        pie: 'Asta larga: barre a dos enemigos de una, pero pesa al volver.',
-        precio: 12,
-        dano: 10, alcance: 1.80, arco: 1.30, cadencia: 0.66
-    },
-    {
-        id: 'tanto',
-        nombre: 'TANTŌ DOBLE',
-        pie: 'Dos hojas cortas: hay que pegarse, pero no dan respiro.',
         precio: 10,
-        dano: 4, alcance: 0.95, arco: 0.80, cadencia: 0.21
+        dano: 10, alcance: 1.50, arco: 1.00, cadencia: 0.50
+    },
+    {
+        id: 'yari',
+        nombre: 'YARI',
+        precio: 18,
+        dano: 15, alcance: 1.80, arco: 0.01, cadencia: 0.40
+    },
+    {
+        id: 'tetsubo',
+        nombre: 'TETSUBŌ',
+        precio: 26,
+        dano: 22, alcance: 1.50, arco: 1.50, cadencia: 0.75
+    },
+    {
+        id: 'nodachi',
+        nombre: 'NODACHI',
+        precio: 29,
+        dano: 25, alcance: 1.80, arco: 1.80, cadencia: 1.00
+    },
+    {
+        id: 'kusarigama',
+        nombre: 'KUSARIGAMA',
+        precio: 32,
+        dano: 20, alcance: 1.60, arco: 3.50, cadencia: 0.40
     }
 ];
 
@@ -40,7 +55,7 @@ const NIVEL_TOPE = COSTES.length;
 const POR_NIVEL = { dano: 2, alcance: 0.05, cadencia: 0.93 };
 
 const CLAVE = 'sendas.forja';
-const INICIAL = { arma: 'katana', niveles: {}, esquirlas: 0, compradas: ['katana'] };
+const INICIAL = { arma: 'tanto', niveles: {}, esquirlas: 0, compradas: ['tanto'] };
 
 // la esquirla dibujada a la manera del juego: dos caras planas de jade y el
 // contorno de tinta, sin degradados. La usan la armería y la lista de ranuras.
@@ -85,7 +100,7 @@ const Forja = {
         const base = ARMAS.find(a => a.id === id) || ARMAS[0];
         const n = this.nivel(base.id);
         return {
-            id: base.id, nombre: base.nombre, pie: base.pie, nivel: n,
+            id: base.id, nombre: base.nombre, nivel: n,
             dano: base.dano + POR_NIVEL.dano * n,
             alcance: +(base.alcance + POR_NIVEL.alcance * n).toFixed(2),
             arco: base.arco,
@@ -182,7 +197,7 @@ const Forja = {
         <div class="arma${elegida ? ' elegida' : ''}${propia ? '' : ' cerrada'}"
              data-arma="${arma.id}">
             <h3>${arma.nombre}${sello}</h3>
-            <p class="pie">${arma.pie}</p>
+            <div class="retrato" data-boceto="${arma.id}"></div>
             <dl class="fichas">
                 <div><dt>Daño</dt><dd>${f.dano}</dd></div>
                 <div><dt>Alcance</dt><dd>${f.alcance}</dd></div>
@@ -192,7 +207,28 @@ const Forja = {
         </div>`;
     }
 
+    // El retrato de cada arma se dibuja una vez y se guarda. El panel se
+    // repinta entero a cada compra, pero el boceto no cambia: lo que se hace
+    // en cada repintado es volver a colgar el mismo lienzo de su hueco -uno
+    // por arma, así que basta con mudarlo de sitio-.
+    const RETRATO = { ancho: 196, alto: 62 };
+    const retratos = {};
+
+    function retratar() {
+        if (typeof ACEROS === 'undefined') return;   // sin bocetos, la ficha va sin foto
+        for (const hueco of caja.querySelectorAll('[data-boceto]')) {
+            const id = hueco.dataset.boceto;
+            if (!(id in retratos)) retratos[id] = ACEROS.lamina(id, RETRATO.ancho, RETRATO.alto);
+            if (retratos[id]) hueco.appendChild(retratos[id]);
+        }
+    }
+
     function pintar() {
+        // comprar o forjar repinta la caja entera: sin esto, el renglón se
+        // olvidaría de dónde estabas y volvería siempre a la primera lámina
+        const previas = caja.querySelector('.armas');
+        const scroll = previas ? previas.scrollLeft : 0;
+
         caja.innerHTML = `
             <h2>ARMERÍA</h2>
             <p class="saldo">Esquirlas de jade: <b>${Forja.esquirlas()}${ESQUIRLA}</b></p>
@@ -200,6 +236,9 @@ const Forja = {
             <p class="nota">Cruzar la puerta de una senda a la siguiente deja una esquirla
             una de cada dos veces: el santuario no siempre paga.
             Un arma comprada se empuña al momento y ya se puede forjar.</p>`;
+
+        retratar();
+        caja.querySelector('.armas').scrollLeft = scroll;
     }
 
     // un solo oyente en la caja: los botones se repintan a cada cambio

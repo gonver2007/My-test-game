@@ -22,7 +22,11 @@ function ajustesNuevos() {
     return {
         volumen: VOLUMEN_DE_SERIE,  // 0..100, el maestro: de él cuelga todo lo que suena
         musica: 70,     // 0..100, y este solo la música, colgando del maestro
-        efectos: 80,    // 0..100, y este los golpes y los orbes, también colgando
+        efectos: 80,    // 0..100, y este los orbes, el vidrio y las puertas
+        // lo que hace el héroe con sus manos -por ahora, el acero al cortar-.
+        // Va aparte de Efectos porque suena en cada golpe: quien lo encuentre
+        // machacón puede bajarlo sin quedarse sordo para el resto de la senda
+        jugador: 80,    // 0..100, también colgando del maestro
         hud: HUD_DE_SERIE  // 60..160, el tamaño del marcador dentro de la partida
     };
 }
@@ -40,6 +44,7 @@ function volumenDeCanal(a, canal) {
     const maestro = a.volumen / 100;
     if (canal === 'musica') return maestro * (a.musica / 100);
     if (canal === 'efectos') return maestro * (a.efectos / 100);
+    if (canal === 'jugador') return maestro * (a.jugador / 100);
     return maestro;
 }
 
@@ -55,6 +60,7 @@ const Ajustes = {
             volumen: acotar(guardado.volumen, 0, 100) ?? base.volumen,
             musica: acotar(guardado.musica, 0, 100) ?? base.musica,
             efectos: acotar(guardado.efectos, 0, 100) ?? base.efectos,
+            jugador: acotar(guardado.jugador, 0, 100) ?? base.jugador,
             hud: acotar(guardado.hud, HUD_MIN, HUD_MAX) ?? base.hud
         };
     },
@@ -168,7 +174,8 @@ const SECCIONES = [
     ['GENERAL', [['hud', 'Tamaño del HUD', HUD_MIN, HUD_MAX, 5, HUD_DE_SERIE]]],
     ['SONIDO',   [['volumen', 'Volumen maestro', 0, 100, 1, VOLUMEN_DE_SERIE],
                   ['musica', 'Música', 0, 100, 1],
-                  ['efectos', 'Efectos', 0, 100, 1]]]
+                  ['efectos', 'Efectos', 0, 100, 1],
+                  ['jugador', 'Jugador', 0, 100, 1]]]
 ];
 
 (function montarAjustes() {

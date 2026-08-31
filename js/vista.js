@@ -1745,20 +1745,14 @@ function prepararSprites() {
             brillo(g, c + 2, c - 5, 3.4, 2.2, -0.6, 0.75);
         }),
 
-        katana: nuevoSprite((g, c) => {
-            g.lineCap = 'round';
-            g.strokeStyle = P.tinta; g.lineWidth = 7.5;                           // entintado
-            g.beginPath(); g.moveTo(c + 2, c); g.quadraticCurveTo(c + 14, c - 2, c + 25, c - 5); g.stroke();
-            g.strokeStyle = P.acero; g.lineWidth = 4.5;                           // hoja
-            g.beginPath(); g.moveTo(c + 2, c); g.quadraticCurveTo(c + 14, c - 2, c + 25, c - 5); g.stroke();
-            g.strokeStyle = '#ffffff'; g.lineWidth = 1.6;                         // filo
-            g.beginPath(); g.moveTo(c + 4, c - 1.6); g.quadraticCurveTo(c + 14, c - 3.6, c + 24, c - 6); g.stroke();
-            pieza(g, c, c, 4.5, 2.4, P.oro, P.oroLuz, P.oroSombra, 1.4, 2);       // guarda
-            g.strokeStyle = P.tinta; g.lineWidth = 6;                             // empuñadura
-            g.beginPath(); g.moveTo(c - 3, c + 1); g.lineTo(c - 10, c + 3); g.stroke();
-            g.strokeStyle = P.bufandaSombra; g.lineWidth = 3.5;
-            g.beginPath(); g.moveTo(c - 3, c + 1); g.lineTo(c - 10, c + 3); g.stroke();
-        }),
+        // Las armas se dibujan en aceros.js, que es de donde las saca también
+        // la armería: así lo que se ve en el panel es lo que se lleva en la mano
+        katana: nuevoSprite(ACEROS.dibujos.katana),
+        tanto: nuevoSprite(ACEROS.dibujos.tanto),
+        yari: nuevoSprite(ACEROS.dibujos.yari),
+        tetsubo: nuevoSprite(ACEROS.dibujos.tetsubo),
+        nodachi: nuevoSprite(ACEROS.dibujos.nodachi),
+        kusarigama: nuevoSprite(ACEROS.dibujos.kusarigama),
 
         escudo: nuevoSprite((g, c) => {
             pieza(g, c, c, 7, 14, P.bermellon, '#e8674f', '#8d2517', 0, 2.6);     // laca roja
@@ -2868,7 +2862,7 @@ function dibujarHeroe(j) {
         ctx.save();
         ctx.rotate(barrido);
         ctx.translate(empuje, 0);
-        ctx.drawImage(sprites.katana, -s / 2 + s * 0.123, -s / 2 + s * 0.185, s, s);
+        ctx.drawImage(sprites[j.armaId] || sprites.katana, -s / 2 + s * 0.123, -s / 2 + s * 0.185, s, s);
         ctx.restore();
     }
 
@@ -3093,11 +3087,11 @@ const VOZ_COPIAS = 2;   // menos que los orbes: estos rara vez se solapan
 
 // Un banco de voces: cada archivo con sus copias, para que dos seguidos
 // no se corten el uno al otro, y la memoria de cuál sonó el último.
-function nuevoBanco(carpeta, nombres) {
+function nuevoBanco(carpeta, nombres, cuantasCopias = VOZ_COPIAS) {
     return {
         voces: nombres.map(nombre => {
             const copias = [];
-            for (let i = 0; i < VOZ_COPIAS; i++) {
+            for (let i = 0; i < cuantasCopias; i++) {
                 const a = new Audio(encodeURI(carpeta + nombre));  // encodeURI: los nombres pueden llevar espacios
                 a.preload = 'auto';
                 copias.push(a);
@@ -3114,12 +3108,12 @@ const bancoAbrir = nuevoBanco(PUERTA_CARPETA, ABRIR_SONIDOS);
 const bancoCruzar = nuevoBanco(PUERTA_CARPETA, CRUZAR_SONIDOS);
 const bancoCristal = nuevoBanco(CRISTAL_CARPETA, CRISTAL_SONIDOS);
 
-function sonarBanco(banco) {
+function sonarBanco(banco, canal = 'efectos') {
     if (!banco || !banco.voces.length) return;
-    // el volumen se lee en cada golpe y no se guarda: así la regla de
-    // Efectos se nota según se arrastra, y estas cajas no cuelgan del
-    // documento, de modo que Ajustes.aplicarValores no las alcanza
-    const alto = (typeof Ajustes !== 'undefined') ? Ajustes.volumen('efectos') : 0.5;
+    // el volumen se lee en cada golpe y no se guarda: así la regla se nota
+    // según se arrastra, y estas cajas no cuelgan del documento, de modo que
+    // Ajustes.aplicarValores no las alcanza
+    const alto = (typeof Ajustes !== 'undefined') ? Ajustes.volumen(canal) : 0.5;
     if (alto <= 0) return;
 
     let cual = Math.floor(Math.random() * banco.voces.length);
@@ -3140,6 +3134,46 @@ function sonarBanco(banco) {
 function sonarAbrirPuerta() { sonarBanco(bancoAbrir); }
 function sonarCruzarPuerta() { sonarBanco(bancoCruzar); }
 function sonarCristal() { sonarBanco(bancoCristal); }
+
+// ------------------------------------------------------------
+//  El acero al cortar, uno por arma
+//
+//  Cada arma tiene su voz: no suena igual una hoja corta que un asta
+//  larga ni que una barra de hierro. La lista se escribe a mano por lo
+//  de siempre -desde file:// no hay forma de leer una carpeta-, y basta
+//  con dejar el mp3 en musica/ataque/ y apuntarlo aquí.
+//
+//  Si de un arma se ponen varios nombres, cada tajo saca uno al azar sin
+//  repetir el anterior, que es lo que evita que golpear sin parar suene
+//  a metrónomo. Y con la lista vacía o el archivo sin poner, esa arma
+//  simplemente corta en silencio: no se rompe nada por faltar un sonido.
+//
+//  Van por el canal 'jugador' y no por 'efectos' porque suenan en cada
+//  golpe, que es muchas veces por senda: quien lo encuentre machacón lo
+//  baja sin quedarse sin orbes, sin vidrios y sin puertas.
+// ------------------------------------------------------------
+const ATAQUE_CARPETA = '../musica/ataque/';
+const ATAQUE_SONIDOS = {
+    tanto: ['tanto.mp3'],
+    katana: ['katana.mp3'],
+    yari: ['yari.mp3'],
+    tetsubo: ['tetsubo.mp3'],
+    nodachi: ['nodachi.mp3'],
+    kusarigama: ['kusarigama.mp3']
+};
+
+// más copias que los otros bancos: el tantō y el kusarigama pegan tan
+// seguido que con dos el golpe nuevo cortaría al anterior a media hoja
+const ATAQUE_COPIAS = 4;
+
+const bancosAtaque = {};
+for (const id in ATAQUE_SONIDOS) {
+    bancosAtaque[id] = nuevoBanco(ATAQUE_CARPETA, ATAQUE_SONIDOS[id], ATAQUE_COPIAS);
+}
+
+function sonarAtaque(id) {
+    sonarBanco(bancosAtaque[id], 'jugador');
+}
 
 // ------------------------------------------------------------
 //  Beber del charco no es un golpe, es un rato: mientras se está
