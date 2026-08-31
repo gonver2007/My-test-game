@@ -3212,6 +3212,52 @@ function sonarCurando(activo) {
     if (suena && suena.catch) suena.catch(() => { curando = false; });
 }
 
+// ------------------------------------------------------------
+//  El resuello: cuando el aliento baja del umbral de la esquiva, el
+//  héroe jadea hasta reponerse. Va en bucle y con apagado, como beber,
+//  y no por el banco de golpes, que dispara y se olvida.
+//
+//  Arranca al quedarse sin aliento para esquivar, antes de que la barra
+//  llegue a apagarse -que eso pasa más abajo, cuando no da ni para un
+//  tajo-. Son dos avisos escalonados a propósito: primero el oído dice
+//  que ya no puedes salir de un apuro, y después el ojo, que estás seco.
+// ------------------------------------------------------------
+const AGOTAMIENTO_SONIDO = '../musica/jugador/agotamiento.mp3';
+
+// El archivo viene bajo de suyo, así que se le da brío aparte del resto del
+// canal: la regla de Jugador sigue mandando, pero este sonido sale más alto
+// que sus vecinos. Ojo con subirlo mucho, que hay techo -un <audio> no pasa
+// de 1- y cuanto mayor sea el brío antes se llega a ese tope; a partir de
+// ahí la regla deja de notarse porque ya no queda a dónde subir.
+const AGOTAMIENTO_BRIO = 2.4;
+
+let vozAgotado = null;
+let agotado = false;
+
+function sonarAgotado(activo) {
+    const alto = (typeof Ajustes !== 'undefined') ? Ajustes.volumen('jugador') : 0.5;
+
+    if (!activo || alto <= 0) {
+        if (agotado && vozAgotado) { vozAgotado.pause(); vozAgotado.currentTime = 0; }
+        agotado = false;
+        return;
+    }
+
+    if (!vozAgotado) {
+        vozAgotado = new Audio(encodeURI(AGOTAMIENTO_SONIDO));
+        vozAgotado.loop = true;    // el resuello dura lo que tarde en reponerse
+        vozAgotado.preload = 'auto';
+    }
+    // se recalcula en cada fotograma por si se mueve la regla mientras dura
+    vozAgotado.volume = Math.min(1, alto * AGOTAMIENTO_BRIO);
+    if (agotado) return;
+
+    agotado = true;
+    try { vozAgotado.currentTime = 0; } catch (e) { /* aún no ha cargado: da igual */ }
+    const suena = vozAgotado.play();
+    if (suena && suena.catch) suena.catch(() => { agotado = false; });
+}
+
 // ============================================================
 //  Los orbes azules en vuelo: una esfera con su halo y una estela que
 //  se estira en la dirección en que va. Cuanto más corre -y corre al
@@ -3618,10 +3664,20 @@ function pintarHud() {
     document.getElementById('pvTope').textContent = '/' + p.hpMax;
     document.getElementById('vida').style.width = Math.max(0, (p.hp / p.hpMax) * 100) + '%';
 
-    const carga = Math.min(1, 1 - Math.max(0, p.cdDash) / ESPERA_DASH);
-    const dash = document.getElementById('dash');
-    dash.style.width = carga * 100 + '%';
-    dash.parentElement.classList.toggle('lista', carga >= 1);
+    // La barra de debajo era la espera del impulso; ahora es el aliento, que
+    // dice más: la espera del dash se adivina igual, porque una esquiva se
+    // lleva media barra de golpe.
+    //
+    // Dos avisos escalonados, y cada uno tiñe una pieza distinta de la barra:
+    // 'esquiva' manda en el hueco de detrás -rojo al bajar de una esquiva- y
+    // 'lista' en el relleno, que solo pierde el oro al quedarse seco. Van en
+    // dos clases sueltas porque cada una la lee un trozo del estilo.
+    const aliento = p.estaminaMax > 0 ? p.estamina / p.estaminaMax : 0;
+    const barra = document.getElementById('dash');
+    barra.style.width = Math.max(0, aliento * 100) + '%';
+    const marcas = barra.parentElement.classList;
+    marcas.toggle('lista', p.estamina >= COSTE_GOLPE);
+    marcas.toggle('esquiva', p.estamina >= COSTE_DASH);
 
     jadeMostrado = contador('jade', 'jadeCifra', J.esquirlas, jadeMostrado);
     orbesMostrado = contador('orbes', 'orbesCifra', J.orbes, orbesMostrado);

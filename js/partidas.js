@@ -14,10 +14,10 @@ const CLAVE_ACTIVA = 'sendas.ranura';
 // primera senda. Lo que se conserva es el acero y lo que se ha juntado.
 function partidaNueva() {
     return {
-        arma: 'katana',
-        compradas: ['katana'],  // lo demás se paga en la armería
+        arma: 'tanto',
+        compradas: ['tanto'],   // lo demás, katana incluida, se paga en la armería
         niveles: {},            // peldaños de forja por arma
-        dones: {},              // vigor y filo, comprados con orbes azules
+        dones: {},              // vida, daño y energía, comprados con orbes azules
         esquirlas: 0,
         orbes: 0,
         god: false,             // inmortalidad, que solo enciende la consola

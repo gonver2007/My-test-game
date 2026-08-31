@@ -109,13 +109,24 @@ const Forja = {
     },
 
     // se sale siempre con algo en la mano: si la guardada no está comprada,
-    // se recurre a la katana
+    // se recurre a la primera de la lista, que es la que se trae de casa
     equipada() {
         const estado = this.leer();
         return this.ficha(this.tiene(estado.arma) ? estado.arma : ARMAS[0].id);
     },
 
     tiene(id) { return (this.leer().compradas || []).indexOf(id) >= 0; },
+
+    // El arsenal se recorre en orden: para comprar un arma hay que tener
+    // desbloqueada la que va justo delante en la lista. Basta con tenerla;
+    // no se le pide estar forjada. Devuelve la que falta, o null si no debe
+    // nada -la primera de la lista no tiene delante a nadie-.
+    requisito(id) {
+        const i = ARMAS.findIndex(a => a.id === id);
+        if (i <= 0) return null;
+        const previa = ARMAS[i - 1];
+        return this.tiene(previa.id) ? null : previa;
+    },
 
     equipar(id) {
         if (!this.tiene(id)) return false;
@@ -125,11 +136,12 @@ const Forja = {
         return true;
     },
 
-    // devuelve true solo si había con qué pagar
+    // devuelve true solo si había con qué pagar y con qué abrirla
     comprar(id) {
         const arma = ARMAS.find(a => a.id === id);
         const estado = this.leer();
         if (!arma || this.tiene(id) || estado.esquirlas < arma.precio) return false;
+        if (this.requisito(id)) return false;   // falta la anterior del arsenal
         estado.esquirlas -= arma.precio;
         estado.compradas = (estado.compradas || []).concat(id);
         estado.arma = id;              // recién comprada, se empuña de inmediato
@@ -174,13 +186,19 @@ const Forja = {
 
         let sello = '', pie;
         if (!propia) {
-            const alcanza = estado.esquirlas >= arma.precio;
-            sello = '<span class="marca cerrado">EN VENTA</span>';
+            // el arsenal se abre en orden: mientras falte la anterior no se
+            // enseña el precio, sino de quién depende. De nada sirve saber lo
+            // que cuesta algo que todavía no está a la venta
+            const falta = Forja.requisito(arma.id);
+            const alcanza = !falta && estado.esquirlas >= arma.precio;
+            sello = falta
+                ? '<span class="marca sellado">SELLADA</span>'
+                : '<span class="marca cerrado">EN VENTA</span>';
             pie = `
                 <span class="pips">${'○'.repeat(NIVEL_TOPE)}</span>
-                <button class="mejorar comprar" data-compra="${arma.id}"
-                        ${alcanza ? '' : 'disabled'}>
-                    COMPRAR · ${arma.precio}${ESQUIRLA}
+                <button class="mejorar ${falta ? 'sellada' : 'comprar'}"
+                        data-compra="${arma.id}" ${alcanza ? '' : 'disabled'}>
+                    ${falta ? `EXIGE ${falta.nombre}` : `COMPRAR · ${arma.precio}${ESQUIRLA}`}
                 </button>`;
         } else {
             const coste = f.nivel < NIVEL_TOPE ? COSTES[f.nivel] : null;

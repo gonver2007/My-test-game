@@ -31,6 +31,21 @@ const FUERZA_DASH = 19;           // impulso del salto lateral
 const ESPERA_DASH = 0.9;          // segundos hasta poder repetirlo
 const DURACION_DASH = 0.18;
 
+// El aliento: se gasta esquivando y golpeando, y se repone solo, sin pausa
+// previa ni descanso que haya que buscarse.
+//
+// Vuelve despacio a propósito -10 cada cinco segundos-, muchísimo menos de lo
+// que cuesta pelear: ninguna arma se sostiene con lo que repone, ni siquiera
+// el nodachi. Eso convierte la barra en una reserva que se administra y no en
+// un grifo del que beber: el golpeo continuo se acaba, y hay que retirarse a
+// tomar aire. Es la diferencia entre un freno y un recurso.
+const ESTAMINA_BASE = 50;
+const COSTE_DASH = 25;            // media barra por esquiva
+const COSTE_GOLPE = 5;
+const ESTAMINA_RITMO = 2;         // puntos por segundo andando: 10 cada 5 segundos
+const ESTAMINA_QUIETO = 2;        // y el doble plantado, sin dar un paso
+const ESTAMINA_CURANDO = 5;       // y a cinco veces con los pies en el elixir
+
 // Lo que el héroe alcanza a ver y recuerda. Algo menos que RADIO_LUZ, la
 // antorcha que dibuja la vista, para que el minimapa no se adelante a los ojos.
 const RADIO_VISION = 8.5;
@@ -70,7 +85,7 @@ const J = {
     muerto: false,
     completado: false,   // se cruzó la última puerta: el camino llegó a su fin
     tiempo: 0,
-    arma: 'katana',      // nombre del acero equipado, solo para el HUD
+    arma: 'tanto',       // nombre del acero equipado, solo para el HUD
     esquirlas: 0,        // saldo de jade, copiado de la ranura al empezar
     orbes: 0,            // y el de orbes azules, que pagan las mejoras
     // lo juntado en la senda de ahora: no llega a la ranura hasta cruzar su
@@ -463,7 +478,10 @@ function actualizar(dt, entrada) {
     // para es que muerda, no que se mueva
     actualizarTrampas(dt);
     if (J.muerto) {
+        // el que ha caído ni bebe ni resuella: los dos bucles se cortan aquí,
+        // que si no seguirían sonando por encima de la pantalla de derrota
         if (typeof sonarCurando === 'function') sonarCurando(false);
+        if (typeof sonarAgotado === 'function') sonarAgotado(false);
         return;
     }
 
@@ -495,8 +513,33 @@ function actualizar(dt, entrada) {
     aplicarEmpuje(j, dt);
     descubrir();
 
-    if (entrada.dash && j.cdDash <= 0) impulsar();
-    if (entrada.atacar && !j.cubriendo && j.cdAtaque <= 0) golpear();
+    // El aliento vuelve solo, sin descanso previo que haya que buscarse, pero
+    // no siempre al mismo paso: el doble plantado que en marcha, y a cinco
+    // veces con los pies en el elixir derramado -cure o no cure, que con la
+    // vida llena el charco sigue siendo un respiro-. Pararse a tomar aire es
+    // una decisión con precio -quieto se está a merced de lo que venga-, y el
+    // charco es el único descanso de verdad, que además se agota solo.
+    //
+    // Manda el mayor de los dos y no el producto: quieto sobre un charco
+    // repone a cinco, no a diez. Así cada número dice lo que promete y el
+    // respiro no se dispara por juntarse con lo otro.
+    //
+    // Va aquí abajo, después de mover, porque es donde ya se sabe si este
+    // fotograma se ha andado o no.
+    const soplo = ESTAMINA_RITMO * Math.max(
+        j.andando ? 1 : ESTAMINA_QUIETO,
+        j.enCharco ? ESTAMINA_CURANDO : 1);
+    j.estamina = Math.min(j.estaminaMax, j.estamina + soplo * dt);
+
+    // por debajo de lo que cuesta una esquiva el héroe resuella, y calla en
+    // cuanto vuelve a tener para una. Se le dice en cada fotograma: el propio
+    // sonido sabe si ya estaba sonando y no se reinicia por que se lo repitan
+    if (typeof sonarAgotado === 'function') sonarAgotado(j.estamina < COSTE_DASH);
+
+    // sin aliento no hay esquiva ni tajo: la espera del dash sigue contando
+    // aparte, y manda la que llegue más tarde de las dos
+    if (entrada.dash && j.cdDash <= 0 && j.estamina >= COSTE_DASH) impulsar();
+    if (entrada.atacar && !j.cubriendo && j.cdAtaque <= 0 && j.estamina >= COSTE_GOLPE) golpear();
 
     // --- enemigos ---
     for (const e of J.enemigos) {
@@ -558,6 +601,7 @@ function aplicarEmpuje(e, dt) {
 // Golpe de espada: un arco por delante del héroe, no una casilla
 function golpear() {
     const j = J.jugador;
+    j.estamina -= COSTE_GOLPE;
     j.cdAtaque = j.cadencia;
     j.golpe = 0.18;
 
@@ -608,6 +652,7 @@ function golpear() {
 // Impulso hacia donde se mira: aprovecha el empuje, que ya frena y choca solo
 function impulsar() {
     const j = J.jugador;
+    j.estamina -= COSTE_DASH;
     j.cdDash = ESPERA_DASH;
     j.dash = DURACION_DASH;
     j.invulnerable = Math.max(j.invulnerable, DURACION_DASH + 0.04);
@@ -715,6 +760,14 @@ function cruzar() {
     }
     asentarBotin();
     nuevoNivel();
+
+    // Cruzar el umbral se cobra el cansancio: al otro lado se entra con el
+    // fuelle entero. La vida no, que esa es la cuenta que hay que cuidar de
+    // senda en senda; el aliento solo mide el ritmo de una pelea, y arrastrarlo
+    // agotado a una senda nueva castigaría por haber ganado la anterior.
+    J.jugador.estamina = J.jugador.estaminaMax;
+    if (typeof sonarAgotado === 'function') sonarAgotado(false);
+
     // esto va después de la mudanza: nuevoNivel lo limpia todo y planta al
     // héroe en la senda siguiente, que es donde debe verse
     if (jade) esquirlaGanada(J.jugador.x, J.jugador.y);
@@ -776,7 +829,11 @@ function formaDeCharco() {
 
 function actualizarCharcos(dt) {
     const j = J.jugador;
-    let bebiendo = false;
+    // dos cosas distintas, y hacía falta separarlas: pisar el charco no es lo
+    // mismo que beber de él. Con la vida llena no hay nada que curar, pero el
+    // héroe sigue teniendo los pies en el elixir y el fuelle lo agradece igual
+    let bebiendo = false;      // está curando: manda en el sonido
+    let enCharco = false;      // está encima: manda en el aliento
     for (const c of J.charcos.slice()) {
         if (c.secando > 0) {
             c.secando += dt;
@@ -786,7 +843,9 @@ function actualizarCharcos(dt) {
 
         c.t += dt;
         // encima de verdad: cuenta el centro del héroe, no rozarlo con el hombro
-        if (Math.hypot(c.x - j.x, c.y - j.y) < c.r && j.hp < j.hpMax) {
+        const encima = Math.hypot(c.x - j.x, c.y - j.y) < c.r;
+        if (encima) enCharco = true;
+        if (encima && j.hp < j.hpMax) {
             const cura = Math.min(CHARCO_RITMO * dt, c.queda, j.hpMax - j.hp);
             j.hp += cura;
             c.queda -= cura;
@@ -807,6 +866,14 @@ function actualizarCharcos(dt) {
                     : `El elixir derramado te devuelve ${total} PV; el resto se seca en la piedra.`);
         }
     }
+
+    // queda apuntado en el héroe porque el aliento lo mira: pisar el elixir
+    // repone el fuelle bastante más deprisa, tenga o no vida que reponer.
+    // Esto se resuelve después de la cuenta del aliento, así que allí se lee
+    // el de este instante con un fotograma de retraso; para un goteo continuo
+    // eso no se nota, y adelantar los charcos cambiaría el orden en que curan
+    // y muerden los enemigos, que sí importa
+    j.enCharco = enCharco;
 
     // el sonido de beber se enciende y se apaga aquí, y no al pisar el charco:
     // así calla solo cuando deja de curar, sea porque te apartas, porque el
@@ -921,7 +988,7 @@ function actualizarEfectos(dt) {
 // ---------- Arranque ----------
 
 // La armería vive en prev.html; si se entra directo a la partida no está
-// cargada, y entonces el héroe sale con la katana de serie.
+// cargada, y entonces el héroe sale con el tantō de serie.
 
 // Lo que se junta se apunta primero en la cuenta de la senda; el HUD lee de
 // aquí, no del almacén
@@ -979,22 +1046,25 @@ function equiparArma(j) {
     J.arma = arma.nombre + (arma.nivel ? ` +${arma.nivel}` : '');
 }
 
-// las mejoras del personaje van sobre el arma ya equipada: el filo suma al
-// daño que sea, y el vigor estira la vida antes de llenarla
+// las mejoras del personaje van sobre el arma ya equipada: el daño suma al
+// que traiga el acero, y la vida y la energía estiran sus barras antes de llenarlas
 function aplicarMejoras(j) {
     if (typeof Personaje === 'undefined') return;
-    j.hpMax += Personaje.vigor();
+    j.hpMax += Personaje.vida();
     j.hp = j.hpMax;
-    j.dano += Personaje.filo();
+    j.estaminaMax += Personaje.energia();
+    j.estamina = j.estaminaMax;
+    j.dano += Personaje.dano();
 }
 
 function iniciarPartida() {
     J.jugador = {
         x: 0, y: 0, r: 0.30, vel: 4.6,
         hp: 50, hpMax: 50, dano: 7,
+        estamina: ESTAMINA_BASE, estaminaMax: ESTAMINA_BASE,
         alcance: 1.25, arco: 1.0, cadencia: 0.40,
         cdAtaque: 0, golpe: 0, invulnerable: 0,
-        cubriendo: false, corriendo: false, dash: 0, cdDash: 0,
+        cubriendo: false, corriendo: false, enCharco: false, dash: 0, cdDash: 0,
         ex: 0, ey: 0, mira: 0, andando: false, nombre: 'héroe'
     };
     equiparArma(J.jugador);

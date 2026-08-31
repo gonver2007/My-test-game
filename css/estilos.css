@@ -153,12 +153,34 @@ canvas#vista {
     background: linear-gradient(180deg, var(--brasa), var(--brasaHonda));
     transition: width .12s linear;
 }
+/* El aliento avisa dos veces, y cada aviso usa una pieza distinta de la
+   barra, para que no se pisen y se distingan de un vistazo:
+
+     el hueco de detrás - se pone rojo al bajar de una esquiva. Además se
+       agranda según se vacía, así que cuanto peor va la cosa más se ve.
+     el relleno - sigue en oro mientras dé para algo, y solo se apaga a
+       ceniza al quedarse seco del todo, sin ni un tajo.
+
+   Así el primer aviso es «no puedes escapar» y el segundo, más raro y más
+   grave, «no puedes nada». Los cambios van templados: rondar un umbral es
+   constante -el aliento sube y baja sin parar- y a pelo parpadearía. */
 .barra.dash {
     height: 7px; width: var(--anchoBarra); margin-top: 6px;
+    border-color: rgba(180, 60, 48, .55);
+    background: rgba(96, 24, 20, .8);
+    transition: background .18s linear, border-color .18s linear;
+}
+/* con aliento para esquivar, el hueco vuelve a ser el oscuro de siempre */
+.barra.dash.esquiva {
+    background: rgba(12, 6, 14, .7);
     border-color: rgba(232, 180, 79, .25);
 }
-/* mientras se recarga es ceniza apagada; llena, se enciende en oro */
-.barra.dash > div { background: rgba(242, 228, 214, .22); }
+/* seco: el relleno pierde el oro */
+.barra.dash > div {
+    background: rgba(242, 228, 214, .22);
+    box-shadow: none;
+    transition: width .12s linear, background .18s linear;
+}
 .barra.dash.lista > div {
     background: var(--oroViejo);
     box-shadow: 0 0 12px rgba(232, 180, 79, .8);
@@ -844,6 +866,16 @@ body.santuario .panel.ajustes {
 .arma .marca.cerrado { background: #7fd6c4; }
 .mejorar.comprar { background: #2f7a76; }
 .mejorar.comprar:hover:not(:disabled) { background: #4ea79c; }
+
+/* La sellada no es que no puedas pagarla: es que todavía no está a la venta.
+   Va en piedra apagada y no en el jade de comprar, para que se distinga de un
+   golpe el «no me llega» del «aún no te toca». */
+.arma .marca.sellada { background: #6b6478; color: rgba(242, 228, 214, .92); }
+.mejorar.sellada {
+    background: rgba(60, 54, 72, .55);
+    border-style: dashed;
+    font-size: 10.5px; letter-spacing: .06em;
+}
 .arma .pie { margin: 0 0 10px; font-size: 12px; line-height: 1.5; color: rgba(242, 228, 214, .68); min-height: 54px; }
 
 .arma .fichas { margin: 0 0 10px; display: flex; justify-content: space-between; }

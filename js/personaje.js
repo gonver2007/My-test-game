@@ -1,27 +1,39 @@
 /* ============================================================
 personaje.js - los orbes azules y lo que compran
 Si el jade afila el acero, los orbes azules endurecen al que los lleva:
-aguante y filo del propio héroe, que no se pierden al cambiar de arma.
-Vive en la ranura, junto al resto de la partida. La clave guardada
+vida, daño y energía del propio héroe, que no se pierden al cambiar de
+arma. Vive en la ranura, junto al resto de la partida. La clave guardada
 sigue llamándose 'dones' para no dejar atrás las partidas ya jugadas.
    ============================================================ */
 'use strict';
 
-// las dos vías de mejora; cada peldaño cuesta lo que diga COSTES_MEJORA
+// las tres vías de mejora; cada peldaño cuesta lo que diga COSTES_MEJORA
 const MEJORAS = [
     {
-        id: 'vigor',
-        nombre: 'VIGOR',
+        id: 'vida',
+        nombre: 'VIDA',
         pie: 'Un aliento más largo: el héroe aguanta más golpes antes de caer.',
         efecto: 'PV máximos', suma: 10, base: 50
     },
     {
-        id: 'filo',
-        nombre: 'FILO',
+        id: 'dano',
+        nombre: 'DAÑO',
         pie: 'La mano que empuña: cada tajo entra más hondo, lleves lo que lleves.',
         efecto: 'Daño', suma: 2, base: 0
+    },
+    {
+        id: 'energia',
+        nombre: 'ENERGÍA',
+        pie: 'El fuelle: más esquivas seguidas y más tajos antes de quedarse sin aire.',
+        efecto: 'Estamina', suma: 10, base: 50
     }
 ];
+
+// Las mejoras se llamaron vigor, filo y aguante hasta que pasaron a decirse
+// por lo que hacen. Lo comprado con los nombres viejos sigue guardado bajo
+// ellos, así que al leer la ranura se traspasa a los nuevos: nadie pierde
+// peldaños que ya pagó por un cambio de nombre.
+const NOMBRES_VIEJOS = { vigor: 'vida', filo: 'dano', aguante: 'energia' };
 
 const COSTES_MEJORA = [50, 150, 500, 750, 1000];
 const MEJORA_TOPE = COSTES_MEJORA.length;
@@ -41,10 +53,24 @@ const ORBE_SVG = `
 const Personaje = {
 
     leer() {
-        if (typeof Partidas !== 'undefined') {
-            return Object.assign({}, INICIAL_PERSONAJE, Partidas.actual());
+        const estado = (typeof Partidas !== 'undefined')
+            ? Object.assign({}, INICIAL_PERSONAJE, Partidas.actual())
+            : Object.assign({}, INICIAL_PERSONAJE, { dones: {} });
+        estado.dones = this.alDia(estado.dones);
+        return estado;
+    },
+
+    // pasa a los nombres de ahora lo que se guardó con los de antes. Si ya
+    // hubiera algo bajo el nombre nuevo manda ese, que es el que se ha
+    // estado usando; el viejo se queda donde está y deja de mirarse
+    alDia(dones) {
+        const puesto = Object.assign({}, dones);
+        for (const viejo in NOMBRES_VIEJOS) {
+            const nuevo = NOMBRES_VIEJOS[viejo];
+            if (puesto[viejo] !== undefined && puesto[nuevo] === undefined)
+                puesto[nuevo] = puesto[viejo];
         }
-        return Object.assign({}, INICIAL_PERSONAJE, { dones: {} });
+        return puesto;
     },
 
     guardar(estado) {
@@ -74,9 +100,16 @@ const Personaje = {
         return true;
     },
 
-    // lo que hay que sumarle al héroe al empezar la partida
-    vigor() { return MEJORAS[0].suma * this.nivel('vigor'); },
-    filo() { return MEJORAS[1].suma * this.nivel('filo'); }
+    // lo que hay que sumarle al héroe al empezar la partida. Se busca por
+    // nombre y no por posición: así añadir una mejora nueva a la lista no
+    // desplaza a las de al lado ni se lleva por delante a las de siempre
+    sumaDe(id) {
+        const m = MEJORAS.find(x => x.id === id);
+        return m ? m.suma * this.nivel(id) : 0;
+    },
+    vida() { return this.sumaDe('vida'); },
+    dano() { return this.sumaDe('dano'); },
+    energia() { return this.sumaDe('energia'); }
 };
 
 // ---------- El panel de prev.html ----------
