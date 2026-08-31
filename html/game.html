@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<title>Sendas del Santuario</title>
+<title>Path to the Sanctuary</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&amp;family=Zen+Kaku+Gothic+New:wght@500;700;900&amp;display=swap" rel="stylesheet">
@@ -20,7 +20,7 @@
     <div id="hud">
         <!-- lo que el héroe aguanta y lo que le queda de impulso -->
         <div id="cedula" class="tablilla">
-            <div id="estadoPv"><b>PV</b><span id="pvAhora">0</span><i id="pvTope">/0</i></div>
+            <div id="estadoPv"><b data-t="hud.pv">PV</b><span id="pvAhora">0</span><i id="pvTope">/0</i></div>
             <div class="barra"><div id="vida"></div></div>
             <div class="barra dash"><div id="dash"></div></div>
         </div>
@@ -30,7 +30,7 @@
              colgada del borde de arriba, como la tablilla de un torii. -->
         <div id="enemigos" class="tablilla">
             <span id="enemigosCifra">0</span>
-            <span class="rotulo">ENEMIGOS RESTANTES</span>
+            <span class="rotulo" data-t="hud.enemigos">ENEMIGOS RESTANTES</span>
         </div>
 
         <!-- dónde se anda: la senda y el nombre de la comarca, que lo pone
@@ -50,22 +50,22 @@
     <!-- al caer no se reinicia solo: el jugador elige si vuelve a prepararse
          o se marcha al inicio -->
     <div id="muerte">
-        <span class="titulo">HAS CAÍDO</span>
+        <span class="titulo" data-t="juego.caido">HAS CAÍDO</span>
         <!-- lo lleva vista.js al caer; sin botín que llorar, ni aparece -->
         <div id="muertePerdido" class="perdido" hidden></div>
         <div class="opciones">
-            <button id="mtContinuar" class="boton principal">CONTINUAR</button>
-            <button id="mtSalir" class="boton">VOLVER AL INICIO</button>
+            <button id="mtContinuar" class="boton principal" data-t="comun.continuar">CONTINUAR</button>
+            <button id="mtSalir" class="boton" data-t="comun.inicio">VOLVER AL INICIO</button>
         </div>
     </div>
 
     <!-- Esc lo abre y lo cierra; mientras tanto la partida sigue corriendo -->
     <div id="menuJuego" hidden>
-        <button id="mjCerrar" class="boton principal">SEGUIR JUGANDO</button>
-        <button id="mjAjustes" class="boton">AJUSTES</button>
-        <button id="mjInicio" class="boton">VOLVER AL INICIO</button>
-        <button id="mjSalir" class="boton">CERRAR JUEGO</button>
-        <p id="mjNota" hidden>El navegador no deja cerrar esta pestaña: ciérrala tú.</p>
+        <button id="mjCerrar" class="boton principal" data-t="juego.seguir">SEGUIR JUGANDO</button>
+        <button id="mjAjustes" class="boton" data-t="comun.ajustes">AJUSTES</button>
+        <button id="mjInicio" class="boton" data-t="comun.inicio">VOLVER AL INICIO</button>
+        <button id="mjSalir" class="boton" data-t="comun.cerrarJuego">CERRAR JUEGO</button>
+        <p id="mjNota" hidden data-t="comun.notaPestana"></p>
     </div>
 
     <!-- Los ajustes no son una pantalla aparte: se asoman aquí encima, en su
@@ -88,6 +88,7 @@
 </div>
 
 <!-- los bocetos de las armas: los usan la armería y, más abajo, la vista -->
+<script src="../js/idiomas.js"></script>
 <script src="../js/aceros.js"></script>
 <script src="../js/armeria.js"></script>
 <script src="../js/personaje.js"></script>

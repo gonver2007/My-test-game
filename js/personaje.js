@@ -7,26 +7,14 @@ sigue llamándose 'dones' para no dejar atrás las partidas ya jugadas.
    ============================================================ */
 'use strict';
 
-// las tres vías de mejora; cada peldaño cuesta lo que diga COSTES_MEJORA
+// Las tres vías de mejora; cada peldaño cuesta lo que diga COSTES_MEJORA.
+// El nombre, la descripción y el rótulo del efecto no se escriben aquí: los
+// pone idiomas.js a partir del id -mejora.vida, mejora.vida.pie...-, que es
+// lo que permite que el panel hable en la lengua elegida.
 const MEJORAS = [
-    {
-        id: 'vida',
-        nombre: 'VIDA',
-        pie: 'Un aliento más largo: el héroe aguanta más golpes antes de caer.',
-        efecto: 'PV máximos', suma: 10, base: 50
-    },
-    {
-        id: 'dano',
-        nombre: 'DAÑO',
-        pie: 'La mano que empuña: cada tajo entra más hondo, lleves lo que lleves.',
-        efecto: 'Daño', suma: 2, base: 0
-    },
-    {
-        id: 'energia',
-        nombre: 'ENERGÍA',
-        pie: 'El fuelle: más esquivas seguidas y más tajos antes de quedarse sin aire.',
-        efecto: 'Estamina', suma: 10, base: 50
-    }
+    { id: 'vida',    suma: 10, base: 50 },
+    { id: 'dano',    suma: 2,  base: 0  },
+    { id: 'energia', suma: 10, base: 50 }
 ];
 
 // Las mejoras se llamaron vigor, filo y aguante hasta que pasaron a decirse
@@ -127,29 +115,35 @@ const Personaje = {
 
         return `
         <div class="arma mejora">
-            <h3>${mejora.nombre}</h3>
-            <p class="pie">${mejora.pie}</p>
+            <h3>${TR('mejora.' + mejora.id)}</h3>
+            <p class="pie">${TR('mejora.' + mejora.id + '.pie')}</p>
             <dl class="fichas">
-                <div><dt>${mejora.efecto}</dt><dd>${total}</dd></div>
-                <div><dt>Siguiente</dt><dd>${coste === null ? '—' : `+${mejora.suma}`}</dd></div>
+                <div><dt>${TR('mejora.' + mejora.id + '.efecto')}</dt><dd>${total}</dd></div>
+                <div><dt>${TR('personaje.siguiente')}</dt><dd>${coste === null ? '—' : `+${mejora.suma}`}</dd></div>
             </dl>
             <div class="forja">
                 <span class="pips">${'●'.repeat(n)}${'○'.repeat(MEJORA_TOPE - n)}</span>
                 <button class="mejorar orbes" data-subir="${mejora.id}"
                         ${alcanza ? '' : 'disabled'}>
-                    ${coste === null ? 'AL MÁXIMO' : `SUBIR · ${coste}${ORBE_SVG}`}
+                    ${coste === null ? TR('armeria.alMaximo') : `${TR('personaje.subir')} · ${coste}${ORBE_SVG}`}
                 </button>
             </div>
         </div>`;
     }
 
     function pintar() {
+        // subir una mejora repinta la caja entera: sin esto, el renglón se
+        // olvidaría de dónde estabas y volvería siempre a la primera lámina
+        const previas = caja.querySelector('.armas');
+        const scroll = previas ? previas.scrollLeft : 0;
+
         caja.innerHTML = `
-            <h2>PERSONAJE</h2>
-            <p class="saldo">Orbes azules: <b>${Personaje.orbes()}${ORBE_SVG}</b></p>
+            <h2>${TR('personaje.titulo')}</h2>
+            <p class="saldo">${TR('personaje.saldo')} <b>${Personaje.orbes()}${ORBE_SVG}</b></p>
             <div class="armas">${MEJORAS.map(tarjeta).join('')}</div>
-            <p class="nota">Cada enemigo caído suelta un orbe azul, que vuela solo hacia ti.
-            Lo que compra queda en el héroe, no en el arma.</p>`;
+            <p class="nota">${TR('personaje.nota')}</p>`;
+
+        caja.querySelector('.armas').scrollLeft = scroll;
     }
 
     caja.addEventListener('click', e => {

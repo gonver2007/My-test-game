@@ -3615,10 +3615,10 @@ function pintarEnemigos() {
     if (quedan) {
         cifra.textContent = quedan;
         caja.querySelector('.rotulo').textContent =
-            quedan === 1 ? 'ENEMIGO RESTANTE' : 'ENEMIGOS RESTANTES';
+            TR(quedan === 1 ? 'hud.enemigo1' : 'hud.enemigos');
     } else {
         cifra.textContent = '—';
-        caja.querySelector('.rotulo').textContent = 'SENDA DESPEJADA';
+        caja.querySelector('.rotulo').textContent = TR('hud.despejada');
     }
     caja.classList.toggle('limpia', !quedan);
 
@@ -3651,7 +3651,7 @@ function pintarCaida() {
     if (orbes) cuentas.push(`<span class="orbes">${orbes}${iconoOrbe}</span>`);
 
     caja.innerHTML =
-        `<span class="rotulo">Perdiste</span>
+        `<span class="rotulo">${TR('juego.perdiste')}</span>
          <span class="cuentas">${cuentas.join('')}</span>`;
     caja.hidden = false;
 }
@@ -3711,11 +3711,10 @@ function pintarHud() {
     aviso.style.opacity = cerca ? 1 : 0;
     if (cerca) {
         const n = J.enemigos.length;
-        aviso.textContent = puertaAbierta()
-            ? '[E] cruzar la puerta'
-            : n
-                ? `El sello aguanta · ${n === 1 ? 'queda 1 enemigo' : `quedan ${n} enemigos`}`
-                : 'El sello se deshace…';
+        aviso.textContent = puertaAbierta() ? TR('aviso.cruzar')
+                          : !n ? TR('aviso.selloCede')
+                          : n === 1 ? TR('aviso.sello1')
+                          : TR('aviso.sello', n);
         aviso.classList.toggle('trabado', !puertaAbierta());
     }
 }
@@ -3907,8 +3906,14 @@ addEventListener('message', ev => {
     const aviso = ev.data;
     if (!aviso || aviso.tipo !== 'ajustes') return;
     if (aviso.cerrar) { alternarMenu(true); return; }
+    // Se copian todos, no unos cuantos: lo que no venga en el aviso llega
+    // como undefined y al guardarse pisa lo que hubiera, así que olvidar uno
+    // no es que no se actualice -es que se le borra el suyo y vuelve al de
+    // fábrica-. El idioma viaja también: cuando el marco no comparte almacén,
+    // esta es la única copia que la partida verá al reiniciar.
     Ajustes.guardar({ volumen: aviso.volumen, musica: aviso.musica,
-                      efectos: aviso.efectos, hud: aviso.hud });
+                      efectos: aviso.efectos, jugador: aviso.jugador,
+                      hud: aviso.hud, idioma: aviso.idioma });
 });
 
 // no hay nada que anotar al salir: el arma y las esquirlas se guardan solas

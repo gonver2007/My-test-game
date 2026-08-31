@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sendas del Santuario</title>
+<title>Path to the Sanctuary</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&amp;family=Zen+Kaku+Gothic+New:wght@500;700;900&amp;display=swap" rel="stylesheet">
@@ -47,16 +47,16 @@
 
 <div id="portada">
     <div class="rotulo"><span>記録の間</span></div>
-    <h1>ELIGE</h1>
-    <div class="enlace"><span>TU</span></div>
-    <h1>RANURA</h1>
-    <p class="lema">Cinco senderos: cada uno recuerda el suyo.</p>
+    <h1 data-t="ranura.t1">ELIGE</h1>
+    <div class="enlace"><span data-t="ranura.t2">TU</span></div>
+    <h1 data-t="ranura.t3">RANURA</h1>
+    <p class="lema" data-t="ranura.lema">Cinco senderos: cada uno recuerda el suyo.</p>
 
     <!-- la lista la rellena partidas.js al cargar -->
     <div id="ranuras" class="panel ranuras"></div>
 
     <nav id="botones">
-        <button id="btVolver" type="button" class="boton">VOLVER</button>
+        <button id="btVolver" type="button" class="boton" data-t="comun.volver">VOLVER</button>
     </nav>
 </div>
 
@@ -64,6 +64,7 @@
      no se recarga al cambiar de pantalla. Esta solo dice, en su data-musica de
      arriba, que en ella el tema suena -->
 
+<script src="../js/idiomas.js"></script>
 <script src="../js/armeria.js"></script>
 <script src="../js/personaje.js"></script>
 <script src="../js/partidas.js"></script>

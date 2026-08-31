@@ -192,22 +192,26 @@ const Forja = {
             const falta = Forja.requisito(arma.id);
             const alcanza = !falta && estado.esquirlas >= arma.precio;
             sello = falta
-                ? '<span class="marca sellado">SELLADA</span>'
-                : '<span class="marca cerrado">EN VENTA</span>';
+                ? `<span class="marca sellado">${TR('armeria.sellada')}</span>`
+                : `<span class="marca cerrado">${TR('armeria.enVenta')}</span>`;
             pie = `
                 <span class="pips">${'○'.repeat(NIVEL_TOPE)}</span>
                 <button class="mejorar ${falta ? 'sellada' : 'comprar'}"
                         data-compra="${arma.id}" ${alcanza ? '' : 'disabled'}>
-                    ${falta ? `EXIGE ${falta.nombre}` : `COMPRAR · ${arma.precio}${ESQUIRLA}`}
+                    ${falta
+                        ? `${TR('armeria.exige')} ${falta.nombre}`
+                        : `${TR('armeria.comprar')} · ${arma.precio}${ESQUIRLA}`}
                 </button>`;
         } else {
             const coste = f.nivel < NIVEL_TOPE ? COSTES[f.nivel] : null;
             const alcanza = coste !== null && estado.esquirlas >= coste;
-            if (elegida) sello = '<span class="marca">EN MANO</span>';
+            if (elegida) sello = `<span class="marca">${TR('armeria.enMano')}</span>`;
             pie = `
                 <span class="pips">${'●'.repeat(f.nivel)}${'○'.repeat(NIVEL_TOPE - f.nivel)}</span>
                 <button class="mejorar" data-mejora="${arma.id}" ${alcanza ? '' : 'disabled'}>
-                    ${coste === null ? 'AL MÁXIMO' : `FORJAR · ${coste}${ESQUIRLA}`}
+                    ${coste === null
+                        ? TR('armeria.alMaximo')
+                        : `${TR('armeria.forjar')} · ${coste}${ESQUIRLA}`}
                 </button>`;
         }
 
@@ -217,9 +221,9 @@ const Forja = {
             <h3>${arma.nombre}${sello}</h3>
             <div class="retrato" data-boceto="${arma.id}"></div>
             <dl class="fichas">
-                <div><dt>Daño</dt><dd>${f.dano}</dd></div>
-                <div><dt>Alcance</dt><dd>${f.alcance}</dd></div>
-                <div><dt>Golpes/s</dt><dd>${(1 / f.cadencia).toFixed(1)}</dd></div>
+                <div><dt>${TR('armeria.dano')}</dt><dd>${f.dano}</dd></div>
+                <div><dt>${TR('armeria.alcance')}</dt><dd>${f.alcance}</dd></div>
+                <div><dt>${TR('armeria.golpes')}</dt><dd>${(1 / f.cadencia).toFixed(1)}</dd></div>
             </dl>
             <div class="forja">${pie}</div>
         </div>`;
@@ -248,12 +252,10 @@ const Forja = {
         const scroll = previas ? previas.scrollLeft : 0;
 
         caja.innerHTML = `
-            <h2>ARMERÍA</h2>
-            <p class="saldo">Esquirlas de jade: <b>${Forja.esquirlas()}${ESQUIRLA}</b></p>
+            <h2>${TR('armeria.titulo')}</h2>
+            <p class="saldo">${TR('armeria.saldo')} <b>${Forja.esquirlas()}${ESQUIRLA}</b></p>
             <div class="armas">${ARMAS.map(tarjeta).join('')}</div>
-            <p class="nota">Cruzar la puerta de una senda a la siguiente deja una esquirla
-            una de cada dos veces: el santuario no siempre paga.
-            Un arma comprada se empuña al momento y ya se puede forjar.</p>`;
+            <p class="nota">${TR('armeria.nota')}</p>`;
 
         retratar();
         caja.querySelector('.armas').scrollLeft = scroll;

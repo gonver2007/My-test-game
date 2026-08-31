@@ -103,7 +103,9 @@ function mensaje(texto) {
     if (J.log.length > 60) J.log.shift();
 }
 
-const sujeto = e => `${e.art === 'el' ? 'El' : 'La'} ${e.nombre}`;
+// el nombre del enemigo no se traduce -un oni es un oni-, pero el artículo
+// que lo precede sí, que es gramática de la lengua y no nombre propio
+const sujeto = e => `${TR(e.art === 'el' ? 'msg.articuloEl' : 'msg.articuloLa')} ${e.nombre}`;
 
 const esMuro = (cx, cy) =>
     cx < 0 || cy < 0 || cx >= ANCHO || cy >= ALTO || J.mapa[cy][cx] === 1;
@@ -363,7 +365,7 @@ function nuevoNivel() {
         if (p) J.enemigos.push(crearEnemigo(p[0] + 0.5, p[1] + 0.5));
     }
 
-    mensaje(`--- Senda ${J.nivel} · ${nombreDelBioma()} ---`);
+    mensaje(`--- ${TR('hud.senda')} ${J.nivel} · ${nombreDelBioma()} ---`);
 }
 
 // El rótulo de la comarca en que se anda. Sale de biomas.js y de ningún otro
@@ -441,7 +443,7 @@ function danarPorTrampa(t) {
     j.invulnerable = 0.5;
     chispas(t.x, t.y, '#c04040', 8);
     numero(j.x, j.y, t.dano, '#ff3b30');
-    mensaje('Los pinchos del suelo te alcanzan.');
+    mensaje(TR('msg.pinchos'));
     comprobarCaida();
 }
 
@@ -579,8 +581,8 @@ function actualizar(dt, entrada) {
 function abrirPuertaSiToca(dt) {
     if (J.enemigos.length) return;
     if (J.puerta.apertura === 0) {
-        mensaje('Cae el último enemigo: el sello se deshace y la puerta se abre.');
-        mensaje('Sin nada que temer, reconoces la senda entera.');
+        mensaje(TR('msg.selloRoto'));
+        mensaje(TR('msg.sendaEntera'));
         if (typeof sonarAbrirPuerta === 'function') sonarAbrirPuerta();
         chispas(J.puerta.x, J.puerta.y, '#a8dcff', 18);
         J.explorado.fill(1);     // ya no hay peligro: se levanta la niebla del mapa
@@ -644,7 +646,7 @@ function golpear() {
             chispas(e.x, e.y, '#803030', 14);
             // cada caído suelta su orbe, que sale despedido y luego vuela al héroe
             soltarOrbes(e.x, e.y, 1);
-            mensaje(`${sujeto(e)} muere.`);
+            mensaje(TR('msg.muere', sujeto(e)));
         }
     }
 }
@@ -698,7 +700,7 @@ function comprobarCaida() {
     j.cubriendo = j.corriendo = false;
     J.muerto = true;
     perderBotin();
-    mensaje('Has muerto.');
+    mensaje(TR('msg.hasMuerto'));
 }
 
 // diferencia entre dos ángulos, siempre en [-PI, PI]
@@ -718,9 +720,11 @@ function cruzar() {
     if (J.muerto || !cercaDePuerta()) return false;
     if (!puertaAbierta()) {
         const n = J.enemigos.length;
-        mensaje(n
-            ? `La puerta sigue sellada. Aún ${n === 1 ? 'queda 1 enemigo' : `quedan ${n} enemigos`}.`
-            : 'La puerta todavía se está abriendo.');
+        // el singular va aparte porque no todas las lenguas lo resuelven
+        // metiendo el número y una ese: hay que dejar escribir la frase entera
+        mensaje(!n ? TR('msg.puertaAbriendo')
+               : n === 1 ? TR('msg.puertaSellada1')
+               : TR('msg.puertaSellada', n));
         return false;
     }
 
@@ -745,7 +749,7 @@ function cruzar() {
         asentarBotin();
         apuntarFinal();
         J.completado = true;
-        mensaje('Cruzas el último umbral. El santuario queda atrás.');
+        mensaje(TR('msg.ultimoUmbral'));
         return true;
     }
 
@@ -756,7 +760,7 @@ function cruzar() {
     const jade = Math.random() < 0.5;
     if (jade) {
         premiar(1);
-        mensaje('Una esquirla de jade se desprende del umbral.');
+        mensaje(TR('msg.jade'));
     }
     asentarBotin();
     nuevoNivel();
@@ -797,7 +801,7 @@ function romperBotella(o) {
     if (typeof sonarCristal === 'function') sonarCristal();
     chispas(o.x, o.y, '#ffd8e6', 14);    // los vidrios
     chispas(o.x, o.y, '#e04f7a', 10);    // y lo que llevaban
-    mensaje('La botella salta en pedazos y el elixir se derrama. Ponte encima.');
+    mensaje(TR('msg.botella'));
 
     J.charcos.push({
         x: o.x, y: o.y,
@@ -859,11 +863,9 @@ function actualizarCharcos(dt) {
         if (c.t >= CHARCO_VIDA || c.queda <= 0.001) {
             c.secando = 0.0001;
             const total = Math.round(c.bebido || 0);
-            mensaje(!total
-                ? 'El elixir derramado se seca en la piedra sin que lo aproveches.'
-                : c.queda <= 0.001
-                    ? `Apuras el elixir derramado: ${total} PV.`
-                    : `El elixir derramado te devuelve ${total} PV; el resto se seca en la piedra.`);
+            mensaje(!total ? TR('msg.charcoSeco')
+                   : c.queda <= 0.001 ? TR('msg.charcoApurado', total)
+                   : TR('msg.charcoResto', total));
         }
     }
 
@@ -1032,7 +1034,7 @@ function perderBotin() {
     J.perdido = { jade, orbes };
     // los que aún volaban se apagan con él: nunca llegaron a ser suyos
     J.orbesSueltos = [];
-    if (jade || orbes) mensaje(`Se quedan en la senda ${jade} de jade y ${orbes} orbes azules.`);
+    if (jade || orbes) mensaje(TR('msg.botinPerdido', jade, orbes));
 }
 
 function equiparArma(j) {
@@ -1088,6 +1090,6 @@ function iniciarPartida() {
     J.efectos = [];
     J.orbesSueltos = [];
     J.tiempo = 0;
-    mensaje('Cruzas el portal del santuario.');
+    mensaje(TR('msg.portal'));
     nuevoNivel();
 }

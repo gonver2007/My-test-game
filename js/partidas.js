@@ -112,7 +112,10 @@ const Partidas = {
 
     let porBorrar = -1;         // la ranura que espera el segundo clic de confirmación
 
-    const fecha = ms => new Date(ms).toLocaleDateString('es-ES',
+    // la fecha se escribe como se escriba en la lengua elegida: en español
+    // «31 ago 2026» y en inglés «31 Aug 2026», que el orden no es el mismo
+    const fecha = ms => new Date(ms).toLocaleDateString(
+        Idioma.actual() === 'en' ? 'en-GB' : 'es-ES',
         { day: '2-digit', month: 'short', year: 'numeric' });
 
     const nombreArma = p => {
@@ -127,9 +130,9 @@ const Partidas = {
     function fila(p, i) {
         if (!p) return `
             <div class="ranura vacia" data-ranura="${i}">
-                <h3>RANURA ${i + 1}</h3>
-                <p class="resumen">— sin partida —</p>
-                <p class="fecha">Empezar una nueva aquí</p>
+                <h3>${TR('ranura.numero')} ${i + 1}</h3>
+                <p class="resumen">${TR('ranura.vacia')}</p>
+                <p class="fecha">${TR('ranura.empezar')}</p>
             </div>`;
 
         const confirmando = porBorrar === i;
@@ -137,18 +140,18 @@ const Partidas = {
         // que no haya que entrar en la partida para saber quién lo lleva: la
         // inmortalidad en rojo a la derecha, la consola en jade a la izquierda
         const sello =
-            (p.cheat ? '<span class="sello consola" title="Consola en la partida">令</span>' : '') +
-            (p.god ? '<span class="sello" title="Inmortal">神</span>' : '');
+            (p.cheat ? `<span class="sello consola" title="${TR('ranura.selloConsola')}">令</span>` : '') +
+            (p.god ? `<span class="sello" title="${TR('ranura.selloDios')}">神</span>` : '');
         return `
             <div class="ranura llena${p.god ? ' inmortal' : ''}" data-ranura="${i}">
                 ${sello}
-                <h3>RANURA ${i + 1}</h3>
+                <h3>${TR('ranura.numero')} ${i + 1}</h3>
                 <p class="resumen">${nombreArma(p)}</p>
                 <p class="monedas">${p.esquirlas}${jade()} · ${p.orbes || 0}${orbes()}</p>
-                <p class="hondura"><b>${p.hondo || 1}</b><span>senda</span></p>
-                <p class="fecha">Última vez: ${fecha(p.jugada)}</p>
+                <p class="hondura"><b>${p.hondo || 1}</b><span>${TR('ranura.senda')}</span></p>
+                <p class="fecha">${TR('ranura.ultima')} ${fecha(p.jugada)}</p>
                 <button class="borrar${confirmando ? ' confirmar' : ''}" data-borrar="${i}">
-                    ${confirmando ? '¿SEGURO?' : 'BORRAR'}
+                    ${confirmando ? TR('ranura.seguro') : TR('ranura.borrar')}
                 </button>
             </div>`;
     }
@@ -156,8 +159,7 @@ const Partidas = {
     function pintar() {
         caja.innerHTML = `
             <div class="lista">${Partidas.todas().map(fila).join('')}</div>
-            <p class="nota">Cada ranura guarda su arma y sus esquirlas.
-            El santuario se recorre siempre desde la primera senda.</p>`;
+            <p class="nota">${TR('ranura.nota')}</p>`;
     }
 
     function entrar(i) {

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sendas del Santuario</title>
+<title>Path to the Sanctuary</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&amp;family=Zen+Kaku+Gothic+New:wght@500;700;900&amp;display=swap" rel="stylesheet">
@@ -46,14 +46,14 @@
 
 <div id="portada">
     <div class="rotulo"><span>調べの間</span></div>
-    <h1>AJUSTES</h1>
-    <p class="lema">Lo que se oye, lo que se ve y lo que hace cada tecla.</p>
+    <h1 data-t="ajustes.titulo">AJUSTES</h1>
+    <p class="lema" data-t="ajustes.lema">Lo que se oye, lo que se ve y lo que hace cada tecla.</p>
 
     <!-- la hoja la rellena ajustes.js al cargar -->
     <div id="ajustes" class="panel ajustes abierto"></div>
 
     <nav id="botones">
-        <button id="btVolver" type="button" class="boton">VOLVER</button>
+        <button id="btVolver" type="button" class="boton" data-t="comun.volver">VOLVER</button>
     </nav>
 </div>
 
@@ -61,6 +61,7 @@
      pantalla se abre entera, y dentro de la partida no suena en absoluto,
      que allí la música la pone el juego -->
 
+<script src="../js/idiomas.js"></script>
 <script src="../js/ajustes.js"></script>
 <script src="../js/menu.js"></script>
 </body>

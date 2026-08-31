@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sendas del Santuario</title>
+<title>Path to the Sanctuary</title>
 </head>
 <!-- Vivía en la raíz, como index.html, hasta que index pasó a ser el armazón
      que sujeta la música. Al mudarse aquí las rutas suben un escalón y los
@@ -175,13 +175,13 @@
        (los 660 menos el 20% de cada lado) y 425px de alto (los 311 del arco
        más los 114 que había desde su borde). -->
   <div id="menuBotones" style="position:absolute;left:50%;transform:translateX(-50%);top:425px;width:396px;max-width:80%;display:flex;flex-direction:column;gap:14px;">
-    <button id="btJugar" type="button" class="boton principal">CONTINUAR</button>
-    <button id="btAjustes" type="button" class="boton">AJUSTES</button>
-    <button id="btSalir" type="button" class="boton">CERRAR JUEGO</button>
-    <button type="button" class="boton">CRÉDITOS</button>
+    <button id="btJugar" type="button" class="boton principal" data-t="comun.continuar">CONTINUAR</button>
+    <button id="btAjustes" type="button" class="boton" data-t="comun.ajustes">AJUSTES</button>
+    <button id="btSalir" type="button" class="boton" data-t="comun.cerrarJuego">CERRAR JUEGO</button>
+    <button type="button" class="boton" data-t="portada.creditos">CRÉDITOS</button>
     <!-- lo enseña menu.js si el cierre no ha podido ser; el mismo apaño que
          el menú de la partida, y con el mismo aviso -->
-    <p id="salirNota" hidden>El navegador no deja cerrar esta pestaña: ciérrala tú.</p>
+    <p id="salirNota" hidden data-t="comun.notaPestana"></p>
   </div>
 
 
@@ -192,13 +192,13 @@
       <div style="font-family:'Shippori Mincho B1',serif;font-weight:700;font-size:18px;letter-spacing:.42em;color:#e8b44f;text-indent:.42em;">聖域の道</div>
       <div style="width:70px;height:2px;background:linear-gradient(90deg,#e8b44f,rgba(232,180,79,0));"></div>
     </div>
-    <h1 style="margin:0;font-family:'Shippori Mincho B1',serif;font-weight:800;font-size:60px;line-height:.9;letter-spacing:.06em;color:#f7efe1;text-align:center;text-shadow:0 0 40px rgba(217,75,51,.55),5px 6px 0 #a5271c;">SENDAS</h1>
+    <h1 style="margin:0;font-family:'Shippori Mincho B1',serif;font-weight:800;font-size:60px;line-height:.9;letter-spacing:.06em;color:#f7efe1;text-align:center;text-shadow:0 0 40px rgba(217,75,51,.55),5px 6px 0 #a5271c;">PATH</h1>
     <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin:12px 0 8px;">
       <div style="width:8px;height:8px;transform:rotate(45deg);background:#d94b33;"></div>
-      <div style="font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:17px;letter-spacing:.62em;color:#e8b44f;text-indent:.62em;">DEL</div>
+      <div style="font-family:'Zen Kaku Gothic New',sans-serif;font-weight:700;font-size:17px;letter-spacing:.62em;color:#e8b44f;text-indent:.62em;">TO THE</div>
       <div style="width:8px;height:8px;transform:rotate(45deg);background:#d94b33;"></div>
     </div>
-    <h1 style="margin:0;font-family:'Shippori Mincho B1',serif;font-weight:800;font-size:60px;line-height:.9;letter-spacing:.06em;color:#f7efe1;text-align:center;text-shadow:0 0 40px rgba(217,75,51,.55),5px 6px 0 #a5271c;">SANTUARIO</h1>
+    <h1 style="margin:0;font-family:'Shippori Mincho B1',serif;font-weight:800;font-size:60px;line-height:.9;letter-spacing:.06em;color:#f7efe1;text-align:center;text-shadow:0 0 40px rgba(217,75,51,.55),5px 6px 0 #a5271c;">SANCTUARY</h1>
 
   </div>
 
@@ -216,6 +216,7 @@
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;showPetals&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}"></script>
+<script src="../js/idiomas.js"></script>
 <script src="../js/partidas.js"></script>
 <script src="../js/ajustes.js"></script>
 <script src="../js/consola.js"></script>

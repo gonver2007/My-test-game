@@ -645,6 +645,35 @@ body.santuario .panel.ajustes {
     padding: 6px 0;
 }
 .ajustes .regla label { text-align: left; letter-spacing: .06em; }
+
+/* El idioma no lleva riel: es una lista cerrada, no un recorrido. Comparte la
+   rejilla de las reglas para no desentonar, con el mando donde iba la cifra.
+   Se viste a mano porque un <select> de serie trae la carpintería del sistema
+   y aquí desafinaría con la laca y la tinta del resto. */
+.ajustes .regla.lista select {
+    font: inherit; font-size: 13px;
+    color: var(--oroViejo);
+    padding: 4px 26px 4px 9px;
+    border: 2px solid rgba(232, 180, 79, .35);
+    border-radius: 2px;
+    background: rgba(12, 6, 14, .55);
+    cursor: pointer;
+    -webkit-appearance: none; appearance: none;
+    /* la punta de flecha, dibujada aquí mismo para no depender de una imagen */
+    background-image: linear-gradient(45deg, transparent 50%, var(--oroViejo) 50%),
+                      linear-gradient(135deg, var(--oroViejo) 50%, transparent 50%);
+    background-position: right 12px center, right 7px center;
+    background-size: 5px 5px, 5px 5px;
+    background-repeat: no-repeat;
+}
+.ajustes .regla.lista select:hover,
+.ajustes .regla.lista select:focus-visible {
+    border-color: var(--oro);
+    outline: none;
+}
+/* el desplegado sí lo pinta el sistema: se le da al menos fondo oscuro para
+   que no salte a blanco en mitad del ocaso */
+.ajustes .regla.lista select option { background: #1c0e16; color: #f2e4d6; }
 .ajustes .regla output {
     color: var(--oroViejo); font-weight: 700;
     padding: 2px 8px; border-radius: 2px;
@@ -723,6 +752,50 @@ body.santuario .panel.ajustes {
     padding: 2px 9px; border-radius: 2px;
     letter-spacing: .06em;
     background: rgba(12, 6, 14, .55);
+}
+
+/* El pie de la hoja: la nota a la izquierda y el botón de aplicar a la
+   derecha, separados por un filete como el que corta las columnas. Cuando no
+   hay nota el hueco de la izquierda se queda vacío y el botón sigue pegado a
+   su esquina, que es donde se le busca. */
+.ajustes .cierre {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 10px 18px;
+    margin-top: 16px; padding-top: 14px;
+    border-top: 1px solid rgba(232, 180, 79, .18);
+}
+/* La nota no es una alarma: lo que anuncia ya está guardado. Por eso va en el
+   oro de la casa y no en bermellón, que aquí es el color de lo que va mal. El
+   flex de 1 con base 0 la deja repartirse el ancho que sobre del botón, y
+   envolver en dos renglones antes que empujarlo fuera. */
+.ajustes .cierre .nota {
+    flex: 1 1 0; min-width: 180px; margin: 0;
+    text-align: left; font-size: 12.5px; line-height: 1.45;
+    color: var(--oroViejo); opacity: .92;
+}
+/* los botones de la hoja no son de los grandes del ocaso: aquí manda VOLVER,
+   y estos van al tamaño de lo que llevan dentro para no competir con él */
+.ajustes .cierre .boton {
+    width: auto; flex: 0 0 auto;
+    padding: 9px 26px;
+    font-size: 14px; letter-spacing: .18em; text-indent: .18em;
+}
+/* Restablecer va más callado que aplicar. Son dos botones seguidos y solo uno
+   es el que cierra el gesto; si pesaran igual, la mano dudaría cada vez. */
+.ajustes .cierre .boton.reset {
+    color: var(--oroViejo);
+    border-color: rgba(232, 180, 79, .30);
+    background: rgba(12, 6, 14, .50);
+}
+/* Apagados mientras no haya nada que hacer con ellos -nada esperando el uno,
+   nada apartado de lo de fábrica el otro-. Se dejan a la vista en vez de
+   esconderlos: así se sabe que existen y qué los enciende, y la hoja no da un
+   salto de alto cada vez que se toca una regla. */
+.ajustes .cierre .boton:disabled {
+    opacity: .38; cursor: default;
+    transform: none; filter: none;
+    background: rgba(28, 14, 22, .88); color: var(--papel);
+    letter-spacing: .18em; text-indent: .18em;
 }
 
 
@@ -1959,3 +2032,26 @@ body.santuario .armeria .armas::-webkit-scrollbar-thumb {
 body.santuario .armeria .armas::-webkit-scrollbar-thumb:hover {
     background: rgba(232, 180, 79, .55);
 }
+
+/* ---------- Lo tocado y todavía sin aplicar ---------- */
+/* Una regla movida y sin aplicar no está mal: está a medias. Por eso se marca
+   con el oro de la casa y no con el bermellón, que aquí es el color del error.
+   El punto al final del nombre es lo que de verdad se ve de reojo; el resto
+   -la cifra encendida- solo lo confirma cuando ya has mirado. */
+.ajustes .regla.pendiente label::after {
+    content: "";
+    display: inline-block; vertical-align: middle;
+    width: 5px; height: 5px; margin-left: 7px;
+    border-radius: 50%;
+    background: var(--oro);
+    box-shadow: 0 0 6px var(--oro);
+}
+.ajustes .regla.pendiente output,
+.ajustes .regla.pendiente.lista select {
+    color: var(--oro);
+    border-color: var(--oro);
+    box-shadow: inset 0 0 0 1px rgba(232, 180, 79, .22);
+}
+/* la cifra no lleva filete de serie, así que se le pone aquí para que el
+   resalte se le note igual que al desplegable */
+.ajustes .regla.pendiente output { border: 1px solid var(--oro); }

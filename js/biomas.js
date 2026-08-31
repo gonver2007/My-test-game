@@ -375,7 +375,15 @@ const Biomas = {
 
     deNivel(nivel) { return BIOMAS[Biomas.indice(nivel)]; },
 
-    nombre(nivel) { return Biomas.deNivel(nivel).nombre; },
+    // el nombre traducido, buscado por el id de la comarca. El que llevan las
+    // fichas aquí arriba queda de red: si idiomas.js no está cargado -o le
+    // falta la clave-, se enseña el de siempre en vez de un hueco
+    nombre(nivel) {
+        const b = Biomas.deNivel(nivel);
+        if (typeof TR !== 'function') return b.nombre;
+        const dicho = TR('bioma.' + b.id);
+        return dicho === 'bioma.' + b.id ? b.nombre : dicho;
+    },
 
     // el dibujo con que firma la comarca. Va en currentColor: lo tiñe quien
     // lo enseñe, y el HUD lo hace con el tinte de esta misma ficha
