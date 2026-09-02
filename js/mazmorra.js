@@ -451,13 +451,20 @@ function crearEnemigo(x, y) {
     // alerta: lo que le queda de ir a por el héroe; a cero, se va de ronda.
     // ronda y alto son el tramo que anda mientras tanto y lo que se para al
     // acabarlo -desacompasado de salida, para que no arranquen todos a la vez-.
-    const base = { x, y, ex: 0, ey: 0, cd: azar(0, 1), herido: 0, mira: azar(0, 6.2832),
+    // golpe y herido son lo mismo por los dos lados: lo que le queda de estar
+    // dando o recibiendo, que es lo que la vista mira para saber qué lámina
+    // suya toca pintar. andado es el camino que lleva hecho, de donde sale por
+    // qué cuadro del paso va; antes, dónde estaba la vuelta pasada.
+    const base = { x, y, ex: 0, ey: 0, cd: azar(0, 1), herido: 0, golpe: 0,
+                   mira: azar(0, 6.2832), andado: 0, andando: false, antes: { x, y },
                    alerta: 0, ronda: null, alto: azar(0, 1.5) };
-    return duro
-        ? { ...base, tipo: 'oni', art: 'el', nombre: 'oni', r: 0.38, vel: 2.1,
-            hp: 30, hpMax: 30, dano: 10, alcance: 0.85, cadencia: 1.3 }
-        : { ...base, tipo: 'ninja', art: 'el', nombre: 'ninja', r: 0.26, vel: 3.3,
-            hp: 10, hpMax: 10, dano: 5, alcance: 0.6, cadencia: 0.9 };
+    // las cifras no están aquí: están en la ficha de bestias.js, que es la
+    // misma que lee el bestiario del zaguán. Así lo que se promete allí es
+    // exactamente lo que sale al paso
+    const f = BESTIAS.ficha(duro ? 'oni' : 'rata');
+    return { ...base, tipo: f.id, art: f.art, nombre: f.nombre,
+             r: f.r, vel: f.vel, hp: f.hp, hpMax: f.hp,
+             dano: f.dano, alcance: f.alcance, cadencia: f.cadencia, vista: f.vista };
 }
 
 // ============================================================
@@ -557,8 +564,10 @@ function actualizar(dt, entrada) {
 //  cuando de verdad no hay nada en medio, que es cuando ir derecho es lo
 //  natural. Antes se quedaban raspando el muro que los separaba de ti.
 // ============================================================
-const VISTA_ENEMIGO = 13;         // hasta dónde se da uno por enterado, en pasos de camino
+// hasta dónde se da uno por enterado va en su ficha (bestias.js), que es de
+// donde lo lee también el bestiario: no todos tienen por qué ver lo mismo
 const MEMORIA_ENEMIGO = 3.5;      // segundos que sigue buscando después de perderte
+const GOLPE_ENEMIGO = 0.25;       // lo que se le ve la pose de descargar el golpe
 const PASO_RONDA = 0.5;           // lo que anda de ronda, sobre su paso de perseguir
 const RONDA_RADIO = 9;            // lo más lejos que se busca el siguiente tramo
 const RONDA_MINIMO = 2.5;         // y lo más cerca, para que el tramo valga la pena
@@ -679,13 +688,26 @@ function rondar(e, dt) {
     e.mira = Math.atan2(my, mx);
 }
 
+// Lo que de verdad ha andado, que no es lo que quería andar: contra un muro se
+// empuja y no se avanza, y midiendo el avance real el paso no patina ni se
+// mueven las patas de quien está clavado. Se mira al empezar la vuelta, así que
+// cuenta lo de la vuelta anterior: un fotograma de retraso que no se ve.
+function apuntarPaso(e, dt) {
+    const andado = Math.hypot(e.x - e.antes.x, e.y - e.antes.y);
+    e.andado += andado;
+    e.andando = andado > dt * 0.2;      // que a uno lo empujen no es que ande
+    e.antes.x = e.x; e.antes.y = e.y;
+}
+
 function actualizarEnemigos(dt) {
     const j = J.jugador;
     const campo = campoHastaHeroe();
 
     for (const e of J.enemigos) {
+        apuntarPaso(e, dt);
         e.cd -= dt;
         e.herido -= dt;
+        e.golpe -= dt;
         e.alerta -= dt;
         aplicarEmpuje(e, dt);
 
@@ -694,7 +716,7 @@ function actualizarEnemigos(dt) {
         // entonces no hay nada de que enterarse. Un tajo despierta igual,
         // venga de donde venga: a quien le pegan, mira.
         const paso = campo ? campo[Math.floor(e.y) * ANCHO + Math.floor(e.x)] : -1;
-        if ((paso >= 0 && paso <= VISTA_ENEMIGO) || e.herido > 0) e.alerta = MEMORIA_ENEMIGO;
+        if ((paso >= 0 && paso <= e.vista) || e.herido > 0) e.alerta = MEMORIA_ENEMIGO;
 
         if (e.alerta <= 0) { rondar(e, dt); continue; }
 
@@ -715,6 +737,9 @@ function actualizarEnemigos(dt) {
             moverEntidad(e, mx / m * e.vel * dt, my / m * e.vel * dt);
         } else if (e.cd <= 0) {
             e.cd = e.cadencia;
+            // la pose se enciende aunque el golpe no entre: lo ha tirado
+            // igual, y verlo venir es lo que da margen a cubrirse
+            e.golpe = GOLPE_ENEMIGO;
             danarJugador(e);
         }
     }
@@ -787,6 +812,9 @@ function golpear() {
             chispas(e.x, e.y, '#803030', 14);
             // cada caído suelta su orbe, que sale despedido y luego vuela al héroe
             soltarOrbes(e.x, e.y, 1);
+            // y queda apuntado en el bestiario de la ranura, que no espera a
+            // cruzar la puerta: lo aprendido no es botín y no se pierde al caer
+            if (typeof Bestiario !== 'undefined') Bestiario.anotarCaido(e.tipo);
             mensaje(TR('msg.muere', sujeto(e)));
         }
     }
@@ -830,16 +858,20 @@ function danarJugador(e) {
     } else {
         numero(j.x, j.y, dano, '#ff3b30');   // golpe enemigo directo: rojo
     }
-    comprobarCaida();
+    comprobarCaida(e);
 }
 
-// Un solo sitio decide que el héroe ha caído, venga el golpe de quien venga
-function comprobarCaida() {
+// Un solo sitio decide que el héroe ha caído, venga el golpe de quien venga.
+// Quien lo dé se le pasa cuando lo hay -del hierro del suelo no hay a quién
+// apuntarle la muerte-, y es lo único para lo que se mira: el bestiario lleva
+// la cuenta de cuántas veces te ha tumbado cada bicho.
+function comprobarCaida(culpable) {
     const j = J.jugador;
     if (j.hp > 0) return;
     j.hp = 0;
     j.cubriendo = j.corriendo = false;
     J.muerto = true;
+    if (culpable && typeof Bestiario !== 'undefined') Bestiario.anotarCaida(culpable.tipo);
     perderBotin();
     mensaje(TR('msg.hasMuerto'));
 }

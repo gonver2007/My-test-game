@@ -56,12 +56,8 @@ const P = {
     acero: '#dfe9ff', aceroSombra: '#8f9fc4',
     oro: '#e8b352', oroLuz: '#ffd784', oroSombra: '#9a6f2b',
 
-    // los adversarios
-    ninja: '#2b3f78', ninjaLuz: '#41609f', ninjaSombra: '#1a2750',
-    ala: '#b7c6de', alaLuz: '#e6effc',
-    oni: '#5a3670', oniLuz: '#7f5297', oniSombra: '#33204a',
-    oniPiel: '#a0619f', oniPielLuz: '#c98cc2',
-    ojoCalido: '#ffd24a', ojoIra: '#ff5a48',
+    // los adversarios se pintan en bestias.js y allí tienen sus colores: de
+    // aquí se fueron con ellos, que aquí ya no los miraba nadie
 
     elixir: '#e04f7a', elixirLuz: '#ff9cba',
     sakura: '#f0a8c8', sakuraLuz: '#ffd3e4',
@@ -1624,54 +1620,51 @@ function nuevoSprite(pintar) {
     return c;
 }
 
+// Lo mismo, pero para las figuras que vienen de un archivo. El lienzo se
+// devuelve hecho y vacío, y se pinta solo en cuanto la lámina llega: así el
+// resto del guion no tiene que enterarse de que esta figura tarda, y
+// dibujarSprite le da el mismo trato que a las de aquí. Con un png del propio
+// disco la espera no se llega a ver.
+function spriteDeLamina(url) {
+    const lado = Math.ceil(SPR * ESCALA_SPR);
+    const c = lienzoOculto(lado, lado);
+    const lamina = new Image();
+    lamina.onload = () => c.getContext('2d').drawImage(lamina, 0, 0, lado, lado);
+    lamina.src = url;
+    return c;
+}
+
+// Todas las láminas de una bestia, colgadas de una vez al arrancar -las poses
+// sueltas y la tira del paso-: dibujar es después solo elegir cuál toca, sin
+// pedir nada a mitad de partida.
+function laminasDeBestia(id) {
+    const juego = { andar: BESTIAS.andares(id).map(spriteDeLamina) };
+    for (const pose of BESTIAS.POSES) juego[pose] = spriteDeLamina(BESTIAS.lamina(id, pose));
+    return juego;
+}
+
+// Lo que anda entre cuadro y cuadro del paso, en partes de lo que abulta el
+// bicho. Va atado a su tamaño y no a un número suelto porque la zancada de una
+// rata no es la de un oni: el grande da el paso más largo y mueve las suyas
+// más despacio aunque los dos anden a la misma velocidad.
+//
+// Y se cuenta por camino andado, no por tiempo: así las patas van al paso que
+// va el bicho, y quien se queda atascado contra un muro no patina en el sitio.
+const ZANCADA = 1.6;
+
+// Manda lo recibido sobre lo dado, y lo dado sobre andar: si le entra un tajo
+// mientras descarga, lo que hay que ver es que le has acertado.
+function poseDeBestia(e) {
+    const juego = sprites[e.tipo];
+    if (e.herido > 0) return juego.dano;
+    if (e.golpe > 0) return juego.ataque;
+    if (!e.andando || !juego.andar.length) return juego.quieto;
+    return juego.andar[Math.floor(e.andado / (e.r * ZANCADA)) % juego.andar.length];
+}
+
 function prepararSprites() {
     sprites = {
         // Todas las figuras miran a la derecha; se rotan al dibujarlas.
-        ninja: nuevoSprite((g, c) => {
-            // alas de libélula, translúcidas y con nervadura
-            g.save();
-            g.globalAlpha = 0.55;
-            pieza(g, c - 4, c - 12, 11, 5, P.ala, P.alaLuz, null, -0.5, 1.8);
-            pieza(g, c - 4, c + 12, 11, 5, P.ala, P.alaLuz, null, 0.5, 1.8);
-            g.restore();
-
-            pieza(g, c - 5, c, 13, 10, P.ninja, P.ninjaLuz, P.ninjaSombra);       // torso
-            pieza(g, c - 8, c - 8, 5, 4, P.ninja, null, P.ninjaSombra, -0.6, 2);  // brazos
-            pieza(g, c - 8, c + 8, 5, 4, P.ninja, null, P.ninjaSombra, 0.6, 2);
-            pieza(g, c + 7, c, 8.5, 7.5, P.ninjaLuz, '#5c7ec0', P.ninja);         // capucha
-            g.fillStyle = '#e8eef8';                                              // banda de la frente
-            g.fillRect(c + 5, c - 7, 4, 14);
-            g.fillStyle = P.ojoCalido;                                            // ojos rasgados
-            g.beginPath(); g.ellipse(c + 12, c - 3.4, 2.6, 1.7, 0.35, 0, 6.2832); g.fill();
-            g.beginPath(); g.ellipse(c + 12, c + 3.4, 2.6, 1.7, -0.35, 0, 6.2832); g.fill();
-            // hoja corta al costado
-            g.strokeStyle = P.tinta; g.lineWidth = 5;
-            g.beginPath(); g.moveTo(c - 2, c - 11); g.lineTo(c + 13, c - 15); g.stroke();
-            g.strokeStyle = P.acero; g.lineWidth = 2.4;
-            g.beginPath(); g.moveTo(c - 2, c - 11); g.lineTo(c + 13, c - 15); g.stroke();
-        }),
-
-        oni: nuevoSprite((g, c) => {
-            pieza(g, c - 4, c, 18, 15, P.oni, P.oniLuz, P.oniSombra);             // corpachón
-            pieza(g, c - 11, c - 13, 7, 6, P.oni, null, P.oniSombra, -0.5);       // hombreras
-            pieza(g, c - 11, c + 13, 7, 6, P.oni, null, P.oniSombra, 0.5);
-            g.fillStyle = P.tinta;                                                // faja de la armadura
-            g.fillRect(c - 12, c - 15, 5, 30);
-            pieza(g, c + 9, c, 11, 10, P.oniPiel, P.oniPielLuz, P.oni);           // testa
-            // cuernos
-            g.strokeStyle = P.tinta; g.lineWidth = 6;
-            g.beginPath(); g.moveTo(c + 12, c - 7); g.lineTo(c + 21, c - 12); g.stroke();
-            g.beginPath(); g.moveTo(c + 12, c + 7); g.lineTo(c + 21, c + 12); g.stroke();
-            g.strokeStyle = '#f0e2c0'; g.lineWidth = 3;
-            g.beginPath(); g.moveTo(c + 12, c - 7); g.lineTo(c + 21, c - 12); g.stroke();
-            g.beginPath(); g.moveTo(c + 12, c + 7); g.lineTo(c + 21, c + 12); g.stroke();
-            g.fillStyle = P.ojoIra;                                               // mirada de ira
-            g.beginPath(); g.ellipse(c + 14, c - 4, 3.2, 2, 0.4, 0, 6.2832); g.fill();
-            g.beginPath(); g.ellipse(c + 14, c + 4, 3.2, 2, -0.4, 0, 6.2832); g.fill();
-            brillo(g, c + 15, c - 4.6, 1.1, 0.8, 0, 0.9);
-            brillo(g, c + 15, c + 3.4, 1.1, 0.8, 0, 0.9);
-        }),
-
         heroe: nuevoSprite((g, c) => {
             // bufanda al viento, por detrás de todo
             g.save();
@@ -1725,6 +1718,11 @@ function prepararSprites() {
             brillo(g, c - 3, c - 2, 2.6, 1.8, -0.6, 0.75);
         })
     };
+
+    // Y detrás las bestias, que no se dibujan aquí: cada una entra con sus
+    // tres poses y sale de la lista de fichas, no de dos líneas escritas a
+    // mano. Añadir una es añadirla allí y dejar sus láminas en asset/.
+    for (const f of BESTIAS.fichas) sprites[f.id] = laminasDeBestia(f.id);
 }
 
 // ============================================================
@@ -2599,9 +2597,9 @@ function pintar() {
         const px = aPantallaX(e.x), py = aPantallaY(e.y);
         ctx.globalAlpha = v;
         sombra(px, py, e.r);
-        if (e.herido > 0) { ctx.save(); ctx.filter = 'brightness(2.6) saturate(0.3)'; }
-        dibujarSprite(sprites[e.tipo], px, py, e.mira);
-        if (e.herido > 0) ctx.restore();
+        // el golpe recibido tuvo un filtro de brillo encima de la figura de
+        // siempre; ahora cada estado trae su lámina y no hay nada que aclarar
+        dibujarSprite(poseDeBestia(e), px, py, e.mira);
         barraEnemigo(e, px, py);
         ctx.globalAlpha = 1;
     }
@@ -3694,12 +3692,12 @@ const MINI = 4;                     // píxeles por casilla
 const LACA_MINI = '#150b13';        // la laca sobre la que se dibuja todo
 const ORO_MINI = '232, 180, 79';    // el oro viejo del marcador, para teñirlo a voluntad
 
-// A cada adversario, el color con que se le reconoce en la senda: el azul
-// acero del ninja y el púrpura del oni, aclarados lo justo para que salgan de
-// la laca. La forma es la misma para todos -el rombo pequeño-, así que el
+// A cada adversario, el color con que se le reconoce en la senda: el pardo
+// rosado de la rata y el púrpura del oni, aclarados lo justo para que salgan
+// de la laca. La forma es la misma para todos -el rombo pequeño-, así que el
 // color es lo único que los separa, y por eso tiene que ser el suyo. El de red
 // es la brasa: un tipo nuevo sin ficha sigue leyéndose como lo que es, peligro.
-const TINTA_ENEMIGO = { ninja: '#5f8fd8', oni: '#b07bd0', otro: '#d94b33' };
+const TINTA_ENEMIGO = { rata: '#c39a92', oni: '#b07bd0', otro: '#d94b33' };
 
 const mini = document.getElementById('minimapa');
 const mctx = mini.getContext('2d');

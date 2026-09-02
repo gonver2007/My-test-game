@@ -855,6 +855,7 @@ body.santuario .panel.ajustes {
 .arma.mejora .pips { color: #6b9cf2; }
 .mejorar.orbes { background: #24468f; }
 .mejorar.orbes:hover:not(:disabled) { background: #3a6fd8; }
+
 .armeria .nota { margin: 14px 0 0; font-size: 12.5px; color: rgba(242, 228, 214, .55); }
 
 .armeria .armas { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; }
@@ -1790,6 +1791,14 @@ body.santuario.zaguan #botones .fila .boton:hover,
 body.santuario.zaguan #botones .fila .boton:focus-visible {
     letter-spacing: .16em; text-indent: .16em;
 }
+/* VOLVER se descuelga de los renglones y baja solo, centrado y con la misma
+   medida que tenía en su terna: un tercio del ancho, descontados los dos
+   huecos de 10px que separaban a los tres. Los 15px de aire por debajo del
+   renglón anterior salen del gap de #botones -10- más estos 5 */
+body.zaguan #botones .fila.salida { justify-content: center; margin-top: 5px; }
+body.santuario.zaguan #botones .fila.salida .boton {
+    flex: 0 0 calc((100% - 20px) / 3);
+}
 /* ============================================================
    El VOLVER de las ranuras y del zaguán: el CERRAR EL JUEGO del menú de Esc
    La salida se avisa en brasa y no en oro, para no pulsarla de paso, con la
@@ -1958,6 +1967,150 @@ body.santuario .panel.armeria::-webkit-scrollbar-thumb {
 }
 body.santuario .panel.armeria::-webkit-scrollbar-thumb:hover {
     background: rgba(232, 180, 79, .55);
+}
+
+/* ============================================================
+   El bestiario (prev.html): el muestrario y la hoja
+   Dos caras del mismo panel, que bestias.js enseña de una en una: la
+   rejilla de retratos y, al pulsar uno, su hoja en grande. Como el
+   bestiario solo existe en el zaguán, se viste una sola vez y de ocaso.
+   ============================================================ */
+
+/* Tres renglones desde el primer día, con los sitios vacíos ya hechos: el
+   panel mide entonces siempre lo mismo, se haya descubierto lo que se haya
+   descubierto. El alto del renglón va escrito a posta -los de más abajo no
+   tienen dentro nada que los estire, y sin esta medida se quedarían en nada-.
+
+   Y se llena hacia abajo, no hacia el lado: el flujo por columnas pone la
+   segunda bestia debajo de la primera y no a su derecha, y hasta que no se
+   acaba una columna no se empieza otra. Las columnas se reparten el ancho a
+   partes iguales, salgan las que salgan. */
+body.santuario .bestiario .rejilla {
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-rows: repeat(3, 126px);
+    grid-auto-columns: 1fr;
+    gap: 12px;
+    margin: 4px 0 0;
+}
+
+/* cada bestia, una tablilla de las de la casa: el retrato y el nombre, y
+   nada más -lo demás está a un clic- */
+body.santuario .bestiario .bestia {
+    box-sizing: border-box;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+    padding: 10px 8px 12px;
+    font-family: inherit;
+    border: 2px solid rgba(232, 180, 79, .35);
+    border-radius: 2px;
+    background: linear-gradient(180deg, rgba(58, 26, 32, .88), rgba(20, 9, 16, .92));
+    box-shadow: inset 0 1px 0 rgba(240, 201, 165, .18);
+    cursor: pointer;
+    transition: transform .08s, border-color .12s, background .12s;
+}
+body.santuario .bestiario .bestia:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(180deg, rgba(92, 40, 40, .9), rgba(30, 12, 18, .92));
+    border-color: rgba(232, 180, 79, .6);
+}
+body.santuario .bestiario .bestia:focus-visible {
+    outline: 2px solid var(--oroViejo); outline-offset: 3px;
+}
+body.santuario .bestiario .bestia .nombre {
+    flex: none;
+    font-size: 12px; font-weight: bold;
+    letter-spacing: .14em; text-indent: .14em;
+    color: var(--hueso);
+}
+
+/* el retrato: el mismo hueco hundido de la armería, aquí en pequeño. Se
+   estira con lo que sobre del renglón, y el lienzo se aviene a él */
+body.santuario .bestiario .retrato {
+    box-sizing: border-box;
+    position: relative;
+    flex: 1 1 auto; min-height: 0; width: 100%;
+    display: flex; align-items: center; justify-content: center;
+    border: 2px solid rgba(23, 19, 43, .75);
+    border-radius: 3px;
+    background:
+        radial-gradient(ellipse at 50% 45%, rgba(255, 207, 114, .13), transparent 68%),
+        rgba(12, 6, 14, .5);
+    box-shadow: inset 0 2px 6px rgba(0, 0, 0, .45);
+}
+/* La lámina llena el hueco sin deformarse y sin salirse: viene cuadrada -el
+   cuadro entero en que se trazó la figura- y el hueco no lo es, así que sobra
+   aire a los lados, que es justo lo que hace de vitrina.
+
+   Va suelta y no como hijo del flex a posta: colgada del hueco, el 100% se
+   mide contra una caja que después de colocar el hueco se sabe siempre, y no
+   contra un alto de flex que según el navegador cuenta o no cuenta. */
+body.santuario .bestiario .retrato img {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: contain;
+}
+
+/* el sitio que espera bestia: se ve el hueco, no lo que va a ocuparlo */
+body.santuario .bestiario .bestia.vacia {
+    justify-content: center;
+    border-style: dashed;
+    border-color: rgba(232, 180, 79, .18);
+    background: rgba(20, 9, 16, .45);
+    box-shadow: none;
+    cursor: default;
+}
+body.santuario .bestiario .bestia.vacia:hover {
+    transform: none;
+    background: rgba(20, 9, 16, .45);
+    border-color: rgba(232, 180, 79, .18);
+}
+body.santuario .bestiario .incognita {
+    font-family: "Shippori Mincho B1", "Yu Mincho", serif;
+    font-size: 28px; line-height: 1;
+    color: rgba(242, 228, 214, .2);
+}
+
+/* ---------- La hoja ---------- */
+/* el retrato en grande a un lado y todo lo que se sabe al otro */
+body.santuario .bestiario .hoja {
+    display: flex; gap: 20px; align-items: flex-start;
+    margin: 6px 0 16px;
+    text-align: left;
+}
+body.santuario .bestiario .retrato.grande { flex: 0 0 286px; height: 200px; }
+body.santuario .bestiario .hoja .cuerpo { flex: 1; min-width: 0; }
+body.santuario .bestiario .hoja h3 {
+    margin: 0 0 10px;
+    font-family: "Shippori Mincho B1", "Yu Mincho", serif;
+    font-size: 22px; font-weight: 800;
+    letter-spacing: .22em; text-indent: .22em;
+    color: var(--oroViejo);
+}
+body.santuario .bestiario .hoja .pie {
+    margin: 0 0 16px;
+    font-size: 13px; line-height: 1.65;
+    color: rgba(242, 228, 214, .72);
+}
+
+/* las cifras, en dos listas: lo que es el bicho y lo que ha habido entre
+   vosotros. La raya de en medio es lo que dice que son dos cosas distintas */
+body.santuario .bestiario .fichas {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 10px; margin: 0;
+}
+body.santuario .bestiario .fichas.cuenta {
+    grid-template-columns: repeat(2, 1fr);
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid rgba(232, 180, 79, .18);
+}
+body.santuario .bestiario .fichas dt {
+    font-size: 10px; letter-spacing: .08em; line-height: 1.35;
+    color: var(--oroViejo);
+}
+body.santuario .bestiario .fichas dd {
+    margin: 3px 0 0;
+    font-size: 19px; font-weight: bold;
+    color: var(--hueso);
 }
 
 /* ---------- Los huecos todavía sin guion ---------- */

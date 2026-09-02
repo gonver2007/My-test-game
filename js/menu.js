@@ -58,9 +58,9 @@ function irAjustes() { irA(document.body.dataset.ajustes || 'ajustes.html'); }
 
 
 // los huecos que se abren en el sitio del menú: armería, personaje,
-// habilidades, pergaminos y amuletos, todos del zaguán. Cada pantalla trae
-// los suyos y los que no existen sencillamente no se abren
-const PANELES = ['armeria', 'personaje',
+// bestiario, habilidades, pergaminos y amuletos, todos del zaguán. Cada
+// pantalla trae los suyos y los que no existen sencillamente no se abren
+const PANELES = ['armeria', 'personaje', 'bestiario',
     'habilidades', 'pergaminos', 'amuletos'];
 
 // todos comparten hueco: abrir uno cierra los demás, y volver a pulsar cierra

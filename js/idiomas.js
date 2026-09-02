@@ -66,9 +66,27 @@ es: {
     'prev.habilidades': 'HABILIDADES',
     'prev.pergaminos': 'PERGAMINOS',
     'prev.amuletos': 'AMULETOS',
+    'prev.bestiario': 'BESTIARIO',
     'prev.notaHabilidades': 'El pergamino sigue en blanco. Aquí se anotarán las artes que se aprendan dentro del santuario.',
     'prev.notaPergaminos': 'Ninguno desenrollado todavía. Aquí irán los que se encuentren en las sendas.',
     'prev.notaAmuletos': 'Todavía no cuelga ninguno del cinto. Aquí se guardarán los que el santuario conceda.',
+
+    // ---------- bestiario ----------
+    // los nombres de los bichos no se traducen: un oni es un oni en todas
+    // partes. Lo que cambia de lengua es lo que se cuenta de él
+    'bestiario.titulo': 'BESTIARIO',
+    'bestiario.lema': 'Lo que sale al paso, medido y contado.',
+    'bestiario.pv': 'PV',
+    'bestiario.dano': 'Daño',
+    'bestiario.golpes': 'Golpes/s',
+    'bestiario.velocidad': 'Velocidad',
+    'bestiario.vista': 'Visión',
+    'bestiario.caidos': 'Eliminados',
+    'bestiario.caidas': 'Te ha eliminado',
+    'bestiario.hueco': 'Sin descubrir',
+    'bestiario.nota': 'Pulsa una bestia para abrir su hoja. Las cifras son las mismas con que se plantan en la senda; las cuentas son de esta ranura y se apuntan al momento: caer cuesta el botín, no lo aprendido.',
+    'bestia.rata.pie': 'Bicho de alcantarilla, flaca y rápida, con la piel a jirones de tanto pelearse por lo que hay. Muerde y se aparta, y rara vez viene sola.',
+    'bestia.oni.pie': 'Mole de cuernos y armadura. Anda despacio y encaja lo que le eches, pero cada mazazo suyo se nota en el hueso.',
 
     // ---------- armería ----------
     'armeria.titulo': 'ARMERÍA',
@@ -227,9 +245,25 @@ en: {
     'prev.habilidades': 'SKILLS',
     'prev.pergaminos': 'SCROLLS',
     'prev.amuletos': 'CHARMS',
+    'prev.bestiario': 'BESTIARY',
     'prev.notaHabilidades': 'The scroll is still blank. The arts learned inside the sanctuary will be written here.',
     'prev.notaPergaminos': 'None unrolled yet. The ones found along the paths will go here.',
     'prev.notaAmuletos': 'Nothing hangs from your belt yet. Whatever the sanctuary grants will be kept here.',
+
+    // ---------- bestiary ----------
+    'bestiario.titulo': 'BESTIARY',
+    'bestiario.lema': 'What comes at you, measured and counted.',
+    'bestiario.pv': 'HP',
+    'bestiario.dano': 'Damage',
+    'bestiario.golpes': 'Hits/s',
+    'bestiario.velocidad': 'Speed',
+    'bestiario.vista': 'Sight',
+    'bestiario.caidos': 'Slain',
+    'bestiario.caidas': 'Has slain you',
+    'bestiario.hueco': 'Undiscovered',
+    'bestiario.nota': 'Click a beast to open its sheet. These are the very numbers they are placed on the path with; the tallies belong to this slot and are written down at once: falling costs you the spoils, not what you learned.',
+    'bestia.rata.pie': 'A sewer creature, lean and quick, its hide in tatters from fighting over what little there is. It bites and backs away, and it rarely comes alone.',
+    'bestia.oni.pie': 'A horned bulk in armour. Slow of foot and able to soak up whatever you throw, but every blow of its own is felt in the bone.',
 
     'armeria.titulo': 'ARMOURY',
     'armeria.saldo': 'Jade shards:',

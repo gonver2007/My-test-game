@@ -52,15 +52,22 @@
         </div>
         <div class="fila">
             <button id="btPergaminos" type="button" class="boton" data-t="prev.pergaminos">PERGAMINOS</button>
-            <button id="btVolver" type="button" class="boton" data-t="comun.volver">VOLVER</button>
+            <button id="btBestiario" type="button" class="boton" data-t="prev.bestiario">BESTIARIO</button>
             <button id="btAmuletos" type="button" class="boton" data-t="prev.amuletos">AMULETOS</button>
+        </div>
+        <!-- la salida se descuelga de su renglón y baja sola, con la misma
+             medida que tenía y a un dedo por debajo: no es un destino más
+             del zaguán, es la puerta por la que se vuelve -->
+        <div class="fila salida">
+            <button id="btVolver" type="button" class="boton" data-t="comun.volver">VOLVER</button>
         </div>
     </nav>
 
-    <!-- los rellenan armeria.js y personaje.js al abrirlos, para que el saldo
-         mostrado sea siempre el del momento -->
+    <!-- los rellenan armeria.js, personaje.js y bestias.js al abrirlos, para
+         que el saldo -y las cuentas del bestiario- sean siempre los del momento -->
     <div id="armeria" class="panel armeria" hidden></div>
     <div id="personaje" class="panel armeria" hidden></div>
+    <div id="bestiario" class="panel armeria bestiario" hidden></div>
 
     <!-- estos tres no tienen guion propio todavía: el hueco queda hecho, y se
          abren y cierran como los demás -->
@@ -86,6 +93,7 @@
 
 <script src="../js/idiomas.js"></script>
 <script src="../js/aceros.js"></script>
+<script src="../js/bestias.js"></script>
 <script src="../js/armeria.js"></script>
 <script src="../js/personaje.js"></script>
 <script src="../js/partidas.js"></script>
