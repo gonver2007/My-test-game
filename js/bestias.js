@@ -79,9 +79,12 @@ const BESTIAS = (function () {
     // andares, porque no es una lámina: es una tira.
     const POSES = ['quieto', 'ataque', 'dano'];
 
+    // clase separa el paso llano del semijefe: es lo que el bestiario mira
+    // para enseñar una pestaña u otra. Quien no la traiga cuenta como
+    // 'enemigo', que es lo que hay hasta que llegue el primero de verdad.
     const fichas = [
         {
-            id: 'rata', art: 'la', nombre: 'rata',
+            id: 'rata', art: 'la', nombre: 'rata', clase: 'enemigo',
             laminas: {
                 bestiario: 'bestiario/rata.png',
                 quieto: 'catacumbas/rata-quieto.png',
@@ -94,7 +97,7 @@ const BESTIAS = (function () {
             alcance: 0.6, cadencia: 0.9, vista: 13, largo: 1.8
         },
         {
-            id: 'ciempies', art: 'el', nombre: 'ciempiés',
+            id: 'ciempies', art: 'el', nombre: 'ciempiés', clase: 'enemigo',
             laminas: {
                 bestiario: 'bestiario/cienpies.png',
                 quieto: 'catacumbas/ciempies-quieto.png',
@@ -218,47 +221,154 @@ const Bestiario = {
     const salida = document.getElementById('btCerrarPanel');
 
     // La rejilla va de tres renglones desde el primer día, con los sitios
-    // vacíos ya hechos: quedan por venir los semijefes y lo que caiga, y así
-    // el panel no cambia de tamaño cada vez que se descubre uno.
+    // vacíos ya hechos: así el panel no cambia de tamaño cada vez que se
+    // descubre uno. Coincide con las diez comarcas de biomas.js -de ahí que
+    // COLUMNAS valga diez-, que es lo que aprovecha la pestaña de jefes para
+    // reservarle su columna a cada una: ver celdasJefes más abajo.
     //
     // Se llena hacia abajo y no hacia el lado: la segunda bestia va debajo de
     // la primera, la cuarta empieza columna nueva. Quien manda en eso es el
     // grid-auto-flow de la hoja de estilo; aquí solo se cuenta igual que allí,
     // para no dejar nunca una columna a medio empezar.
     const RENGLONES = 3;
-    const COLUMNAS = 4;
+    const COLUMNAS = 10;
 
     // la bestia que se está mirando en grande; con null se ve la rejilla
     let abierta = null;
 
+    // qué pestaña de la rejilla toca: el paso llano o los semijefes. Empieza
+    // -y vuelve a empezar cada vez que se abre el panel- en enemigos, que es
+    // lo que hay ahora mismo y lo que se pide ver primero.
+    const CATEGORIAS = ['enemigo', 'jefe'];
+    let categoria = 'enemigo';
+
+    // Si esta ranura ya se ha cruzado con ella. Antes del primer golpe que la
+    // tumba, el bestiario no sabe nada suyo -ni su aspecto ni sus cifras-, así
+    // que no aparece: el hueco queda como el de una bestia que todavía no
+    // existe, con su «?» y su título de «Sin descubrir». Es la misma cuenta
+    // que ya lleva Bestiario, aquí solo se mira si ha pasado de cero.
+    function descubierta(f) { return Bestiario.marca(f.id).caidos > 0; }
+
     // ---------- La rejilla ----------
-    function celda(f) {
+    function celda(f, alta) {
         return `
-        <button type="button" class="bestia" data-bestia="${f.id}">
+        <button type="button" class="bestia${alta ? ' alta' : ''}" data-bestia="${f.id}">
             <span class="retrato"><img src="${BESTIAS.retrato(f.id)}" alt=""></span>
             <span class="nombre">${f.nombre.toUpperCase()}</span>
         </button>`;
     }
 
-    // el sitio que espera bestia: se ve que está y se ve que no hay nadie
-    function vacia() {
+    // el sitio que espera bestia: se ve que está y se ve que no hay nadie.
+    // El título es lo único que cambia de un hueco a otro -el signo de
+    // interrogación no dice nada él solo-, y por defecto es el genérico de
+    // siempre; los de la pestaña de jefes lo afinan más, ver celdaJefe
+    function vacia(titulo, alta) {
         return `
-        <div class="bestia vacia" title="${TR('bestiario.hueco')}">
+        <div class="bestia vacia${alta ? ' alta' : ''}" title="${titulo || TR('bestiario.hueco')}">
             <span class="incognita">？</span>
         </div>`;
     }
 
+    // el nombre de una comarca, traducido igual que Biomas.nombre pero sin
+    // pedirle un nivel: aquí se tiene ya la ficha del bioma, no la senda
+    function nombreZona(zona) {
+        const clave = 'bioma.' + zona.id;
+        const dicho = TR(clave);
+        return dicho === clave ? zona.nombre : dicho;
+    }
+
+    // Los dos rangos de jefe que va a tener cada comarca, en el orden en que
+    // se plantan en la senda: primero el semijefe -a media comarca-, luego
+    // el jefe que la cierra. Cuando exista una ficha con clase 'jefe' y estas
+    // dos señas -zona: el id del bioma, rango: uno de estos dos-, aparece
+    // sola en su sitio; hasta entonces el hueco dice de quién es la espera.
+    const RANGOS_JEFE = [['semijefe', 'bestiario.semijefe'], ['jefe', 'bestiario.jefeDeZona']];
+
+    function celdaJefe(zona, rango, claveRotulo, alta) {
+        const f = BESTIAS.fichas.find(x => x.clase === 'jefe' && x.zona === zona.id && x.rango === rango);
+        // sin ficha todavía, o con ficha pero sin haberla tumbado ni una vez:
+        // el hueco es el mismo en los dos casos, con el rótulo de la zona
+        return (f && descubierta(f)) ? celda(f, alta)
+            : vacia(`${TR(claveRotulo)} — ${nombreZona(zona)}`, alta);
+    }
+
+    // La pestaña de jefes no es un cajón donde caiga cualquiera: una columna
+    // por comarca, en el mismo orden en que se atraviesan -Biomas.lista es
+    // quien lo dice-, con el semijefe y el jefe uno debajo del otro.
+    //
+    // Y la columna no son tres sitios iguales: el primero vale por dos
+    // renglones -es una lámina de pie, no un cuadradito- y el segundo se queda
+    // con el que sobra. Así son dos sitios para dos rangos, en vez de dos y un
+    // hueco de relleno al final. Lo alto lo hace el grid-row de la clase
+    // «alta» en la hoja de estilo; aquí solo se dice quién la lleva.
+    //
+    // Sin biomas.js cargado -no debería pasar; prev.html lo trae solo por
+    // esto- la lista sale vacía y rejilla() la rellena con columnas en blanco,
+    // así que tampoco se rompe nada.
+    function celdasJefes() {
+        const zonas = (typeof Biomas !== 'undefined' && Biomas.lista) ? Biomas.lista : [];
+        const celdas = [];
+        for (const zona of zonas)
+            RANGOS_JEFE.forEach(([rango, rotulo], i) =>
+                celdas.push(celdaJefe(zona, rango, rotulo, i === 0)));
+        return celdas;
+    }
+
+    // una columna de jefes en blanco, con sus dos sitios: el alto y el llano
+    function columnaVacia() { return [vacia(null, true), vacia()]; }
+
+    // las dos pestañas de arriba: ENEMIGOS y JEFES, con la que toca marcada
+    function pestanas() {
+        const rotulo = { enemigo: 'bestiario.enemigos', jefe: 'bestiario.jefes' };
+        return `
+        <div class="pestanas" role="tablist">
+            ${CATEGORIAS.map(c => `
+            <button type="button" class="pestana${c === categoria ? ' activa' : ''}"
+                    role="tab" aria-selected="${c === categoria}" data-categoria="${c}">
+                ${TR(rotulo[c])}
+            </button>`).join('')}
+        </div>`;
+    }
+
     function rejilla() {
-        // nunca menos de tres columnas de tres, y nunca una a medio empezar
-        const sitios = Math.max(COLUMNAS * RENGLONES,
-            Math.ceil(BESTIAS.fichas.length / RENGLONES) * RENGLONES);
-        const celdas = BESTIAS.fichas.map(celda);
-        while (celdas.length < sitios) celdas.push(vacia());
+        const esJefes = categoria === 'jefe';
+
+        // las bestias que de verdad hay en esta pestaña -para la nota de
+        // abajo-, aparte de cómo se dispongan sus huecos en la rejilla
+        const propias = BESTIAS.fichas.filter(f => (f.clase || 'enemigo') === categoria);
+
+        // en jefes, la disposición manda: una columna por comarca. En
+        // enemigos sigue siendo el cajón de siempre, en el orden en que
+        // llegan las fichas
+        // el map va con lambda y no con «propias.map(celda)» a posta: map le
+        // pasa el índice como segundo argumento, y el segundo de celda es
+        // ahora si va alta, así que la segunda bestia de la lista salía de pie
+        const celdas = esJefes ? celdasJefes()
+            : propias.map(f => descubierta(f) ? celda(f) : vacia());
+
+        // Nunca menos de diez columnas, y nunca una a medio empezar. En
+        // enemigos la columna son tres sitios iguales; en jefes son dos, que
+        // el de arriba vale por dos renglones, así que se rellena de dos en
+        // dos y no de tres en tres.
+        if (esJefes) {
+            const columnas = Math.max(COLUMNAS, Math.ceil(celdas.length / RANGOS_JEFE.length));
+            while (celdas.length < columnas * RANGOS_JEFE.length)
+                celdas.push(...columnaVacia());
+        } else {
+            const sitios = Math.max(COLUMNAS * RENGLONES,
+                Math.ceil(celdas.length / RENGLONES) * RENGLONES);
+            while (celdas.length < sitios) celdas.push(vacia());
+        }
+
+        // sin nadie en la pestaña, la nota lo dice claro y no repite el
+        // «pulsa una bestia» de siempre, que ahí no hay ninguna que pulsar
+        const nota = propias.length ? TR('bestiario.nota') : TR('bestiario.sinJefes');
         return `
             <h2>${TR('bestiario.titulo')}</h2>
             <p class="saldo">${TR('bestiario.lema')}</p>
+            ${pestanas()}
             <div class="rejilla">${celdas.join('')}</div>
-            <p class="nota">${TR('bestiario.nota')}</p>`;
+            <p class="nota">${nota}</p>`;
     }
 
     // ---------- La hoja ----------
@@ -309,17 +419,25 @@ const Bestiario = {
 
     // un solo oyente en la caja: dentro se repinta entera a cada paso
     caja.addEventListener('click', e => {
+        const pestana = e.target.closest('[data-categoria]');
+        if (pestana) {
+            const c = pestana.dataset.categoria;
+            if (c !== categoria) { categoria = c; pintar(); }
+            return;
+        }
         const elegida = e.target.closest('[data-bestia]');
         if (elegida) { abierta = elegida.dataset.bestia; pintar(); }
     });
 
     // abrir y cerrar es cosa de menu.js, que sabe de todos los paneles y los
     // cierra entre sí; sin él, esto se abre igual. Se entra siempre por la
-    // rejilla, aunque la última vez se dejara una hoja abierta
+    // rejilla de enemigos, aunque la última vez se dejara una hoja abierta o
+    // la pestaña de jefes puesta
     boton.addEventListener('click', () => {
         if (typeof alternar === 'function') alternar('bestiario');
         else caja.hidden = !caja.hidden;
         abierta = null;
+        categoria = 'enemigo';
         if (caja.hidden) vestirSalida(); else pintar();
     });
 

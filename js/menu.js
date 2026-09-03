@@ -121,12 +121,14 @@ addEventListener('keydown', e => {
 });
 
 // el renglón de láminas se corre con la rueda: con el ratón nadie tiene por
-// qué ir a buscar la barra de abajo. Ojo con la unidad, que aquí estuvo el
-// fallo: no todos los ratones hablan en píxeles -hay quien manda líneas, y
-// entonces deltaY vale 3-, así que tomarlo a la letra movía el renglón tres
-// míseros píxeles por tirón y no se llegaba nunca al final
+// qué ir a buscar la barra de abajo. Vale igual para las armas que para la
+// rejilla del bestiario, que es el mismo truco de scroll horizontal. Ojo con
+// la unidad, que aquí estuvo el fallo: no todos los ratones hablan en píxeles
+// -hay quien manda líneas, y entonces deltaY vale 3-, así que tomarlo a la
+// letra movía el renglón tres míseros píxeles por tirón y no se llegaba nunca
+// al final
 addEventListener('wheel', e => {
-    const fila = e.target.closest && e.target.closest('.armas');
+    const fila = e.target.closest && e.target.closest('.armas, .rejilla');
     if (!fila || fila.scrollWidth <= fila.clientWidth) return;
     if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;   // ya viene de lado
     const unidad = e.deltaMode === 1 ? 40                   // viene en líneas

@@ -1976,6 +1976,42 @@ body.santuario .panel.armeria::-webkit-scrollbar-thumb:hover {
    bestiario solo existe en el zaguán, se viste una sola vez y de ocaso.
    ============================================================ */
 
+/* Las dos pestañas de la rejilla: ENEMIGOS -la que se abre siempre primero- y
+   JEFES, todavía en blanco. Dos fichas de forja en miniatura, como los pips
+   de la armería: la que manda se lee en oro y con el filete encendido, y la
+   otra se apaga a la espera de que se la pulse. */
+body.santuario .bestiario .pestanas {
+    display: flex; gap: 8px;
+    margin: 10px 0 4px;
+}
+body.santuario .bestiario .pestana {
+    flex: 1 1 0;
+    font-family: inherit;
+    font-size: 12px; font-weight: bold;
+    letter-spacing: .14em; text-indent: .14em;
+    padding: 8px 0;
+    color: rgba(242, 228, 214, .55);
+    background: rgba(20, 9, 16, .55);
+    border: 2px solid rgba(232, 180, 79, .2);
+    border-radius: 2px;
+    cursor: pointer;
+    transition: color .12s, background .12s, border-color .12s;
+}
+body.santuario .bestiario .pestana:hover {
+    color: var(--hueso);
+    border-color: rgba(232, 180, 79, .45);
+}
+body.santuario .bestiario .pestana.activa {
+    color: var(--oroViejo);
+    background: linear-gradient(180deg, rgba(92, 40, 40, .9), rgba(30, 12, 18, .92));
+    border-color: var(--oroViejo);
+    box-shadow: inset 0 1px 0 rgba(240, 201, 165, .18);
+    cursor: default;
+}
+body.santuario .bestiario .pestana:focus-visible {
+    outline: 2px solid var(--oroViejo); outline-offset: 2px;
+}
+
 /* Tres renglones desde el primer día, con los sitios vacíos ya hechos: el
    panel mide entonces siempre lo mismo, se haya descubierto lo que se haya
    descubierto. El alto del renglón va escrito a posta -los de más abajo no
@@ -1983,15 +2019,46 @@ body.santuario .panel.armeria::-webkit-scrollbar-thumb:hover {
 
    Y se llena hacia abajo, no hacia el lado: el flujo por columnas pone la
    segunda bestia debajo de la primera y no a su derecha, y hasta que no se
-   acaba una columna no se empieza otra. Las columnas se reparten el ancho a
-   partes iguales, salgan las que salgan. */
+   acaba una columna no se empieza otra.
+
+   Son diez de ancho -treinta sitios de una vez, para que quepan de sobra las
+   que vayan llegando-, y la tablilla mantiene la misma medida que tenía con
+   cuatro: no se encoge para que quepan todas a la vista, sino que la rejilla
+   se corre hacia el lado y se scrollea, igual que el renglón de armas de la
+   armería. El ancho de la celda va fijo -grid-auto-columns- en vez de a 1fr,
+   que es lo que deja que la rejilla se salga del panel en vez de repartirlo. */
 body.santuario .bestiario .rejilla {
     display: grid;
     grid-auto-flow: column;
     grid-template-rows: repeat(3, 126px);
-    grid-auto-columns: 1fr;
+    grid-auto-columns: 174px;
     gap: 12px;
     margin: 4px 0 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    /* el aire de arriba deja sitio al brinco del ratón; el de abajo, a la barra */
+    padding: 6px 2px 12px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(232, 180, 79, .45) transparent;
+}
+/* El sitio alto de la pestaña de jefes: vale por dos renglones, y con el
+   hueco de en medio son 264px de una pieza. Es una lámina de pie -un jefe
+   entero cabe ahí- frente al cuadradito de los enemigos, y deja la columna en
+   dos sitios para dos rangos en vez de dos y un relleno al final. Quién la
+   lleva lo dice bestias.js: siempre el primero de cada columna. */
+body.santuario .bestiario .bestia.alta { grid-row: span 2; }
+
+body.santuario .bestiario .rejilla::-webkit-scrollbar { height: 10px; }
+body.santuario .bestiario .rejilla::-webkit-scrollbar-track {
+    background: rgba(12, 6, 14, .4); border-radius: 6px;
+}
+body.santuario .bestiario .rejilla::-webkit-scrollbar-thumb {
+    background: rgba(232, 180, 79, .35);
+    border-radius: 6px;
+    border: 2px solid rgba(28, 14, 22, .9);
+}
+body.santuario .bestiario .rejilla::-webkit-scrollbar-thumb:hover {
+    background: rgba(232, 180, 79, .55);
 }
 
 /* cada bestia, una tablilla de las de la casa: el retrato y el nombre, y
@@ -2018,6 +2085,11 @@ body.santuario .bestiario .bestia:focus-visible {
 }
 body.santuario .bestiario .bestia .nombre {
     flex: none;
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-align: center;
     font-size: 12px; font-weight: bold;
     letter-spacing: .14em; text-indent: .14em;
     color: var(--hueso);

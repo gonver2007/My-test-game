@@ -1,5 +1,5 @@
 
-//cambiar oni por cien pies
+ajustar cantidad de enemigos manualmente de la senda 1 a la 10
 
 
 añadir seccion despegable de armas secundarias justo abajo de armas primarias en el boton de armas de prev.htm "lanza dardos con veneno con daño por segundo"shuriken que si se mejora puede rebotar en mas enemigos"
