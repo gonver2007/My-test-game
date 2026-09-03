@@ -65,10 +65,15 @@ const BESTIAS = (function () {
     //
     // largo es cuántas veces es más largo que ancho. Con 1 el cuerpo es el
     // círculo de siempre; con más, se le tumba un palo de ese largo en la
-    // dirección a la que mira y se le mide contra él. Al ciempiés le hacía
-    // falta: es una tira, y con un cerco redondo le pegabas al ombligo y no al
-    // lomo. Sale de medirle la lámina, que en la senda ocupa 3,3 casillas de
-    // largo por 1,5 de ancho.
+    // dirección a la que mira y se le mide contra él, que es lo que hace que
+    // se le acierte por el lomo y no solo por el ombligo.
+    //
+    // Sale de medirle la lámina, y midiendo el bulto y no la silueta entera:
+    // la cola de la rata se arrastra solo por detrás, y el palo crece por los
+    // dos lados por igual, así que contándola le saldría cerco por delante del
+    // hocico. Su bulto ocupa 0,94 casillas de largo por 0,61 de ancho, y con
+    // 1,8 el palo mide 0,94 clavadas. El ciempiés es una tira entera: 3,3 por
+    // 1,5, que con 2,8 dan 3,36.
     // Las poses sueltas. Quieto es la de siempre y la que vale cuando no pasa
     // nada; las otras dos duran lo que dure el golpe. El paso va aparte, en
     // andares, porque no es una lámina: es una tira.
@@ -86,7 +91,7 @@ const BESTIAS = (function () {
                         'catacumbas/rata-andar-3.png', 'catacumbas/rata-andar-4.png']
             },
             r: 0.26, vel: 3.3, hp: 10, dano: 5,
-            alcance: 0.6, cadencia: 0.9, vista: 13
+            alcance: 0.6, cadencia: 0.9, vista: 13, largo: 1.8
         },
         {
             id: 'ciempies', art: 'el', nombre: 'ciempiés',
