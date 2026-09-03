@@ -2,21 +2,23 @@
 bestias.js - quiénes salen al paso, en un solo sitio
 
 Lo mismo que aceros.js hace con las armas, este hace con lo que las
-recibe. Antes las cifras de la rata y del oni vivían dentro de
+recibe. Antes las cifras de la rata y del ciempiés vivían dentro de
 crearEnemigo, y sus figuras dentro de vista.js: nadie más los veía.
 El bestiario del zaguán quiere enseñarlos sin entrar en la senda, y
 copiarlos habría sido condenarlos a separarse en cuanto se retocara
 uno. Aquí están una sola vez y beben todos del mismo sitio:
 
   - la mazmorra, por BESTIAS.ficha, para plantarlos en el mapa
-  - la vista y el panel, por BESTIAS.lamina, para pintarlos
+  - la vista, por BESTIAS.lamina, para pintarlos en la senda
+  - el bestiario, por BESTIAS.retrato, que enseña otro dibujo: uno de
+    cuerpo entero, para mirarlo despacio, y no la figura de arriba
 
 Las figuras no se dibujan a código: son láminas de asset/, sobre el
 mismo cuadro de 56 en que se trazan los aceros y el héroe, a cuatro
-veces su tamaño y mirando a la derecha. El oni viene de un puñado de
-elipses que estuvieron en vista.js -el trazo sigue en el historial-;
-la rata, de un dibujo de fuera al que se le despegó el fondo. Lo que
-manda es el archivo, y se retoca con un editor de imagen.
+veces su tamaño y mirando a la derecha. Las dos vienen de dibujos de
+fuera a los que se les despegó el fondo. Lo que manda es el archivo, y
+se retoca con un editor de imagen; hubo un ninja y un oni dibujados a
+código en vista.js, y su trazo sigue en el historial.
 
 Cada bestia tiene tres poses sueltas -quieta, dando el golpe y
 recibiéndolo- y una tira de cuatro para andar. La de daño hace lo que
@@ -48,12 +50,25 @@ const BESTIAS = (function () {
     // los planta, así que el bestiario no promete nada que no se cumpla en la
     // senda: es la misma línea leída dos veces.
     //
-    // El nombre no se traduce -un oni es un oni en todas partes-, pero el
-    // artículo sí: msg.articuloEl lo resuelve cada lengua a su manera.
+    // El nombre no se traduce, pero el artículo sí: msg.articuloEl y
+    // msg.articuloLa los resuelve cada lengua a su manera, y por eso la rata
+    // es «la» y el ciempiés «el».
     //
     // vista es hasta dónde se dan por enterados, en pasos de camino. Era una
     // constante suelta de la mazmorra, igual para todos; aquí cada uno puede
     // tener la suya el día que convenga -de momento ven lo mismo que veían-.
+    //
+    // talla es lo que se agranda su figura al dibujarla. Sin ella todos salen
+    // del mismo tamaño, porque todas las láminas miden lo mismo y llenan su
+    // cuadro por igual: es lo único que puede hacer que un bicho se vea mayor
+    // que otro. Quien no la trae vale 1, que es la medida de la casa.
+    //
+    // largo es cuántas veces es más largo que ancho. Con 1 el cuerpo es el
+    // círculo de siempre; con más, se le tumba un palo de ese largo en la
+    // dirección a la que mira y se le mide contra él. Al ciempiés le hacía
+    // falta: es una tira, y con un cerco redondo le pegabas al ombligo y no al
+    // lomo. Sale de medirle la lámina, que en la senda ocupa 3,3 casillas de
+    // largo por 1,5 de ancho.
     // Las poses sueltas. Quieto es la de siempre y la que vale cuando no pasa
     // nada; las otras dos duran lo que dure el golpe. El paso va aparte, en
     // andares, porque no es una lámina: es una tira.
@@ -63,6 +78,7 @@ const BESTIAS = (function () {
         {
             id: 'rata', art: 'la', nombre: 'rata',
             laminas: {
+                bestiario: 'bestiario/rata.png',
                 quieto: 'catacumbas/rata-quieto.png',
                 ataque: 'catacumbas/rata-ataque.png',
                 dano: 'catacumbas/rata-dano.png',
@@ -73,30 +89,37 @@ const BESTIAS = (function () {
             alcance: 0.6, cadencia: 0.9, vista: 13
         },
         {
-            id: 'oni', art: 'el', nombre: 'oni',
+            id: 'ciempies', art: 'el', nombre: 'ciempiés',
             laminas: {
-                quieto: 'catacumbas/oni-quieto.png',
-                ataque: 'catacumbas/oni-ataque.png',
-                dano: 'catacumbas/oni-dano.png',
-                andar: ['catacumbas/oni-andar-1.png', 'catacumbas/oni-andar-2.png',
-                        'catacumbas/oni-andar-3.png', 'catacumbas/oni-andar-4.png']
+                bestiario: 'bestiario/cienpies.png',
+                quieto: 'catacumbas/ciempies-quieto.png',
+                ataque: 'catacumbas/ciempies-ataque.png',
+                dano: 'catacumbas/ciempies-dano.png',
+                andar: ['catacumbas/ciempies-andar-1.png', 'catacumbas/ciempies-andar-2.png',
+                        'catacumbas/ciempies-andar-3.png', 'catacumbas/ciempies-andar-4.png']
             },
-            r: 0.38, vel: 2.1, hp: 30, dano: 10,
-            alcance: 0.85, cadencia: 1.3, vista: 13
+            r: 0.6, vel: 2.1, hp: 30, dano: 10,
+            alcance: 0.45, cadencia: 1.3, vista: 13, talla: 2, largo: 2.8
         }
     ];
 
     const ficha = id => fichas.find(f => f.id === id) || null;
 
     // Dónde está la lámina de uno en la pose que se pida; sin pedir nada, la
-    // de quieto, que es la que enseña el bestiario. A la bestia que no exista
-    // -o a la pose que no tenga- se le devuelve cadena vacía o la de quieto,
-    // nunca nulo: quien lo meta en un src no acaba pidiendo «undefined.png»
+    // de quieto. A la bestia que no exista -o a la pose que no tenga- se le
+    // devuelve cadena vacía o la de quieto, nunca nulo: quien lo meta en un
+    // src no acaba pidiendo «undefined.png»
     function lamina(id, pose) {
         const f = ficha(id);
         if (!f) return '';
         return CARPETA + (f.laminas[pose] || f.laminas.quieto);
     }
+
+    // El retrato del bestiario, que es otra cosa que la figura de la senda:
+    // aquella se ve desde arriba y a 85px, y esta es un dibujo de cuerpo
+    // entero para mirarlo despacio, en bestiario/. Quien no tenga el suyo
+    // enseña su figura de quieto, que es lo que se hacía antes de haberlos.
+    const retrato = id => lamina(id, 'bestiario');
 
     // La tira del paso, en orden. La bestia que no la traiga devuelve una tira
     // vacía, y quien la pida se queda con la de quieto: se anda sin animar,
@@ -106,24 +129,24 @@ const BESTIAS = (function () {
         return ((f && f.laminas.andar) || []).map(l => CARPETA + l);
     }
 
-    return { CARPETA, POSES, fichas, ficha, lamina, andares };
+    return { CARPETA, POSES, fichas, ficha, lamina, andares, retrato };
 })();
 
 // ============================================================
 //  La cuenta: lo eliminado y lo que te ha eliminado
 // ============================================================
 // Vive en la ranura, bajo la clave 'bestiario', con la forma
-// { rata: { caidos, caidas }, oni: { ... } }. Una ranura de antes de que
+// { rata: { caidos, caidas }, ciempies: { ... } }. Una ranura de antes de que
 // esto existiera sencillamente no la trae, y entonces todo empieza a cero.
 const MARCA_VACIA = { caidos: 0, caidas: 0 };
 
-// El ninja pasó a ser rata: otro nombre y otra lámina, pero el mismo bicho en
-// el mismo sitio. Lo que se llevaba contado bajo el nombre viejo se traspasa
+// El ninja pasó a ser rata y el oni, ciempiés: otro nombre y otras láminas,
+// pero los mismos bichos en el mismo sitio. Lo que se llevaba contado bajo el nombre viejo se traspasa
 // al leer, que nadie tiene por qué perder una cuenta por un cambio de nombre.
 // Es lo mismo que hace personaje.js con las mejoras que se llamaron de otra
 // manera, y por eso se llama distinto de su NOMBRES_VIEJOS: dos const con el
 // mismo nombre en el ámbito global no avisan, tumban el archivo entero.
-const RENOMBRADAS = { ninja: 'rata' };
+const RENOMBRADAS = { ninja: 'rata', oni: 'ciempies' };
 
 const Bestiario = {
 
@@ -207,7 +230,7 @@ const Bestiario = {
     function celda(f) {
         return `
         <button type="button" class="bestia" data-bestia="${f.id}">
-            <span class="retrato"><img src="${BESTIAS.lamina(f.id)}" alt=""></span>
+            <span class="retrato"><img src="${BESTIAS.retrato(f.id)}" alt=""></span>
             <span class="nombre">${f.nombre.toUpperCase()}</span>
         </button>`;
     }
@@ -243,7 +266,7 @@ const Bestiario = {
         return `
             <h2>${TR('bestiario.titulo')}</h2>
             <div class="hoja">
-                <div class="retrato grande"><img src="${BESTIAS.lamina(f.id)}" alt=""></div>
+                <div class="retrato grande"><img src="${BESTIAS.retrato(f.id)}" alt=""></div>
                 <div class="cuerpo">
                     <h3>${f.nombre.toUpperCase()}</h3>
                     <p class="pie">${TR('bestia.' + f.id + '.pie')}</p>

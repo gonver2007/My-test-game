@@ -15,4 +15,5 @@ cuando escribes ungod {la ranura que sea "1,2,3,4,5"o todas como te lo e puesto 
 
 cuando escribes tp {solo funciona desde el menu de esc dentro de game.html} cualquier numero de el 1 a el 100 te hace tp a ese sandero
 
-
+cuando escribes hitbox {solo funciona desde el menu de esc dentro de game.html} se muestra con un ciadrado la hitbox de el jugador y de los enemigos
+cuando escribes unhitbox {solo funciona desde el menu de esc dentro de game.html} se deja de enseñar con un ciadrado la hitbox de el jugador y de los enemigos

@@ -141,6 +141,19 @@ sale de este navegador.
         decir(`Senda ${n}: ${comarca}.`, 'bien');
     }
 
+    // Enseñar o esconder los cercos. Como «tp», esto pasa en la partida que se
+    // está jugando y no toca ninguna ranura: solo vale dentro de game.html, y
+    // quien pinta es la vista.
+    function cercos(si) {
+        if (!enPartida)
+            return decir('«hitbox» solo vale dentro de la partida.', 'mal');
+        if (typeof mostrarCercos !== 'function')
+            return decir('La vista todavía no está en pie.', 'mal');
+        mostrarCercos(si);
+        decir(si ? 'Cercos a la vista: el cuadrado es su caja, y el círculo de dentro es lo que de verdad choca.'
+                 : 'Cercos escondidos.', 'bien');
+    }
+
     // cada orden con su forma de escribirla y lo que hace: es la lista que
     // se recita con «gon info ver»
     const AYUDA = [
@@ -151,6 +164,8 @@ sale de este navegador.
         ['cheat on <ranuras>',                  'deja abrir esta consola desde el menú de Esc de la partida'],
         ['cheat of <ranuras>',                  'vuelve a cerrarles la consola dentro de la partida'],
         ['tp <senda>',                          'salta a esa senda; solo dentro de la partida'],
+        ['hitbox',                              'enseña el cerco del héroe y el de cada enemigo'],
+        ['unhitbox',                            'los vuelve a esconder'],
         ['gon info ver',                        'recita esta misma lista'],
         ['clear',                               'borra el chat de la consola y el historial']
     ];
@@ -204,7 +219,12 @@ sale de este navegador.
         },
 
         // tp 7 — la senda a la que se salta, del 1 al último peldaño del camino
-        tp(aDonde) { teletransportar(aDonde); }
+        tp(aDonde) { teletransportar(aDonde); },
+
+        // hitbox · unhitbox — el cerco del héroe y el de cada enemigo, encima
+        // de todo lo demás
+        hitbox() { cercos(true); },
+        unhitbox() { cercos(false); }
     };
 
     // se parte por espacios, salvo dentro de comillas: así "1, 3" llega de una

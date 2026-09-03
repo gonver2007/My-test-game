@@ -102,7 +102,7 @@ function mensaje(texto) {
     if (J.log.length > 60) J.log.shift();
 }
 
-// el nombre del enemigo no se traduce -un oni es un oni-, pero el artículo
+// el nombre del enemigo no se traduce, pero el artículo
 // que lo precede sí, que es gramática de la lengua y no nombre propio
 const sujeto = e => `${TR(e.art === 'el' ? 'msg.articuloEl' : 'msg.articuloLa')} ${e.nombre}`;
 
@@ -115,6 +115,32 @@ function libre(x, y, r) {
         for (let cx = Math.floor(x - r); cx <= Math.floor(x + r); cx++)
             if (esMuro(cx, cy)) return false;
     return true;
+}
+
+// ============================================================
+//  Los que no son redondos
+// ============================================================
+// Casi todo lo que anda por aquí se mide como un círculo: un centro y un
+// radio, y la cuenta se hace con hypot. Al ciempiés eso le queda ridículo -es
+// tres veces más largo que ancho- y se le veía: le pegabas al centro y no a la
+// mitad del cuerpo, que es lo que uno mira cuando ataca.
+//
+// Así que quien lo pida lleva el cuerpo tumbado: un palo de su largo en la
+// dirección a la que mira, con el radio de siempre alrededor. Es una cápsula,
+// vamos. El palo mide medio bicho a cada lado del centro, y con largo 1 no
+// mide nada y queda el círculo de toda la vida: por eso los demás no se
+// enteran de que esto existe.
+function medioCuerpo(e) { return e.r * ((e.largo || 1) - 1); }
+
+// El punto del palo que más cerca le queda a algo. De aquí sale todo lo demás:
+// lo que se mide contra el bicho se mide contra este punto, no contra su
+// ombligo, y por eso da igual por dónde del cuerpo le entres.
+function cercaDelCuerpo(e, px, py) {
+    const m = medioCuerpo(e);
+    if (!m) return { x: e.x, y: e.y };
+    const cx = Math.cos(e.mira), cy = Math.sin(e.mira);
+    const t = Math.max(-m, Math.min(m, (px - e.x) * cx + (py - e.y) * cy));
+    return { x: e.x + cx * t, y: e.y + cy * t };
 }
 
 // Movimiento con deslizamiento: si un eje choca, el otro sigue avanzando.
@@ -236,7 +262,7 @@ function unirSalas(a, b) {
 }
 
 // Los pasillos se abren de ANCHO_PASILLO casillas: de una sola no se puede
-// esquivar ni usar el impulso, y el oni apenas cabe.
+// esquivar ni usar el impulso, y el ciempiés apenas cabe.
 function excavarH(x1, x2, y) {
     for (let x = Math.min(x1, x2); x <= Math.max(x1, x2); x++)
         for (let k = 0; k < ANCHO_PASILLO; k++)
@@ -461,10 +487,11 @@ function crearEnemigo(x, y) {
     // las cifras no están aquí: están en la ficha de bestias.js, que es la
     // misma que lee el bestiario del zaguán. Así lo que se promete allí es
     // exactamente lo que sale al paso
-    const f = BESTIAS.ficha(duro ? 'oni' : 'rata');
+    const f = BESTIAS.ficha(duro ? 'ciempies' : 'rata');
     return { ...base, tipo: f.id, art: f.art, nombre: f.nombre,
              r: f.r, vel: f.vel, hp: f.hp, hpMax: f.hp,
-             dano: f.dano, alcance: f.alcance, cadencia: f.cadencia, vista: f.vista };
+             dano: f.dano, alcance: f.alcance, cadencia: f.cadencia, vista: f.vista,
+             talla: f.talla || 1, largo: f.largo || 1 };
 }
 
 // ============================================================
@@ -728,7 +755,13 @@ function actualizarEnemigos(dt) {
         const d = Math.hypot(vx, vy) || 1e-6;
         e.mira = Math.atan2(vy, vx);
 
-        if (d > e.alcance + j.r) {
+        // muerde con la cabeza, no con el ombligo: como se vuelve hacia el
+        // héroe, el punto de su cuerpo que le queda más cerca es justo la
+        // punta que le apunta
+        const morro = cercaDelCuerpo(e, j.x, j.y);
+        const dMorro = Math.hypot(j.x - morro.x, j.y - morro.y);
+
+        if (dMorro > e.alcance + j.r) {
             const [rx, ry] = rumboAlHeroe(e);
             const rd = Math.hypot(rx, ry) || 1;
             const [sx, sy] = separacionEnemigos(e);
@@ -790,7 +823,11 @@ function golpear() {
     }
 
     for (const e of J.enemigos.slice()) {
-        const dx = e.x - j.x, dy = e.y - j.y;
+        // contra el trozo de cuerpo que le quede más cerca, no contra su
+        // centro: a uno largo se le acierta por donde se le ve, que es lo que
+        // uno espera al darle a la mitad del lomo
+        const cerca = cercaDelCuerpo(e, j.x, j.y);
+        const dx = cerca.x - j.x, dy = cerca.y - j.y;
         const d = Math.hypot(dx, dy);
         if (d > j.alcance + e.r) continue;
         // mismo margen que con las botellas: cuanto más pegado el enemigo,
@@ -804,8 +841,8 @@ function golpear() {
         e.herido = 0.25;
         e.ex += dx / (d || 1) * 6;
         e.ey += dy / (d || 1) * 6;
-        chispas(e.x, e.y, '#c04040', 6);
-        numero(e.x, e.y, dano, '#00e5ff');   // daño que hace el jugador: cian
+        chispas(cerca.x, cerca.y, '#c04040', 6);
+        numero(cerca.x, cerca.y, dano, '#00e5ff');   // daño que hace el jugador: cian
 
         if (e.hp <= 0) {
             J.enemigos = J.enemigos.filter(o => o !== e);

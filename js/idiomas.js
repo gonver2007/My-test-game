@@ -72,7 +72,7 @@ es: {
     'prev.notaAmuletos': 'Todavía no cuelga ninguno del cinto. Aquí se guardarán los que el santuario conceda.',
 
     // ---------- bestiario ----------
-    // los nombres de los bichos no se traducen: un oni es un oni en todas
+    // los nombres de los bichos no se traducen: el bicho es el mismo en todas
     // partes. Lo que cambia de lengua es lo que se cuenta de él
     'bestiario.titulo': 'BESTIARIO',
     'bestiario.lema': 'Lo que sale al paso, medido y contado.',
@@ -86,7 +86,7 @@ es: {
     'bestiario.hueco': 'Sin descubrir',
     'bestiario.nota': 'Pulsa una bestia para abrir su hoja. Las cifras son las mismas con que se plantan en la senda; las cuentas son de esta ranura y se apuntan al momento: caer cuesta el botín, no lo aprendido.',
     'bestia.rata.pie': 'Bicho de alcantarilla, flaca y rápida, con la piel a jirones de tanto pelearse por lo que hay. Muerde y se aparta, y rara vez viene sola.',
-    'bestia.oni.pie': 'Mole de cuernos y armadura. Anda despacio y encaja lo que le eches, pero cada mazazo suyo se nota en el hueso.',
+    'bestia.ciempies.pie': 'Una ristra de anillos acorazados sobre cien patas. Va pegado al suelo, encaja lo que le eches y se cuela por donde no cabe nada; lo primero que te alcanza son las pinzas.',
 
     // ---------- armería ----------
     'armeria.titulo': 'ARMERÍA',
@@ -263,7 +263,7 @@ en: {
     'bestiario.hueco': 'Undiscovered',
     'bestiario.nota': 'Click a beast to open its sheet. These are the very numbers they are placed on the path with; the tallies belong to this slot and are written down at once: falling costs you the spoils, not what you learned.',
     'bestia.rata.pie': 'A sewer creature, lean and quick, its hide in tatters from fighting over what little there is. It bites and backs away, and it rarely comes alone.',
-    'bestia.oni.pie': 'A horned bulk in armour. Slow of foot and able to soak up whatever you throw, but every blow of its own is felt in the bone.',
+    'bestia.ciempies.pie': 'A string of armoured rings on a hundred legs. It hugs the ground, soaks up whatever you throw and slips through gaps that fit nothing; the first thing to reach you is its pincers.',
 
     'armeria.titulo': 'ARMOURY',
     'armeria.saldo': 'Jade shards:',

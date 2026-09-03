@@ -1625,8 +1625,12 @@ function nuevoSprite(pintar) {
 // resto del guion no tiene que enterarse de que esta figura tarda, y
 // dibujarSprite le da el mismo trato que a las de aquí. Con un png del propio
 // disco la espera no se llega a ver.
-function spriteDeLamina(url) {
-    const lado = Math.ceil(SPR * ESCALA_SPR);
+// El lienzo se hace del tamaño con que la figura va a verse, y eso incluye su
+// talla: al que se dibuja al doble hay que hornearlo al doble. Horneándolo
+// todo a la medida de la casa, el grande salía de un lienzo de 85px estirado a
+// 170 y se le veían los píxeles uno a uno, por muchos que trajera su archivo.
+function spriteDeLamina(url, talla = 1) {
+    const lado = Math.ceil(SPR * ESCALA_SPR * talla);
     const c = lienzoOculto(lado, lado);
     const lamina = new Image();
     lamina.onload = () => c.getContext('2d').drawImage(lamina, 0, 0, lado, lado);
@@ -1638,14 +1642,16 @@ function spriteDeLamina(url) {
 // sueltas y la tira del paso-: dibujar es después solo elegir cuál toca, sin
 // pedir nada a mitad de partida.
 function laminasDeBestia(id) {
-    const juego = { andar: BESTIAS.andares(id).map(spriteDeLamina) };
-    for (const pose of BESTIAS.POSES) juego[pose] = spriteDeLamina(BESTIAS.lamina(id, pose));
+    const talla = (BESTIAS.ficha(id) || {}).talla || 1;
+    const juego = { andar: BESTIAS.andares(id).map(u => spriteDeLamina(u, talla)) };
+    for (const pose of BESTIAS.POSES)
+        juego[pose] = spriteDeLamina(BESTIAS.lamina(id, pose), talla);
     return juego;
 }
 
 // Lo que anda entre cuadro y cuadro del paso, en partes de lo que abulta el
 // bicho. Va atado a su tamaño y no a un número suelto porque la zancada de una
-// rata no es la de un oni: el grande da el paso más largo y mueve las suyas
+// rata no es la de un ciempiés: el grande da el paso más largo y mueve las suyas
 // más despacio aunque los dos anden a la misma velocidad.
 //
 // Y se cuenta por camino andado, no por tiempo: así las patas van al paso que
@@ -2599,7 +2605,7 @@ function pintar() {
         sombra(px, py, e.r);
         // el golpe recibido tuvo un filtro de brillo encima de la figura de
         // siempre; ahora cada estado trae su lámina y no hay nada que aclarar
-        dibujarSprite(poseDeBestia(e), px, py, e.mira);
+        dibujarSprite(poseDeBestia(e), px, py, e.mira, e.talla);
         barraEnemigo(e, px, py);
         ctx.globalAlpha = 1;
     }
@@ -2610,6 +2616,7 @@ function pintar() {
     sombrasDeGeometria(j);
     pintarLuces(j);
     dibujarParticulas();
+    dibujarCercos(j);
 
     if (flash > 0) {
         ctx.fillStyle = `rgba(200, 40, 60, ${flash * 0.35})`;
@@ -2749,13 +2756,66 @@ function auraDeElixir(px, py, fase) {
     }
 }
 
-function dibujarSprite(sprite, px, py, angulo) {
-    const s = SPR * ESCALA_SPR;
+// talla: lo que se agranda esta figura sobre la medida de la casa. Todas
+// valían 1 mientras todas eran del mismo tamaño; el ciempiés no lo es, y su
+// lámina llena el cuadro igual que las demás -más no cabe-, así que lo único
+// que puede hacerlo mayor en pantalla es dibujarlo mayor.
+function dibujarSprite(sprite, px, py, angulo, talla = 1) {
+    const s = SPR * ESCALA_SPR * talla;
     ctx.save();
     ctx.translate(px, py);
     if (angulo) ctx.rotate(angulo);
     ctx.drawImage(sprite, -s / 2, -s / 2, s, s);
     ctx.restore();
+}
+
+// ============================================================
+//  Los cercos, cuando se piden
+// ============================================================
+// Los enciende y los apaga la consola, con «hitbox» y «unhitbox», y se pintan
+// los últimos de todo: por encima de la oscuridad y de las luces, que un cerco
+// que se apaga con la penumbra no sirve para lo que se pide.
+//
+// Lo que de verdad choca es un círculo -el juego mide siempre con hypot, nunca
+// por esquinas-, pero se pide un cuadrado y un cuadrado se pinta: es su caja,
+// y el lado son dos radios. Dentro va además el círculo en fino, para que no
+// se lea que las esquinas también golpean, que es justo lo que uno concluiría
+// mirando solo el cuadrado.
+let verCercos = false;
+
+function mostrarCercos(si) { verCercos = !!si; return verCercos; }
+
+// El cerco se pinta tumbado a lo que mira el bicho: la caja mide su largo por
+// su ancho, y dentro va la cápsula -el palo con el radio alrededor-, que es la
+// forma con la que de verdad se mide. Quien no es largo tiene el palo a cero y
+// le sale el cuadrado con su círculo de siempre.
+function dibujarCerco(px, py, r, largo, mira, color) {
+    const R = r * TILE;
+    const m = R * ((largo || 1) - 1);        // medio palo, en píxeles
+    ctx.save();
+    ctx.translate(px, py);
+    if (mira) ctx.rotate(mira);
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = color;
+    ctx.strokeRect(-m - R, -R, (m + R) * 2, R * 2);
+
+    ctx.globalAlpha = 0.5;
+    ctx.beginPath();
+    ctx.arc(m, 0, R, -Math.PI / 2, Math.PI / 2);
+    ctx.lineTo(-m, R);
+    ctx.arc(-m, 0, R, Math.PI / 2, -Math.PI / 2);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+}
+
+// el héroe el último, que es el que se mira: así ningún enemigo encima le tapa
+// el suyo cuando están pegados
+function dibujarCercos(j) {
+    if (!verCercos) return;
+    for (const e of J.enemigos)
+        dibujarCerco(aPantallaX(e.x), aPantallaY(e.y), e.r, e.largo, e.mira, '#ff3b30');
+    dibujarCerco(aPantallaX(j.x), aPantallaY(j.y), j.r, 1, 0, '#00e5ff');
 }
 
 function sombraElipse(px, py, rx, ry, alfa) {
@@ -3693,11 +3753,11 @@ const LACA_MINI = '#150b13';        // la laca sobre la que se dibuja todo
 const ORO_MINI = '232, 180, 79';    // el oro viejo del marcador, para teñirlo a voluntad
 
 // A cada adversario, el color con que se le reconoce en la senda: el pardo
-// rosado de la rata y el púrpura del oni, aclarados lo justo para que salgan
+// rosado de la rata y el rojo del ciempiés, aclarados lo justo para salir
 // de la laca. La forma es la misma para todos -el rombo pequeño-, así que el
 // color es lo único que los separa, y por eso tiene que ser el suyo. El de red
 // es la brasa: un tipo nuevo sin ficha sigue leyéndose como lo que es, peligro.
-const TINTA_ENEMIGO = { rata: '#c39a92', oni: '#b07bd0', otro: '#d94b33' };
+const TINTA_ENEMIGO = { rata: '#c39a92', ciempies: '#d94b33', otro: '#d94b33' };
 
 const mini = document.getElementById('minimapa');
 const mctx = mini.getContext('2d');
