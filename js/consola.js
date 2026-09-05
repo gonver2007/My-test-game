@@ -1,9 +1,6 @@
-/* ============================================================
-consola.js - la consola de la portada (Alt+Intro)
-Aquí solo está el mueble: la caja, el historial y quien reparte lo
-que se teclea. Las órdenes se añaden a mano en ORDENES. Vive en la
-portada y, con «cheat on», también en la partida; nada de lo que hace
-sale de este navegador.
+/* consola.js - el mueble de la consola (Alt+Intro): caja, historial y reparto
+   de lo que se teclea. Las órdenes se añaden a mano en ORDENES. Vive en la
+   portada y, con «cheat on», también en la partida.
    ============================================================ */
 'use strict';
 
@@ -16,8 +13,8 @@ sale de este navegador.
     const historial = [];
     let puesto = 0;            // por dónde va el paseo con las flechas
 
-    // la misma consola sirve en los dos sitios, pero no hace lo mismo en cada
-    // uno: hay órdenes que solo tienen sentido con una partida delante
+    // la misma consola en los dos sitios, pero hay órdenes que solo tienen
+    // sentido con una partida delante
     const enPartida = document.body.classList.contains('juego');
 
     // ---------- Escribir ----------
@@ -43,21 +40,17 @@ sale de este navegador.
     }
 
     // ---------- Comandos ----------
-    // Una entrada por orden: el nombre tecleado y lo que hace. Lo que se
-    // escriba detrás llega como argumentos sueltos, siempre en texto:
-    //
-    //   saludo(nombre) { decir(`Hola, ${nombre || 'forastero'}.`); }
-    //
-    // cada moneda dice cómo se llama en la ranura y cómo se lee en voz alta
+    // Una entrada por orden en ORDENES; lo que se escriba detrás llega como
+    // argumentos sueltos, siempre en texto.
+    // Cada moneda dice cómo se llama en la ranura y cómo se lee en voz alta.
     const MONEDAS = {
         orbes: { campo: 'orbes', nombre: 'orbes azules' },
         jade:  { campo: 'esquirlas', nombre: 'jade' }
     };
 
-    // El esqueleto de toda orden que toca ranuras: se eligen, se recorren
-    // saltando las que no tienen partida -sin dar la lata una por una cuando se
-    // han pedido todas- y se avisa al final si no había ninguna. Lo propio de
-    // cada orden es solo lo que hace con las que sí valen.
+    // El esqueleto de toda orden que toca ranuras: se eligen, se saltan las
+    // vacías (sin dar la lata una por una si se pidieron todas) y se avisa si
+    // no valía ninguna.
     function porCadaRanura(ranuras, hacer) {
         const cuales = elegirRanuras(ranuras);
         if (!cuales.length)
@@ -93,8 +86,7 @@ sale de este navegador.
         });
     }
 
-    // un sí o un no apuntado en las ranuras que se digan; el rótulo cuenta en
-    // voz alta cómo queda cada una
+    // un sí o un no apuntado en las ranuras que se digan
     function apuntar(ranuras, campo, si, rotulo) {
         porCadaRanura(ranuras, i => {
             Partidas.guardarEn(i, { [campo]: si });
@@ -115,9 +107,8 @@ sale de este navegador.
             si => si ? 'con consola en la partida' : 'sin consola en la partida');
     }
 
-    // Saltar de senda sin cruzar puertas. Esto no toca ninguna ranura: pasa
-    // en la partida que se está jugando, así que solo vale dentro de
-    // game.html y con el camino ya en pie
+    // Saltar de senda sin cruzar puertas. No toca ninguna ranura: pasa en la
+    // partida en curso, así que solo vale dentro de game.html.
     function teletransportar(aDonde) {
         if (!enPartida)
             return decir('«tp» solo vale dentro de la partida.', 'mal');
@@ -141,8 +132,7 @@ sale de este navegador.
         decir(`Senda ${n}: ${comarca}.`, 'bien');
     }
 
-    // Enseñar o esconder los cercos. Como «tp», esto pasa en la partida que se
-    // está jugando y no toca ninguna ranura: solo vale dentro de game.html, y
+    // Enseñar o esconder los cercos: como «tp», solo dentro de game.html, y
     // quien pinta es la vista.
     function cercos(si) {
         if (!enPartida)
@@ -154,8 +144,7 @@ sale de este navegador.
                  : 'Cercos escondidos.', 'bien');
     }
 
-    // cada orden con su forma de escribirla y lo que hace: es la lista que
-    // se recita con «gon info ver»
+    // cada orden con su forma y lo que hace: la lista de «gon info ver»
     const AYUDA = [
         ['give <moneda> <ranuras> <cuántas>',   'añade jade u orbes azules a esas ranuras'],
         ['ungive <moneda> <ranuras> <cuántas>', 'quita jade u orbes azules de esas ranuras'],
@@ -185,8 +174,7 @@ sale de este navegador.
             decir('Así: gon info ver', 'mal');
         },
 
-        // clear -> la consola queda como recién abierta: sin chat y sin
-        // nada que pasear con las flechas
+        // clear -> la consola queda como recién abierta
         clear() {
             salida.textContent = '';
             historial.length = 0;
@@ -221,14 +209,12 @@ sale de este navegador.
         // tp 7 — la senda a la que se salta, del 1 al último peldaño del camino
         tp(aDonde) { teletransportar(aDonde); },
 
-        // hitbox · unhitbox — el cerco del héroe y el de cada enemigo, encima
-        // de todo lo demás
+        // hitbox · unhitbox — el cerco del héroe y el de cada enemigo
         hitbox() { cercos(true); },
         unhitbox() { cercos(false); }
     };
 
-    // se parte por espacios, salvo dentro de comillas: así "1, 3" llega de una
-    // pieza y sin ellas
+    // se parte por espacios salvo dentro de comillas, así "1, 3" llega entero
     function trocear(texto) {
         const trozos = texto.match(/"[^"]*"|'[^']*'|\S+/g) || [];
         return trozos.map(t => t.replace(/^["']|["']$/g, ''));
@@ -245,8 +231,7 @@ sale de este navegador.
     }
 
     // ---------- Abrir y cerrar ----------
-    // En la portada la consola es de la casa. Dentro de la partida solo se
-    // abre si la ranura lleva el permiso que enciende «cheat on»
+    // En la portada es de la casa; en la partida, solo con el permiso de «cheat on»
     function permitida() {
         if (!enPartida) return true;
         return !!(typeof Partidas !== 'undefined' && Partidas.actual().cheat);
@@ -268,8 +253,7 @@ sale de este navegador.
         }
     });
 
-    // el botón del menú de Esc: solo lo tiene game.html, y solo se enseña a
-    // quien haya encendido el permiso desde la portada
+    // el botón del menú de Esc: solo lo tiene game.html y solo con el permiso
     const botonMenu = document.getElementById('mjConsola');
     if (botonMenu && permitida()) {
         botonMenu.hidden = false;

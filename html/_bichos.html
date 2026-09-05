@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<title>Bichos · banco de figuras</title>
+<!-- Página de humo para mirar las figuras de bestias.js sin entrar en la senda:
+     las tres bestias, sus cuatro poses, animadas y en grande sobre el fondo de
+     la mazmorra. No carga el juego, solo bestias.js, así que lo que se ve aquí
+     es exactamente lo que pinta la senda. -->
+<style>
+ body{background:#241d2e;color:#c9bfd6;font:13px/1.5 system-ui,sans-serif;margin:0;padding:20px}
+ h1{font-size:14px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#c9bfd6;margin:0 0 4px}
+ p.pie{color:#8d7fa3;margin:0 0 20px}
+ h2{font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#8d7fa3;margin:24px 0 8px}
+ .fila{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+ .celda{background:#3a3040;border:1px solid #4b3f55;border-radius:6px;padding:6px;text-align:center}
+ .celda span{display:block;color:#8d7fa3;font-size:11px;margin-top:3px}
+ canvas{display:block}
+ label{color:#8d7fa3;margin-left:14px;font-size:12px}
+</style>
+<h1>Banco de figuras</h1>
+<p class="pie">Lo que dibuja <code>bestias.js</code>, en vivo.
+   <label><input type="checkbox" id="cerco"> enseñar el cuadro de 56</label></p>
+<div id="todo"></div>
+
+<script src="../js/bestias.js"></script>
+<script>
+'use strict';
+// El aumento con que se miran aquí: la talla de la ficha, para que unos se
+// vean mayores que otros igual que en la senda, por el aumento de la página.
+const AUMENTO = 3.2;
+
+const todo = document.getElementById('todo');
+const marco = document.getElementById('cerco');
+const lienzos = [];
+
+for (const f of BESTIAS.fichas) {
+    const h = document.createElement('h2');
+    h.textContent = f.nombre + '  ·  talla ' + (f.talla || 1);
+    todo.appendChild(h);
+    const fila = document.createElement('div');
+    fila.className = 'fila';
+    todo.appendChild(fila);
+
+    for (const pose of BESTIAS.POSES) {
+        const lado = Math.round(BESTIAS.CUADRO * AUMENTO * (f.talla || 1));
+        const celda = document.createElement('div');
+        celda.className = 'celda';
+        const cv = document.createElement('canvas');
+        cv.width = cv.height = lado;
+        celda.appendChild(cv);
+        const pie = document.createElement('span');
+        pie.textContent = pose;
+        celda.appendChild(pie);
+        fila.appendChild(celda);
+        lienzos.push({ g: cv.getContext('2d'), id: f.id, pose, lado });
+    }
+}
+
+// La fase: andando corre sola, pegando va y vuelve de cero a uno -que es lo
+// que la senda le pasa como avance del golpe-, y las dos quietas no la usan.
+function cuadro(ms) {
+    const t = ms / 1000;
+    for (const L of lienzos) {
+        L.g.clearRect(0, 0, L.lado, L.lado);
+        if (marco.checked) {
+            L.g.strokeStyle = '#4b3f55';
+            L.g.lineWidth = 1;
+            L.g.strokeRect(0.5, 0.5, L.lado - 1, L.lado - 1);
+        }
+        const fase = L.pose === 'andar' ? t * 5
+                   : L.pose === 'ataque' ? (t * 0.7) % 1 : 0;
+        BESTIAS.pintar(L.g, L.lado, L.id, L.pose, fase);
+    }
+    requestAnimationFrame(cuadro);
+}
+requestAnimationFrame(cuadro);
+</script>
+</html>

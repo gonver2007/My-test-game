@@ -1,42 +1,31 @@
-/* ============================================================
-menu.js - las pantallas del menú: botones, paneles y navegación
-Aquí ya no se pinta nada. Hubo un fondo de noche azul dibujado a
-mano en un lienzo -bosque, torii, farolillos y pétalos-, que era el
-aspecto que tenía el juego antes del ocaso. Hoy la portada pinta su
-cielo con CSS y ninguna pantalla trae ese lienzo, así que el pintor
-entero se ha ido: quedaba muerto y era la última guarida del azul.
+/* menu.js - las pantallas del menú: botones, paneles y navegación.
+   Aquí ya no se pinta nada: el fondo lo hace el css de cada pantalla.
    ============================================================ */
 'use strict';
 
 // ---------- El armazón ----------
-// Todas las pantallas del menú viven dentro del marco de index.html, que es
-// quien sujeta la música. La ventanita de ajustes de la partida también está
-// enmarcada, pero de otro marco y con otras reglas, así que se descuenta.
+// El menú vive dentro del marco de index.html, que sujeta la música. La
+// ventanita de ajustes de la partida va en otro marco y se descuenta.
 const enArmazon = hayPadre && !enMarco;
 
 function avisarAlArmazon(mensaje) {
     if (enArmazon) parent.postMessage(Object.assign({ tipo: 'armazon' }, mensaje), '*');
 }
 
-// Suelta no se queda: si esta pantalla se abre por su cuenta —al volver de la
-// partida, que sí vive fuera del marco, o entrando por su url— se manda al
-// armazón con el recado de abrirla a ella. Así el menú siempre acaba dentro,
-// se llegue por donde se llegue, y la música nunca se queda sin quien la
-// sujete. replace y no href: este paso no merece un hueco en el historial.
+// Suelta no se queda: una pantalla abierta por su cuenta se manda al armazón
+// con el recado de abrirla a ella, para que la música tenga quien la sujete.
+// replace y no href: este paso no merece hueco en el historial.
 if (!hayPadre) {
     const yo = location.pathname.split('/').pop() + location.search;
     location.replace('../index.html?ir=' + encodeURIComponent(yo));
 }
 
 // ---------- Botones ----------
-// cada pantalla dice en su <body data-siguiente="..."> a dónde lleva el botón
-// principal, así todas comparten este mismo guion. Las rutas son relativas a
-// quien las declara, y todas las pantallas del menú viven ya en html/.
+// Cada pantalla dice en <body data-siguiente> a dónde lleva el botón principal;
+// las rutas son relativas a quien las declara.
 
-// La partida es la única que no cabe en el marco: trae su propio Esc, su
-// consola y su propia ventana de ajustes. Se le pide al armazón que salga a
-// pantalla completa, y se le manda la dirección ya resuelta para que no tenga
-// que adivinar desde dónde se le habla.
+// La partida no cabe en el marco (trae su Esc, su consola y sus ajustes): se le
+// pide al armazón que salga a pantalla completa, con la dirección ya resuelta.
 function irA(destino) {
     if (enArmazon && /(^|\/)game\.html($|[?#])/.test(destino)) {
         avisarAlArmazon({ salir: new URL(destino, location.href).href });
@@ -47,9 +36,8 @@ function irA(destino) {
 
 function continuar() { irA(document.body.dataset.siguiente || 'game.html'); }
 
-// Enmarcada dentro de la partida (la ventana de ajustes), volver no es irse a
-// ninguna parte: es cerrar la ventana. Se lo pide a quien la abrió, que es el
-// único que puede. enMarco y cerrarMarco los pone ajustes.js.
+// Enmarcada dentro de la partida, volver es cerrar la ventana, no navegar.
+// enMarco y cerrarMarco los pone ajustes.js.
 function volver() {
     if (enMarco) { cerrarMarco(); return; }
     irA(document.body.dataset.anterior || 'portada.html');
@@ -57,9 +45,7 @@ function volver() {
 function irAjustes() { irA(document.body.dataset.ajustes || 'ajustes.html'); }
 
 
-// los huecos que se abren en el sitio del menú: armería, personaje,
-// bestiario, habilidades, pergaminos y amuletos, todos del zaguán. Cada
-// pantalla trae los suyos y los que no existen sencillamente no se abren
+// los huecos del zaguán; los que una pantalla no tenga sencillamente no se abren
 const PANELES = ['armeria', 'personaje', 'bestiario',
     'habilidades', 'pergaminos', 'amuletos'];
 
@@ -73,9 +59,8 @@ function alternar(id) {
     marcarPaneles();
 }
 
-// mientras hay alguno abierto el body lleva la marca: con ella la pantalla
-// esconde el rótulo y lo demás, y el panel se lee sin nada delante. La miran
-// también armeria.js y personaje.js, que abren los suyos por su cuenta
+// mientras hay alguno abierto el body lleva la marca, que el css usa para
+// esconder el rótulo. La miran también armeria.js y personaje.js
 function marcarPaneles() {
     const abierto = PANELES.some(id => {
         const panel = document.getElementById(id);
@@ -120,13 +105,8 @@ addEventListener('keydown', e => {
     if (e.key === 'Escape') { if (enMarco) cerrarMarco(); else cerrarPaneles(); }
 });
 
-// el renglón de láminas se corre con la rueda: con el ratón nadie tiene por
-// qué ir a buscar la barra de abajo. Vale igual para las armas que para la
-// rejilla del bestiario, que es el mismo truco de scroll horizontal. Ojo con
-// la unidad, que aquí estuvo el fallo: no todos los ratones hablan en píxeles
-// -hay quien manda líneas, y entonces deltaY vale 3-, así que tomarlo a la
-// letra movía el renglón tres míseros píxeles por tirón y no se llegaba nunca
-// al final
+// el renglón de láminas se corre con la rueda (armas y rejilla del bestiario).
+// Ojo con deltaMode: no todos los ratones hablan en píxeles.
 addEventListener('wheel', e => {
     const fila = e.target.closest && e.target.closest('.armas, .rejilla');
     if (!fila || fila.scrollWidth <= fila.clientWidth) return;
@@ -138,14 +118,10 @@ addEventListener('wheel', e => {
     e.preventDefault();
 }, { passive: false });
 
-// ---------- La música, que ya no es cosa de aquí ----------
-// La caja de música vive en el armazón (index.html), fuera del marco, porque
-// es el único documento que no se recarga al cambiar de pantalla. Lo que se
-// hace desde dentro es contarle dos cosas:
-//
-//   - si en esta pantalla suena o no, que lo dice su <body data-musica>
-//   - el primer toque del jugador, porque el navegador no deja sonar nada
-//     hasta que lo haya, y los clics caen aquí dentro y no en el armazón
+// ---------- La música ----------
+// Vive en el armazón, que es el único documento que no se recarga. Desde aquí
+// se le cuentan dos cosas: si en esta pantalla suena (<body data-musica>) y el
+// primer toque del jugador, sin el cual el navegador no deja sonar nada.
 if (enArmazon) {
     avisarAlArmazon({ musica: document.body.dataset.musica === 'si' });
 
@@ -155,17 +131,9 @@ if (enArmazon) {
 }
 
 
-// Estas pantallas (portada, ranuras, zaguán, final) están pensadas para un
-// ancho de referencia: lo que cambia con la ventana es el zoom con que se
-// ven, no su diseño, así que se ven siempre del mismo tamaño en cualquier
-// pantalla. El hud del juego no pasa por aquí: ese sí se acomoda a cada
-// pantalla, ver ajustarEscalaLienzo en vista.js.
-// Dentro de la ventana de ajustes de la partida esto no se aplica: allí manda
-// el tamaño del marco, que ya es pequeño, y encogerlo otra vez dejaría las
-// letras ilegibles.
-// El arco de la portada no necesita nada aquí: como el de ranura.html, va
-// clavado de arriba al suelo y escala con este mismo zoom, igual que el resto
-// del decorado. Es justo lo que lo deja quieto.
+// El menú se diseña para un ancho de referencia: con la ventana cambia el zoom,
+// no el diseño. El hud de la partida no pasa por aquí (ver ajustarEscalaLienzo
+// en vista.js), y dentro de la ventana de ajustes tampoco: ahí ya manda el marco.
 const REF_ANCHO_MENU = 1600;
 function fijarEscalaMenu() {
     document.documentElement.style.zoom = enMarco ? 1 : innerWidth / REF_ANCHO_MENU;

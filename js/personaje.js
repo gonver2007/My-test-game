@@ -1,26 +1,19 @@
-/* ============================================================
-personaje.js - los orbes azules y lo que compran
-Si el jade afila el acero, los orbes azules endurecen al que los lleva:
-vida, daño y energía del propio héroe, que no se pierden al cambiar de
-arma. Vive en la ranura, junto al resto de la partida. La clave guardada
-sigue llamándose 'dones' para no dejar atrás las partidas ya jugadas.
+/* personaje.js - los orbes azules y lo que compran: vida, daño y energía del
+   héroe, que no se pierden al cambiar de arma. Viven en la ranura, bajo la
+   clave 'dones' para no dejar atrás las partidas ya jugadas.
    ============================================================ */
 'use strict';
 
-// Las tres vías de mejora; cada peldaño cuesta lo que diga COSTES_MEJORA.
-// El nombre, la descripción y el rótulo del efecto no se escriben aquí: los
-// pone idiomas.js a partir del id -mejora.vida, mejora.vida.pie...-, que es
-// lo que permite que el panel hable en la lengua elegida.
+// Las tres vías de mejora; cada peldaño cuesta lo que diga COSTES_MEJORA. Los
+// textos los pone idiomas.js a partir del id (mejora.vida, mejora.vida.pie...).
 const MEJORAS = [
     { id: 'vida',    suma: 10, base: 50 },
     { id: 'dano',    suma: 2,  base: 0  },
     { id: 'energia', suma: 10, base: 50 }
 ];
 
-// Las mejoras se llamaron vigor, filo y aguante hasta que pasaron a decirse
-// por lo que hacen. Lo comprado con los nombres viejos sigue guardado bajo
-// ellos, así que al leer la ranura se traspasa a los nuevos: nadie pierde
-// peldaños que ya pagó por un cambio de nombre.
+// Se llamaron vigor, filo y aguante: lo comprado con los nombres viejos se
+// traspasa al leer, para no perder peldaños ya pagados.
 const NOMBRES_VIEJOS = { vigor: 'vida', filo: 'dano', aguante: 'energia' };
 
 const COSTES_MEJORA = [50, 150, 500, 750, 1000];
@@ -28,8 +21,7 @@ const MEJORA_TOPE = COSTES_MEJORA.length;
 
 const INICIAL_PERSONAJE = { orbes: 0, dones: {} };
 
-// el orbe azul: una esfera de noche con el corazón encendido y el brillo alto
-// de siempre, que es lo que la hace leerse redonda y no plana
+// el orbe azul: esfera de noche con el corazón encendido
 const ORBE_SVG = `
     <svg class="esquirla orbe" viewBox="0 0 18 18" aria-hidden="true">
         <circle cx="9" cy="9" r="7.1" fill="#24468f"
@@ -48,9 +40,8 @@ const Personaje = {
         return estado;
     },
 
-    // pasa a los nombres de ahora lo que se guardó con los de antes. Si ya
-    // hubiera algo bajo el nombre nuevo manda ese, que es el que se ha
-    // estado usando; el viejo se queda donde está y deja de mirarse
+    // pasa los nombres viejos a los de ahora; si ya hay algo bajo el nuevo,
+    // manda ese y el viejo deja de mirarse
     alDia(dones) {
         const puesto = Object.assign({}, dones);
         for (const viejo in NOMBRES_VIEJOS) {
@@ -88,9 +79,8 @@ const Personaje = {
         return true;
     },
 
-    // lo que hay que sumarle al héroe al empezar la partida. Se busca por
-    // nombre y no por posición: así añadir una mejora nueva a la lista no
-    // desplaza a las de al lado ni se lleva por delante a las de siempre
+    // lo que se le suma al héroe al empezar. Se busca por nombre y no por
+    // posición: añadir una mejora no desplaza a las de al lado
     sumaDe(id) {
         const m = MEJORAS.find(x => x.id === id);
         return m ? m.suma * this.nivel(id) : 0;
@@ -151,8 +141,7 @@ const Personaje = {
         if (subir) { Personaje.subir(subir.dataset.subir); pintar(); }
     });
 
-    // abrir y cerrar es cosa de menu.js: él sabe de todos los paneles, los
-    // cierra entre sí y marca el body para que la pantalla esconda el rótulo
+    // abrir y cerrar es cosa de menu.js, que conoce todos los paneles
     boton.addEventListener('click', () => {
         if (typeof alternar === 'function') alternar('personaje');
         else caja.hidden = !caja.hidden;

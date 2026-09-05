@@ -1,16 +1,14 @@
 // ============================================================
-//  mazmorra.js - lógica del juego en tiempo real (sin dibujado)
-//  Las plantas se trazan con dos o tres salas amplias apiladas,
-//  unidas por corredores rectos. Las entidades se mueven en
-//  coordenadas continuas (casillas con decimales), no a saltos.
+//  mazmorra.js - lógica del juego en tiempo real (sin dibujado). Las plantas
+//  son dos o tres salas amplias apiladas y unidas por corredores rectos, y
+//  todo se mueve en coordenadas continuas, no a saltos.
 // ============================================================
 
 const ANCHO = 36, ALTO = 44;
 
-// Trazado de la planta: unas cuantas salas apiladas de abajo arriba. Se entra
-// siempre por la de abajo y se sale por la puerta de la de arriba.
-// Estas medidas son solo el patrón de la casa: cada bioma trae las suyas en su
-// ficha, y estas quedan de red por si se juega sin biomas cargados.
+// Trazado de la planta: salas apiladas de abajo arriba; se entra por la de
+// abajo y se sale por la puerta de la de arriba. Estas medidas son solo la red:
+// cada bioma trae las suyas en su ficha.
 const PLANTA_BASE = {
     salas: [2, 3],                // cuántas salas se apilan
     ancho: [15, 26],              // lo que mide cada una, en casillas
@@ -31,14 +29,10 @@ const FUERZA_DASH = 19;           // impulso del salto lateral
 const ESPERA_DASH = 0.9;          // segundos hasta poder repetirlo
 const DURACION_DASH = 0.18;
 
-// El aliento: se gasta esquivando y golpeando, y se repone solo, sin pausa
-// previa ni descanso que haya que buscarse.
-//
-// Vuelve despacio a propósito -10 cada cinco segundos-, muchísimo menos de lo
-// que cuesta pelear: ninguna arma se sostiene con lo que repone, ni siquiera
-// el nodachi. Eso convierte la barra en una reserva que se administra y no en
-// un grifo del que beber: el golpeo continuo se acaba, y hay que retirarse a
-// tomar aire. Es la diferencia entre un freno y un recurso.
+// El aliento: se gasta esquivando y golpeando y se repone solo, pero despacio
+// -10 cada cinco segundos-, muchísimo menos de lo que cuesta pelear. Así la
+// barra es una reserva que se administra y no un grifo: el golpeo continuo se
+// acaba y hay que retirarse a tomar aire.
 const ESTAMINA_BASE = 50;
 const COSTE_DASH = 25;            // media barra por esquiva
 const COSTE_GOLPE = 5;
@@ -46,17 +40,16 @@ const ESTAMINA_RITMO = 2;         // puntos por segundo andando: 10 cada 5 segun
 const ESTAMINA_QUIETO = 2;        // y el doble plantado, sin dar un paso
 const ESTAMINA_CURANDO = 5;       // y a cinco veces con los pies en el elixir
 
-// Hasta dónde llegan los ojos del héroe. Algo menos que RADIO_LUZ, la antorcha
-// que dibuja la vista: se alumbra más terreno del que de verdad se abarca.
+// Hasta dónde llegan los ojos del héroe. Algo menos que ALCANCE_LUZ (vista.js):
+// se alumbra más terreno del que de verdad se abarca.
 const RADIO_VISION = 8.5;
 
 const VEL_PUERTA = 1.4;           // lo que tardan en separarse las hojas
 
-// El elixir no se bebe de un trago al pasarle por encima: la botella hay que
-// romperla a golpes, igual que a un enemigo, y lo que llevaba se derrama en el
-// suelo. Ese charco cura mientras se está encima -no se lleva puesto- y no
-// espera: dura lo que dura y luego se seca. Quien lo rompe con la vida llena
-// desperdicia media botella, y esa es justamente la decisión que se le pide.
+// El elixir no se bebe al pasarle por encima: la botella se rompe a golpes y lo
+// que llevaba se derrama. El charco cura mientras se está encima, dura lo que
+// dura y se seca; romperlo con la vida llena desperdicia media botella, y esa
+// es justamente la decisión que se le pide al jugador.
 const CHARCO_VIDA = 5;       // segundos que aguanta antes de empezar a secarse
 const CHARCO_CURA = 10;      // PV que da entero, como mucho
 const CHARCO_RITMO = 4;      // PV por segundo mientras se pisa: los 10 en 2,5 s
@@ -102,8 +95,7 @@ function mensaje(texto) {
     if (J.log.length > 60) J.log.shift();
 }
 
-// el nombre del enemigo no se traduce, pero el artículo
-// que lo precede sí, que es gramática de la lengua y no nombre propio
+// el nombre del enemigo no se traduce, pero sí el artículo, que es gramática
 const sujeto = e => `${TR(e.art === 'el' ? 'msg.articuloEl' : 'msg.articuloLa')} ${e.nombre}`;
 
 const esMuro = (cx, cy) =>
@@ -120,21 +112,15 @@ function libre(x, y, r) {
 // ============================================================
 //  Los que no son redondos
 // ============================================================
-// Casi todo lo que anda por aquí se mide como un círculo: un centro y un
-// radio, y la cuenta se hace con hypot. Al ciempiés eso le queda ridículo -es
-// tres veces más largo que ancho- y se le veía: le pegabas al centro y no a la
-// mitad del cuerpo, que es lo que uno mira cuando ataca.
-//
-// Así que quien lo pida lleva el cuerpo tumbado: un palo de su largo en la
-// dirección a la que mira, con el radio de siempre alrededor. Es una cápsula,
-// vamos. El palo mide medio bicho a cada lado del centro, y con largo 1 no
-// mide nada y queda el círculo de toda la vida: por eso los demás no se
-// enteran de que esto existe.
+// Casi todo se mide como un círculo (centro y radio, con hypot). Al ciempiés
+// eso le queda ridículo -es tres veces más largo que ancho-, así que quien lo
+// pida lleva el cuerpo tumbado: una cápsula, un palo de su largo en la
+// dirección a la que mira con el radio alrededor. Con largo 1 el palo no mide
+// nada y queda el círculo de siempre.
 function medioCuerpo(e) { return e.r * ((e.largo || 1) - 1); }
 
-// El punto del palo que más cerca le queda a algo. De aquí sale todo lo demás:
-// lo que se mide contra el bicho se mide contra este punto, no contra su
-// ombligo, y por eso da igual por dónde del cuerpo le entres.
+// El punto del palo que más cerca le queda a algo: lo que se mide contra el
+// bicho se mide contra aquí, no contra su ombligo.
 function cercaDelCuerpo(e, px, py) {
     const m = medioCuerpo(e);
     if (!m) return { x: e.x, y: e.y };
@@ -150,19 +136,17 @@ function moverEntidad(e, dx, dy) {
 }
 
 // ============================================================
-//  Generación de plantas: dos o tres salas amplias unidas por
-//  corredores en ángulo recto. Nada de contornos orgánicos: aquí
-//  todo son rectas, y las esquinas achaflanadas dan las diagonales.
+//  Generación de plantas: salas amplias unidas por corredores en ángulo recto.
+//  Todo son rectas; las diagonales salen de achaflanar esquinas.
 // ============================================================
-// La planta que toca trazar: la del bioma de esta senda, con la de serie de
-// red por si biomas.js no está cargado
+// La planta del bioma de esta senda, con la de serie de red
 function plantaDelNivel() {
     const bioma = (typeof Biomas !== 'undefined') ? Biomas.deNivel(J.nivel) : null;
     return Object.assign({}, PLANTA_BASE, bioma && bioma.planta);
 }
 
-// Un tramo de valores [min, max] recortado a lo que de verdad cabe. Así un
-// bioma puede pedir salas enormes o diminutas sin romper el trazado.
+// Un tramo [min, max] recortado a lo que de verdad cabe, para que un bioma
+// pueda pedir salas enormes o diminutas sin romper el trazado.
 function medida(tramo, tope, suelo) {
     const max = Math.max(suelo, Math.min(tramo[1], tope));
     const min = Math.max(suelo, Math.min(tramo[0], max));
@@ -177,8 +161,8 @@ function generarSalas() {
     for (let y = 0; y < ALTO; y++) m.push(new Array(ANCHO).fill(1));
     J.mapa = m;
 
-    // El mapa se reparte en franjas horizontales, una por sala. La franja 0 es
-    // la de abajo, donde se aparece; la última, arriba, es la de la puerta.
+    // El mapa se reparte en franjas horizontales, una por sala: la 0 es la de
+    // abajo, donde se aparece; la última, arriba, la de la puerta.
     const cuantas = azarEnt(p.salas[0], p.salas[1]);
     const franja = Math.floor((ALTO - 4) / cuantas);
 
@@ -202,8 +186,7 @@ function generarSalas() {
     for (let i = 1; i < salas.length; i++)
         unirSalas(centro(salas[i - 1]), centro(salas[i]));
 
-    // ...y los que pida el bioma por un costado, para que haya más de un
-    // camino y la planta no se convierta en un embudo
+    // ...y los que pida el bioma por un costado, para que haya más de un camino
     for (let k = 0; k < p.atajos && salas.length > 1; k++) {
         const par = azarEnt(0, salas.length - 2);
         unirSalas(puntoLateral(salas[par], -1), puntoLateral(salas[par + 1], 1));
@@ -220,8 +203,8 @@ function generarSalas() {
     return { region, salas };
 }
 
-// Punto a un costado de la sala: sirve para abrir el segundo corredor lejos
-// del primero, que sale del centro
+// Punto a un costado de la sala, para abrir el segundo corredor lejos del
+// primero, que sale del centro
 const puntoLateral = (s, lado) => ({
     x: Math.floor(s.x + (lado < 0 ? s.w * 0.2 : s.w * 0.8)),
     y: Math.floor(s.y + s.h / 2)
@@ -326,8 +309,7 @@ function distanciasDesde(ox, oy) {
 // ============================================================
 function nuevoNivel() {
     const { region, salas } = generarSalas();
-    // la planta es otra: el campo por el que se guiaban los bichos ya no vale,
-    // y se traza de nuevo en cuanto haga falta
+    // la planta es otra: el campo que guiaba a los bichos ya no vale
     olvidarCampo();
 
     // Se entra siempre por la sala de abajo, pegado a su pared del fondo...
@@ -361,15 +343,14 @@ function nuevoNivel() {
         ? candidatas.splice(azarEnt(0, candidatas.length - 1), 1)[0]
         : null;
 
-    // los elixires se reparten antes: con la senda llena de enemigos, si no se
-    // reservan su sitio se quedarían sin hueco donde caer
+    // los elixires se reparten antes: con la senda llena de enemigos se
+    // quedarían sin hueco donde caer
     for (let i = 0; i < 3; i++) {
         const p = coger();
         if (p) J.objetos.push({ x: p[0] + 0.5, y: p[1] + 0.5, tipo: 'elixir', r: 0.35, giro: azar(0, 6.28) });
     }
 
-    // el hierro del suelo, si el bioma lo tiene: se reparte antes que los
-    // enemigos por lo mismo que los elixires, para que le quede sitio
+    // el hierro del suelo, si el bioma lo tiene, por lo mismo que los elixires
     sembrarTrampas(coger);
 
     const cuantos = Math.min(ENEMIGOS_TOPE, ENEMIGOS_BASE + (J.nivel - 1) * ENEMIGOS_POR_NIVEL);
@@ -381,16 +362,14 @@ function nuevoNivel() {
     mensaje(`--- ${TR('hud.senda')} ${J.nivel} · ${nombreDelBioma()} ---`);
 }
 
-// El rótulo de la comarca en que se anda. Sale de biomas.js y de ningún otro
-// sitio: el HUD y los mensajes leen los dos de aquí.
+// El rótulo de la comarca. Sale de biomas.js y de ningún otro sitio: el HUD y
+// los mensajes leen los dos de aquí.
 function nombreDelBioma() {
     return (typeof Biomas !== 'undefined') ? Biomas.nombre(J.nivel) : 'santuario';
 }
 
-// Y las otras dos señas de la comarca, que el marcador enseña juntas: el
-// emblema con que firma y el tinte con que se pinta. Igual que el nombre,
-// salen de su ficha; sin biomas.js cargado no hay dibujo y el color es el
-// oro de la casa, que es lo que ya usa el resto del marcador.
+// Las otras dos señas que el marcador enseña juntas: el emblema con que firma
+// la comarca y su tinte. Sin biomas.js, sin dibujo y con el oro de la casa.
 function emblemaDelBioma() {
     return (typeof Biomas !== 'undefined') ? Biomas.emblema(J.nivel) : '';
 }
@@ -400,9 +379,8 @@ function tinteDelBioma() {
 }
 
 // ============================================================
-//  Trampas: hierro que sube y baja del suelo por su cuenta. Solo las
-//  planta el bioma que las tiene declaradas en su ficha; los demás
-//  tramos se recorren igual que siempre.
+//  Trampas: hierro que sube y baja del suelo por su cuenta. Solo las planta el
+//  bioma que las declara en su ficha.
 // ============================================================
 function sembrarTrampas(coger) {
     const bioma = (typeof Biomas !== 'undefined') ? Biomas.deNivel(J.nivel) : null;
@@ -423,9 +401,8 @@ function sembrarTrampas(coger) {
     }
 }
 
-// Cuánto de su vuelta lleva andado la trampa, de 0 a 1. El tramo que hace
-// daño está declarado aquí, y es el mismo que dibuja la vista: así lo que se
-// ve en el suelo es exactamente lo que muerde.
+// Cuánto de su vuelta lleva andado la trampa, de 0 a 1. El tramo que hace daño
+// se declara aquí y es el mismo que dibuja la vista: lo que se ve es lo que muerde.
 const TRAMPA_AVISO = 0.62;        // empieza a asomar y a chirriar
 const TRAMPA_FUERA = 0.74;        // el hierro está arriba: a partir de aquí hiere
 const TRAMPA_VUELVE = 0.94;       // y se recoge
@@ -446,8 +423,8 @@ function actualizarTrampas(dt) {
     }
 }
 
-// El hierro no entiende de guardias ni de escudos: viene de abajo. Lo único
-// que salva es no estar encima, o el amparo del impulso.
+// El hierro viene de abajo: no entiende de guardias. Solo salva no estar
+// encima, o el amparo del impulso.
 function danarPorTrampa(t) {
     const j = J.jugador;
     if (j.inmortal || j.invulnerable > 0) return;
@@ -460,8 +437,8 @@ function danarPorTrampa(t) {
     comprobarCaida();
 }
 
-// La casilla transitable más próxima al punto pedido: así ni la entrada ni la
-// puerta acaban dentro de la roca por culpa de un chaflán
+// La casilla transitable más próxima al punto pedido, para que ni la entrada ni
+// la puerta acaben dentro de la roca por culpa de un chaflán
 function casillaLibreCercaDe(region, px, py, r) {
     let mejor = null, mejorD = Infinity;
     for (const [x, y] of region) {
@@ -472,22 +449,41 @@ function casillaLibreCercaDe(region, px, py, r) {
     return mejor || [px, py];
 }
 
+// Quién sale al paso según lo hondo que se esté. Los pesos no suman uno a
+// posta: cuenta lo que pesa cada uno frente a los otros, así se mete una bestia
+// nueva sin recalcular las de al lado, y quien pese cero todavía no sale.
+//
+// No se leen las zonas de las fichas a sabiendas: atarlo a ellas dejaría sin un
+// solo enemigo las ocho comarcas que aún no tienen bestia propia, y sus sendas
+// se abrirían solas al entrar.
+const REPARTO = [
+    ['rata', () => 1],
+    ['esqueleto', nivel => Math.max(0, (nivel - 1) * 0.22)],
+    ['ciempies', nivel => Math.max(0, (nivel - 10) * 0.28)]
+];
+
+function bestiaDeLaSenda() {
+    const pesos = REPARTO.map(([id, cuanto]) => [id, cuanto(J.nivel)]);
+    const total = pesos.reduce((s, [, p]) => s + p, 0);
+    let tirada = Math.random() * total;
+    for (const [id, p] of pesos) if ((tirada -= p) <= 0) return id;
+    return pesos[0][0];
+}
+
 function crearEnemigo(x, y) {
-    const duro = Math.random() < Math.min(0.15 + J.nivel * 0.08, 0.6);
     // alerta: lo que le queda de ir a por el héroe; a cero, se va de ronda.
-    // ronda y alto son el tramo que anda mientras tanto y lo que se para al
-    // acabarlo -desacompasado de salida, para que no arranquen todos a la vez-.
-    // golpe y herido son lo mismo por los dos lados: lo que le queda de estar
-    // dando o recibiendo, que es lo que la vista mira para saber qué lámina
-    // suya toca pintar. andado es el camino que lleva hecho, de donde sale por
-    // qué cuadro del paso va; antes, dónde estaba la vuelta pasada.
+    // ronda/alto: el tramo que anda mientras tanto y lo que se para al acabarlo,
+    // desacompasados de salida para que no arranquen todos a la vez.
+    // golpe/herido: lo que le queda de estar dando o recibiendo, que es lo que
+    // la vista mira para saber qué pose pintarle.
+    // andado: el camino hecho, de donde sale la fase del paso; antes, dónde
+    // estaba la vuelta pasada.
     const base = { x, y, ex: 0, ey: 0, cd: azar(0, 1), herido: 0, golpe: 0,
                    mira: azar(0, 6.2832), andado: 0, andando: false, antes: { x, y },
                    alerta: 0, ronda: null, alto: azar(0, 1.5) };
-    // las cifras no están aquí: están en la ficha de bestias.js, que es la
-    // misma que lee el bestiario del zaguán. Así lo que se promete allí es
-    // exactamente lo que sale al paso
-    const f = BESTIAS.ficha(duro ? 'ciempies' : 'rata');
+    // las cifras están en la ficha de bestias.js, la misma que lee el bestiario:
+    // lo que se promete allí es exactamente lo que sale al paso
+    const f = BESTIAS.ficha(bestiaDeLaSenda());
     return { ...base, tipo: f.id, art: f.art, nombre: f.nombre,
              r: f.r, vel: f.vel, hp: f.hp, hpMax: f.hp,
              dano: f.dano, alcance: f.alcance, cadencia: f.cadencia, vista: f.vista,
@@ -502,11 +498,11 @@ function actualizar(dt, entrada) {
     J.tiempo += dt;
     actualizarEfectos(dt);
     // el hierro sigue subiendo y bajando aunque el héroe haya caído: lo que se
-    // para es que muerda, no que se mueva
+    // para es que muerda
     actualizarTrampas(dt);
     if (J.muerto) {
-        // el que ha caído ni bebe ni resuella: los dos bucles se cortan aquí,
-        // que si no seguirían sonando por encima de la pantalla de derrota
+        // el que ha caído ni bebe ni resuella: si no, los dos bucles seguirían
+        // sonando por encima de la pantalla de derrota
         if (typeof sonarCurando === 'function') sonarCurando(false);
         if (typeof sonarAgotado === 'function') sonarAgotado(false);
         return;
@@ -539,31 +535,22 @@ function actualizar(dt, entrada) {
     }
     aplicarEmpuje(j, dt);
 
-    // El aliento vuelve solo, sin descanso previo que haya que buscarse, pero
-    // no siempre al mismo paso: el doble plantado que en marcha, y a cinco
-    // veces con los pies en el elixir derramado -cure o no cure, que con la
-    // vida llena el charco sigue siendo un respiro-. Pararse a tomar aire es
-    // una decisión con precio -quieto se está a merced de lo que venga-, y el
-    // charco es el único descanso de verdad, que además se agota solo.
-    //
-    // Manda el mayor de los dos y no el producto: quieto sobre un charco
-    // repone a cinco, no a diez. Así cada número dice lo que promete y el
-    // respiro no se dispara por juntarse con lo otro.
-    //
-    // Va aquí abajo, después de mover, porque es donde ya se sabe si este
-    // fotograma se ha andado o no.
+    // El aliento vuelve solo, pero no siempre al mismo paso: el doble plantado
+    // que en marcha, y a cinco veces con los pies en el elixir derramado (cure o
+    // no cure). Manda el mayor de los dos y no el producto, así quieto sobre un
+    // charco repone a cinco y no a diez.
+    // Va después de mover, que es donde ya se sabe si este fotograma se ha andado.
     const soplo = ESTAMINA_RITMO * Math.max(
         j.andando ? 1 : ESTAMINA_QUIETO,
         j.enCharco ? ESTAMINA_CURANDO : 1);
     j.estamina = Math.min(j.estaminaMax, j.estamina + soplo * dt);
 
-    // por debajo de lo que cuesta una esquiva el héroe resuella, y calla en
-    // cuanto vuelve a tener para una. Se le dice en cada fotograma: el propio
-    // sonido sabe si ya estaba sonando y no se reinicia por que se lo repitan
+    // por debajo de lo que cuesta una esquiva el héroe resuella. Se le dice en
+    // cada fotograma: el sonido sabe si ya sonaba y no se reinicia
     if (typeof sonarAgotado === 'function') sonarAgotado(j.estamina < COSTE_DASH);
 
-    // sin aliento no hay esquiva ni tajo: la espera del dash sigue contando
-    // aparte, y manda la que llegue más tarde de las dos
+    // sin aliento no hay esquiva ni tajo; la espera del dash cuenta aparte y
+    // manda la que llegue más tarde de las dos
     if (entrada.dash && j.cdDash <= 0 && j.estamina >= COSTE_DASH) impulsar();
     if (entrada.atacar && !j.cubriendo && j.cdAtaque <= 0 && j.estamina >= COSTE_GOLPE) golpear();
 
@@ -574,25 +561,19 @@ function actualizar(dt, entrada) {
 }
 
 // ============================================================
-//  El seso de los adversarios
+//  El seso de los adversarios: dos estados y nada más.
 //
-//  Tienen dos estados y nada más: de ronda y a por el héroe.
+//  De ronda andan sus tramos y se paran a ratos, en vez de esperar plantados:
+//  una sala con doce bichos quietos es un museo, y con doce que se mueven no se
+//  sabe de antemano quién va a estar dónde.
 //
-//  De ronda andan sus tramos y se paran a ratos, en vez de esperar
-//  plantados a que alguien pase por delante. Una senda con doce bichos
-//  quietos es un museo; con doce bichos que se mueven, se cruzan y se
-//  paran, la misma sala ya no se recorre igual: no se sabe de antemano
-//  quién va a estar dónde.
+//  Y a por el héroe no van en línea recta contra las paredes: hay un campo de
+//  distancias -un solo BFS desde él, compartido por todos- que cada uno baja
+//  cuesta abajo, así que doblan las esquinas. Solo van derechos cuando de
+//  verdad no hay nada en medio.
 //
-//  Y cuando van a por ti no van en línea recta contra las paredes: hay
-//  un campo de distancias -un solo BFS desde el héroe, compartido por
-//  todos- y cada uno lo baja como si fuera cuesta abajo, así que doblan
-//  las esquinas y salen de las salas por donde se sale. Solo van derechos
-//  cuando de verdad no hay nada en medio, que es cuando ir derecho es lo
-//  natural. Antes se quedaban raspando el muro que los separaba de ti.
+//  Hasta dónde se da uno por enterado va en su ficha (bestias.js).
 // ============================================================
-// hasta dónde se da uno por enterado va en su ficha (bestias.js), que es de
-// donde lo lee también el bestiario: no todos tienen por qué ver lo mismo
 const MEMORIA_ENEMIGO = 3.5;      // segundos que sigue buscando después de perderte
 const GOLPE_ENEMIGO = 0.25;       // lo que se le ve la pose de descargar el golpe
 const PASO_RONDA = 0.5;           // lo que anda de ronda, sobre su paso de perseguir
@@ -601,9 +582,8 @@ const RONDA_MINIMO = 2.5;         // y lo más cerca, para que el tramo valga la
 const RONDA_ALTO = [0.4, 1.8];    // lo que se para al terminar uno
 const RONDA_ATASCO = 1.2;         // sin acercarse a su destino, se busca otro
 
-// El campo de distancias hasta el héroe. Es uno solo para todos los bichos y
-// se rehace únicamente cuando el héroe cambia de casilla: perseguir a doce a
-// la vez cuesta entonces lo mismo que perseguir a uno.
+// El campo de distancias hasta el héroe: uno solo para todos, rehecho solo
+// cuando el héroe cambia de casilla. Perseguir a doce cuesta como perseguir a uno.
 let campoHeroe = null;
 let campoEn = -1;                 // la casilla desde la que está trazado
 
@@ -619,9 +599,8 @@ function campoHastaHeroe() {
     return campoHeroe;
 }
 
-// ¿Se ven dos puntos sin roca de por medio? Se va probando la recta que los
-// une a tres muestras por casilla: no es un trazado exacto, pero para decidir
-// si se va derecho o se dobla la esquina sobra, y cuesta casi nada.
+// ¿Se ven dos puntos sin roca de por medio? Se prueba la recta a tres muestras
+// por casilla: no es exacto, pero para decidir si se dobla la esquina sobra.
 function hayVision(x0, y0, x1, y1) {
     const dx = x1 - x0, dy = y1 - y0;
     const pasos = Math.ceil(Math.hypot(dx, dy) * 3);
@@ -632,8 +611,7 @@ function hayVision(x0, y0, x1, y1) {
     return true;
 }
 
-// Lo que hay que apartarse de los demás para no acabar todos en el mismo
-// punto. Se usa igual persiguiendo que de ronda.
+// Lo que hay que apartarse de los demás para no acabar todos en el mismo punto.
 function separacionEnemigos(e) {
     let sx = 0, sy = 0;
     for (const o of J.enemigos) {
@@ -645,8 +623,8 @@ function separacionEnemigos(e) {
     return [sx, sy];
 }
 
-// Hacia dónde tirar para llegar al héroe. Con el camino despejado, derecho a
-// él; si no, a la casilla vecina que menos pasos deje, que es lo que hace que
+// Hacia dónde tirar para llegar al héroe: derecho si el camino está despejado;
+// si no, a la casilla vecina que menos pasos deje, que es lo que hace que
 // rodeen los muros en vez de empujarlos.
 function rumboAlHeroe(e) {
     const j = J.jugador;
@@ -671,10 +649,8 @@ function rumboAlHeroe(e) {
     return [bx + 0.5 - e.x, by + 0.5 - e.y];
 }
 
-// El siguiente tramo de ronda: cerca, libre y a la vista desde donde se está,
-// para que se pueda andar de una tirada sin acabar de morros contra una
-// esquina. Si tras unos cuantos tanteos no sale ninguno, se queda parado y
-// vuelve a probar al rato: mejor eso que empeñarse en un sitio imposible.
+// El siguiente tramo de ronda: cerca, libre y a la vista, para andarlo de una
+// tirada. Si tras unos tanteos no sale ninguno se queda parado y prueba al rato.
 function tramoDeRonda(e) {
     for (let i = 0; i < 12; i++) {
         const a = azar(0, 6.2832), r = azar(RONDA_MINIMO, RONDA_RADIO);
@@ -702,8 +678,8 @@ function rondar(e, dt) {
         e.alto = azar(RONDA_ALTO[0], RONDA_ALTO[1]);
         return;
     }
-    // se cuenta el tiempo que lleva sin recortar camino, no el que lleva
-    // andando: quien avanza aunque sea despacio no está atascado
+    // se cuenta el tiempo sin recortar camino, no el que lleva andando: quien
+    // avanza aunque sea despacio no está atascado
     if (d < e.ronda.resto - 0.05) { e.ronda.resto = d; e.ronda.sinAvanzar = 0; }
     else e.ronda.sinAvanzar += dt;
 
@@ -715,10 +691,9 @@ function rondar(e, dt) {
     e.mira = Math.atan2(my, mx);
 }
 
-// Lo que de verdad ha andado, que no es lo que quería andar: contra un muro se
-// empuja y no se avanza, y midiendo el avance real el paso no patina ni se
-// mueven las patas de quien está clavado. Se mira al empezar la vuelta, así que
-// cuenta lo de la vuelta anterior: un fotograma de retraso que no se ve.
+// Lo que de verdad ha andado, que no es lo que quería: contra un muro se empuja
+// y no se avanza, y midiendo el avance real el paso no patina en el sitio. Se
+// mira al empezar la vuelta, así que cuenta la anterior: un fotograma de retraso.
 function apuntarPaso(e, dt) {
     const andado = Math.hypot(e.x - e.antes.x, e.y - e.antes.y);
     e.andado += andado;
@@ -738,10 +713,9 @@ function actualizarEnemigos(dt) {
         e.alerta -= dt;
         aplicarEmpuje(e, dt);
 
-        // Se cuenta por pasos de camino y no a vuelo de pájaro: al otro lado
-        // de un muro se puede estar a tres casillas y a cuarenta de camino, y
-        // entonces no hay nada de que enterarse. Un tajo despierta igual,
-        // venga de donde venga: a quien le pegan, mira.
+        // Se cuenta por pasos de camino y no a vuelo de pájaro: al otro lado de
+        // un muro se puede estar a tres casillas y a cuarenta de camino. Un tajo
+        // despierta igual, venga de donde venga.
         const paso = campo ? campo[Math.floor(e.y) * ANCHO + Math.floor(e.x)] : -1;
         if ((paso >= 0 && paso <= e.vista) || e.herido > 0) e.alerta = MEMORIA_ENEMIGO;
 
@@ -756,8 +730,7 @@ function actualizarEnemigos(dt) {
         e.mira = Math.atan2(vy, vx);
 
         // muerde con la cabeza, no con el ombligo: como se vuelve hacia el
-        // héroe, el punto de su cuerpo que le queda más cerca es justo la
-        // punta que le apunta
+        // héroe, el punto más cercano de su cuerpo es la punta que le apunta
         const morro = cercaDelCuerpo(e, j.x, j.y);
         const dMorro = Math.hypot(j.x - morro.x, j.y - morro.y);
 
@@ -770,15 +743,15 @@ function actualizarEnemigos(dt) {
             moverEntidad(e, mx / m * e.vel * dt, my / m * e.vel * dt);
         } else if (e.cd <= 0) {
             e.cd = e.cadencia;
-            // la pose se enciende aunque el golpe no entre: lo ha tirado
-            // igual, y verlo venir es lo que da margen a cubrirse
+            // la pose se enciende aunque el golpe no entre: verlo venir es lo
+            // que da margen a cubrirse
             e.golpe = GOLPE_ENEMIGO;
             danarJugador(e);
         }
     }
 }
-// El sello cede cuando no queda nada vivo en la senda. Las hojas tardan un
-// momento en separarse: hasta que no acaban, la puerta no deja pasar.
+// El sello cede cuando no queda nada vivo. Las hojas tardan un momento en
+// separarse: hasta que no acaban, la puerta no deja pasar.
 function abrirPuertaSiToca(dt) {
     if (J.enemigos.length) return;
     if (J.puerta.apertura === 0) {
@@ -806,36 +779,32 @@ function golpear() {
     j.cdAtaque = j.cadencia;
     j.golpe = 0.18;
 
-    // el acero suena al salir, dé o no dé: es el gesto lo que se oye, y un
-    // tajo al aire que callara se sentiría como que no ha llegado a salir
+    // el acero suena al salir, dé o no dé: es el gesto lo que se oye
     if (typeof sonarAtaque === 'function') sonarAtaque(j.armaId);
 
-    // el mismo arco rompe las botellas que pille de paso: no hay que apuntarlas
-    // aparte ni pulsar otra tecla, basta con dar un tajo donde están
+    // el mismo arco rompe las botellas que pille de paso: basta con dar el tajo
     for (const o of J.objetos.slice()) {
         const dx = o.x - j.x, dy = o.y - j.y;
         const d = Math.hypot(dx, dy);
         if (d > j.alcance + o.r) continue;
         // a quemarropa el objeto ocupa un cono más ancho que su propio radio
-        // visto desde el héroe: por debajo de ese cono, tocarlo ya basta
         if (Math.abs(difAngulo(Math.atan2(dy, dx), j.mira)) > j.arco + Math.atan2(o.r + j.r, d)) continue;
         romperBotella(o);
     }
 
     for (const e of J.enemigos.slice()) {
-        // contra el trozo de cuerpo que le quede más cerca, no contra su
-        // centro: a uno largo se le acierta por donde se le ve, que es lo que
-        // uno espera al darle a la mitad del lomo
+        // contra el trozo de cuerpo más cercano y no contra su centro: a uno
+        // largo se le acierta por donde se le ve
         const cerca = cercaDelCuerpo(e, j.x, j.y);
         const dx = cerca.x - j.x, dy = cerca.y - j.y;
         const d = Math.hypot(dx, dy);
         if (d > j.alcance + e.r) continue;
-        // mismo margen que con las botellas: cuanto más pegado el enemigo,
-        // más ancho es el cono que en verdad barre el arma, sea cual sea
+        // mismo margen que con las botellas: cuanto más pegado, más ancho es el
+        // cono que en verdad barre el arma
         if (Math.abs(difAngulo(Math.atan2(dy, dx), j.mira)) > j.arco + Math.atan2(e.r + j.r, d)) continue;
 
-        // el arma pega lo que dice su ficha, ni más ni menos: lo que se lee en
-        // la armería es lo que se ve salir del enemigo
+        // el arma pega lo que dice su ficha: lo que se lee en la armería es lo
+        // que se ve salir del enemigo
         const dano = j.dano;
         e.hp -= dano;
         e.herido = 0.25;
@@ -849,8 +818,8 @@ function golpear() {
             chispas(e.x, e.y, '#803030', 14);
             // cada caído suelta su orbe, que sale despedido y luego vuela al héroe
             soltarOrbes(e.x, e.y, 1);
-            // y queda apuntado en el bestiario de la ranura, que no espera a
-            // cruzar la puerta: lo aprendido no es botín y no se pierde al caer
+            // el bestiario no espera a cruzar la puerta: lo aprendido no es
+            // botín y no se pierde al caer
             if (typeof Bestiario !== 'undefined') Bestiario.anotarCaido(e.tipo);
             mensaje(TR('msg.muere', sujeto(e)));
         }
@@ -874,8 +843,8 @@ function danarJugador(e) {
     // el modo inmortal de la consola: los golpes ni se sienten
     if (j.inmortal || j.invulnerable > 0) return;
 
-    // el golpe quita lo que dice la ficha del bicho, sin sorteo: así se sabe
-    // cuántos aguanta uno y cuántos más si se cubre
+    // el golpe quita lo que dice la ficha, sin sorteo: así se sabe cuántos
+    // aguanta uno y cuántos más si se cubre
     let dano = e.dano;
     // el escudo solo para lo que viene de frente
     const deFrente = Math.abs(difAngulo(Math.atan2(e.y - j.y, e.x - j.x), j.mira)) < ARCO_GUARDIA;
@@ -898,10 +867,9 @@ function danarJugador(e) {
     comprobarCaida(e);
 }
 
-// Un solo sitio decide que el héroe ha caído, venga el golpe de quien venga.
-// Quien lo dé se le pasa cuando lo hay -del hierro del suelo no hay a quién
-// apuntarle la muerte-, y es lo único para lo que se mira: el bestiario lleva
-// la cuenta de cuántas veces te ha tumbado cada bicho.
+// Un solo sitio decide que el héroe ha caído. Quien lo dé se le pasa cuando lo
+// hay -del hierro del suelo no hay a quién apuntarle la muerte-, y solo se mira
+// para la cuenta del bestiario.
 function comprobarCaida(culpable) {
     const j = J.jugador;
     if (j.hp > 0) return;
@@ -930,8 +898,8 @@ function cruzar() {
     if (J.muerto || !cercaDePuerta()) return false;
     if (!puertaAbierta()) {
         const n = J.enemigos.length;
-        // el singular va aparte porque no todas las lenguas lo resuelven
-        // metiendo el número y una ese: hay que dejar escribir la frase entera
+        // el singular va aparte: no todas las lenguas lo resuelven metiendo el
+        // número y una ese
         mensaje(!n ? TR('msg.puertaAbriendo')
                : n === 1 ? TR('msg.puertaSellada1')
                : TR('msg.puertaSellada', n));
@@ -941,20 +909,17 @@ function cruzar() {
     // suena el umbral: solo aquí, cuando ya no hay vuelta atrás
     if (typeof sonarCruzarPuerta === 'function') sonarCruzarPuerta();
 
-    // Los orbes que todavía venían por el aire cruzan contigo: haberlos
-    // ganado ya los tenías, y perderlos por no esperarlos quieto delante de
-    // la puerta sería castigar la prisa. No se mudan tal cual, eso sí: sus
-    // coordenadas son las de la senda que se deja atrás, y en la de al lado
-    // caerían en cualquier parte, hasta dentro de la roca. Se apunta cuántos
-    // eran y se sueltan de nuevo junto al héroe, ya en su entrada.
+    // Los orbes que venían por el aire cruzan contigo: ganados ya los tenías, y
+    // perderlos por no esperarlos delante de la puerta sería castigar la prisa.
+    // No se mudan tal cual -sus coordenadas son las de la senda que se deja-:
+    // se apunta cuántos eran y se sueltan de nuevo junto al héroe.
     const enVuelo = J.orbesSueltos.length;
     J.orbesSueltos = [];
 
-    // la última puerta no lleva a otra senda: detrás está el final del camino.
-    // Quien la cruza se lleva lo juntado y sale del santuario por arriba.
+    // la última puerta no lleva a otra senda: detrás está el final del camino
     if (typeof Biomas !== 'undefined' && Biomas.ultima(J.nivel)) {
-        // aquí no hay senda al otro lado donde volver a soltarlos, así que
-        // los que volaban se cobran en el sitio antes de cerrar la cuenta
+        // no hay senda al otro lado donde soltarlos: los que volaban se cobran
+        // en el sitio antes de cerrar la cuenta
         if (enVuelo) premiarOrbes(enVuelo);
         asentarBotin();
         apuntarFinal();
@@ -965,8 +930,8 @@ function cruzar() {
 
     J.nivel++;
     apuntarHondura();
-    // el umbral paga a cara o cruz, y solo en jade: los orbes azules los dejan
-    // los enemigos al caer
+    // el umbral paga a cara o cruz, y solo en jade: los orbes los dejan los
+    // enemigos al caer
     const jade = Math.random() < 0.5;
     if (jade) {
         premiar(1);
@@ -977,13 +942,12 @@ function cruzar() {
 
     // Cruzar el umbral se cobra el cansancio: al otro lado se entra con el
     // fuelle entero. La vida no, que esa es la cuenta que hay que cuidar de
-    // senda en senda; el aliento solo mide el ritmo de una pelea, y arrastrarlo
-    // agotado a una senda nueva castigaría por haber ganado la anterior.
+    // senda en senda.
     J.jugador.estamina = J.jugador.estaminaMax;
     if (typeof sonarAgotado === 'function') sonarAgotado(false);
 
-    // esto va después de la mudanza: nuevoNivel lo limpia todo y planta al
-    // héroe en la senda siguiente, que es donde debe verse
+    // después de la mudanza: nuevoNivel limpia todo y planta al héroe en la
+    // senda siguiente, que es donde debe verse
     if (jade) esquirlaGanada(J.jugador.x, J.jugador.y);
     // y los rezagados entran detrás de él, como si hubieran pasado la puerta
     if (enVuelo) soltarOrbes(J.jugador.x, J.jugador.y, enVuelo);
@@ -993,15 +957,11 @@ function cruzar() {
 // ============================================================
 //  La botella y su charco
 //
-//  La botella salta de un solo tajo -aguantar golpes la volvería un
-//  enemigo más, y no lo es- y lo que llevaba dentro cae al suelo.
-//
-//  El charco tiene dos cuerpos distintos a propósito: para la partida
-//  es un círculo limpio, porque saber si pisas o no pisas no puede
-//  depender de un contorno caprichoso; para la vista es una mancha
-//  irregular trazada por código, que se sortea aquí una vez -al
-//  derramarse- y viaja con el charco, de modo que ni dos charcos son
-//  iguales ni el mismo tiembla de un fotograma a otro.
+//  La botella salta de un solo tajo y lo que llevaba cae al suelo. El charco
+//  tiene dos cuerpos a propósito: para la partida es un círculo limpio -saber
+//  si pisas no puede depender de un contorno caprichoso- y para la vista una
+//  mancha irregular, sorteada una vez al derramarse y guardada con el charco,
+//  de modo que ni dos son iguales ni el mismo tiembla de un fotograma a otro.
 // ============================================================
 function romperBotella(o) {
     if (o.roto) return;          // dos filos en el mismo tajo no la rompen dos veces
@@ -1024,15 +984,14 @@ function romperBotella(o) {
     });
 }
 
-// El contorno de la mancha: un puñado de radios sorteados alrededor del
-// centro. Se guardan como números y no como trazado para poder estirarlos
-// al secarse sin volver a sortear nada.
+// El contorno de la mancha: radios sorteados alrededor del centro. Se guardan
+// como números y no como trazado, para poder estirarlos al secarse.
 function formaDeCharco() {
     const puntas = azarEnt(7, 10);
     const radios = [];
     for (let i = 0; i < puntas; i++) radios.push(azar(0.62, 1.12));
-    // se liman los saltos entre vecinos: sin esto salen estrellas de mar,
-    // y lo que se derrama no pincha, se extiende
+    // se liman los saltos entre vecinos: sin esto salen estrellas de mar, y lo
+    // que se derrama no pincha, se extiende
     for (let v = 0; v < 2; v++)
         for (let i = 0; i < puntas; i++) {
             const a = radios[(i - 1 + puntas) % puntas], b = radios[(i + 1) % puntas];
@@ -1043,9 +1002,8 @@ function formaDeCharco() {
 
 function actualizarCharcos(dt) {
     const j = J.jugador;
-    // dos cosas distintas, y hacía falta separarlas: pisar el charco no es lo
-    // mismo que beber de él. Con la vida llena no hay nada que curar, pero el
-    // héroe sigue teniendo los pies en el elixir y el fuelle lo agradece igual
+    // pisar el charco no es lo mismo que beber de él: con la vida llena no hay
+    // nada que curar, pero el fuelle agradece igual tener los pies en el elixir
     let bebiendo = false;      // está curando: manda en el sonido
     let enCharco = false;      // está encima: manda en el aliento
     for (const c of J.charcos.slice()) {
@@ -1067,9 +1025,8 @@ function actualizarCharcos(dt) {
             bebiendo = true;
         }
 
-        // el registro se entera al final y de una vez: contarlo mientras se
-        // bebe llenaría diez líneas con el mismo aviso, y la barra de vida ya
-        // está diciendo lo que pasa mucho mejor que cualquier renglón
+        // el registro se entera al final y de una vez: contarlo mientras se bebe
+        // llenaría diez líneas con el mismo aviso
         if (c.t >= CHARCO_VIDA || c.queda <= 0.001) {
             c.secando = 0.0001;
             const total = Math.round(c.bebido || 0);
@@ -1079,17 +1036,13 @@ function actualizarCharcos(dt) {
         }
     }
 
-    // queda apuntado en el héroe porque el aliento lo mira: pisar el elixir
-    // repone el fuelle bastante más deprisa, tenga o no vida que reponer.
-    // Esto se resuelve después de la cuenta del aliento, así que allí se lee
-    // el de este instante con un fotograma de retraso; para un goteo continuo
-    // eso no se nota, y adelantar los charcos cambiaría el orden en que curan
-    // y muerden los enemigos, que sí importa
+    // queda apuntado en el héroe porque el aliento lo mira. Se resuelve después
+    // de la cuenta del aliento, así que allí se lee con un fotograma de retraso:
+    // adelantar los charcos cambiaría el orden en que curan y muerden, que sí importa
     j.enCharco = enCharco;
 
-    // el sonido de beber se enciende y se apaga aquí, y no al pisar el charco:
-    // así calla solo cuando deja de curar, sea porque te apartas, porque el
-    // charco se agota o porque ya no te falta vida que reponer
+    // el sonido de beber se apaga aquí y no al salir del charco: así calla solo
+    // cuando deja de curar, sea por apartarse, por agotarlo o por estar lleno
     if (typeof sonarCurando === 'function') sonarCurando(bebiendo);
 }
 
@@ -1102,8 +1055,7 @@ function chispas(x, y, color, cuantas) {
     }
 }
 
-// la esquirla de jade ganada en el umbral: sube girando delante del héroe
-// mientras se apaga. Los orbes azules tienen lo suyo, más abajo.
+// la esquirla de jade del umbral: sube girando delante del héroe mientras se apaga
 const JADE_CARA = '#2f7a76', JADE_LUZ = '#7fd6c4';
 
 function esquirlaGanada(x, y) {
@@ -1114,10 +1066,9 @@ function esquirlaGanada(x, y) {
 }
 
 // ============================================================
-//  Orbes azules: lo que suelta cada caído. Salen despedidos del cuerpo,
-//  se quedan un instante flotando y entonces el héroe tira de ellos
-//  hasta metérselos dentro. No chocan con la roca -son luz, no piedra-,
-//  así que ninguno se queda trabado al otro lado de un muro.
+//  Orbes azules: lo que suelta cada caído. Salen despedidos, flotan un instante
+//  y el héroe tira de ellos. No chocan con la roca -son luz-, así que ninguno
+//  se queda trabado al otro lado de un muro.
 // ============================================================
 const ORBE_CARA = '#24468f', ORBE_LUZ = '#6b9cf2', ORBE_NUCLEO = '#a8c4ff';
 
@@ -1155,10 +1106,9 @@ function actualizarOrbes(dt) {
             continue;
         }
 
-        // y desde que se vuelve va derecho, sin inercia ninguna: se apunta al
-        // héroe cada cuadro y anda lo que puede en esa línea. Antes acumulaba
-        // velocidad y eso le hacía pasarse de largo y ponerse a dar vueltas;
-        // así la distancia solo baja, y siempre acaba entrando.
+        // desde que se vuelve va derecho y sin inercia: se apunta al héroe cada
+        // cuadro y anda lo que puede en esa línea, así la distancia solo baja.
+        // Acumulando velocidad se pasaba de largo y se ponía a dar vueltas.
         const dx = j.x - o.x, dy = j.y - o.y;
         const d = Math.hypot(dx, dy) || 1e-6;
         if (d < ORBE_DENTRO) { recogerOrbe(o); continue; }
@@ -1199,9 +1149,6 @@ function actualizarEfectos(dt) {
 
 // ---------- Arranque ----------
 
-// La armería vive en prev.html; si se entra directo a la partida no está
-// cargada, y entonces el héroe sale con el tantō de serie.
-
 // Lo que se junta se apunta primero en la cuenta de la senda; el HUD lee de
 // aquí, no del almacén
 function premiar(esquirlas) {
@@ -1214,8 +1161,8 @@ function premiarOrbes(cuantos) {
     J.pendiente.orbes += cuantos;
 }
 
-// la senda más honda a la que ha llegado esta ranura queda apuntada en ella:
-// es lo que enseña la sala de los registros, y solo sube, nunca baja
+// la senda más honda de esta ranura queda apuntada en ella: es lo que enseña la
+// sala de los registros, y solo sube
 function apuntarHondura() {
     if (typeof Partidas === 'undefined') return;
     if (J.nivel > (Partidas.actual().hondo || 1)) Partidas.guardarActual({ hondo: J.nivel });
@@ -1227,8 +1174,8 @@ function apuntarFinal() {
     Partidas.guardarActual({ hondo: J.nivel, completado: true });
 }
 
-// cruzar la puerta es lo que hace tuyo el botín de la senda: hasta entonces no
-// se escribe nada en la ranura
+// cruzar la puerta es lo que hace tuyo el botín: hasta entonces no se escribe
+// nada en la ranura
 function asentarBotin() {
     if (typeof Forja !== 'undefined' && J.pendiente.jade) Forja.premiar(J.pendiente.jade);
     if (typeof Personaje !== 'undefined' && J.pendiente.orbes) Personaje.premiar(J.pendiente.orbes);
@@ -1258,8 +1205,8 @@ function equiparArma(j) {
     J.arma = arma.nombre + (arma.nivel ? ` +${arma.nivel}` : '');
 }
 
-// las mejoras del personaje van sobre el arma ya equipada: el daño suma al
-// que traiga el acero, y la vida y la energía estiran sus barras antes de llenarlas
+// las mejoras del personaje van sobre el arma ya equipada: el daño suma al del
+// acero, y la vida y la energía estiran sus barras antes de llenarlas
 function aplicarMejoras(j) {
     if (typeof Personaje === 'undefined') return;
     j.hpMax += Personaje.vida();

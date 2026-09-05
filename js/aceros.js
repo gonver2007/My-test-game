@@ -1,23 +1,15 @@
-/* ============================================================
-aceros.js - los bocetos de las armas, en un solo sitio
-
-Antes vivían dentro de vista.js, y allí no los veía nadie más que
-la partida. La armería quiere enseñar cada arma antes de comprarla,
-y copiar los dibujos habría sido condenarlos a separarse en cuanto
-se retocara uno: aquí están una sola vez y beben los dos del mismo
-trazo -la partida por ACEROS.dibujos, el panel por ACEROS.lamina-.
-
-Van dibujados sobre un cuadro de 56, mirando a la derecha, que es
-como los quiere el juego para rotarlos al empuñarlos.
+/* aceros.js - los bocetos de las armas, en un solo sitio: la partida los usa
+   por ACEROS.dibujos y la armería por ACEROS.lamina, así que no se separan.
+   Van dibujados sobre un cuadro de 56 y mirando a la derecha, que es como los
+   quiere el juego para rotarlos al empuñarlos.
    ============================================================ */
 'use strict';
 
 const ACEROS = (function () {
     const LADO = 56;                 // el cuadro en que están dibujadas
 
-    // solo los colores que tocan el acero, tomados de la paleta del juego.
-    // Este archivo se vale por sí mismo a posta: la armería lo carga sin
-    // cargar vista.js entero, que es la pantalla de la partida
+    // solo los colores que tocan el acero. Este archivo se vale por sí mismo:
+    // la armería lo carga sin cargar vista.js entero
     const P = {
         tinta: '#17132b',
         acero: '#dfe9ff',
@@ -25,16 +17,14 @@ const ACEROS = (function () {
         bufandaSombra: '#24468f',
         bermellon: '#c8402f', bermellonHondo: '#5e1a15',
 
-        // el aparejo pobre del principio: mango de madera desnuda y guarda de
-        // hierro sin dorar. El oro queda para las armas que hay que comprar,
-        // así se ve de un vistazo con qué se empieza y con qué se acaba
+        // el aparejo pobre del principio: madera desnuda y hierro sin dorar.
+        // El oro queda para las armas que hay que comprar
         madera: '#7a5432', maderaLuz: '#9c6f45', maderaSombra: '#48301c',
         hierro: '#3a3340', hierroLuz: '#5d5568', hierroSombra: '#211c2a'
     };
 
-    // los dos pinceles de siempre: el bulto entintado con su luz y su sombra,
-    // y la pincelada blanca que remata. Son gemelos de los de vista.js, que
-    // los necesita para todo lo demás y no puede depender de este archivo
+    // los dos pinceles de siempre: el bulto entintado con luz y sombra, y la
+    // pincelada blanca. Gemelos de los de vista.js, que no puede depender de aquí
     function pieza(g, cx, cy, rx, ry, base, luz, sombra, giro = 0, grosor = 2.4) {
         g.save();
         if (grosor) {
@@ -64,8 +54,8 @@ const ACEROS = (function () {
     }
 
     // ---------- Los cinco aceros ----------
-    // Cada uno recibe el lienzo y el centro del cuadro, y se dibuja alrededor.
-    // Nada debe salirse de 0 a 56: lo que se pinte fuera se pierde sin aviso.
+    // Cada uno recibe el lienzo y el centro del cuadro. Nada debe salirse de
+    // 0 a 56: lo que se pinte fuera se pierde sin aviso.
     const dibujos = {
 
         tanto(g, c) {
@@ -103,10 +93,8 @@ const ACEROS = (function () {
         },
 
         yari(g, c) {
-            // el asta va corrida cinco puntos a la izquierda de donde estaba:
-            // acababa en c+30 y la punta se salía del cuadro -que llega a c+28,
-            // y aún hay que descontarle el redondeo del trazo-. Mide lo mismo,
-            // pero ahora se ve entera
+            // el asta va corrida a la izquierda para que la punta no se salga
+            // del cuadro; mide lo mismo que antes
             g.lineCap = 'round';
             g.strokeStyle = P.tinta; g.lineWidth = 5.5;                           // asta, larga y recta
             g.beginPath(); g.moveTo(c - 18, c + 5); g.lineTo(c + 25, c - 8); g.stroke();
@@ -120,13 +108,11 @@ const ACEROS = (function () {
         },
 
         tetsubo(g, c) {
-            // No es una maza: el tetsubō es una barra larga de hierro que va
-            // engordando del puño al remate, con las caras planas sembradas de
-            // clavos. Ni bola ni pinchos -lo que hace daño es el peso-.
-            // Todo se mide sobre un eje, para que clavos y aros caigan a plomo
+            // No es una maza: barra larga de hierro que engorda del puño al
+            // remate, con las caras sembradas de clavos. Todo se mide sobre un
+            // eje, para que clavos y aros caigan a plomo.
             g.lineCap = 'round';
-            // el cuadro mide 56 y la cabeza es gruesa: el remate se queda en
-            // c+22 para que el redondeo del trazo no se salga por la punta
+            // el remate se queda en c+22 para que el trazo no se salga
             const ax = c - 14, ay = c + 7, bx = c + 22, by = c - 7;
             const L = Math.hypot(bx - ax, by - ay);
             const dx = (bx - ax) / L, dy = (by - ay) / L;    // a lo largo
@@ -151,8 +137,7 @@ const ACEROS = (function () {
                 g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
             }
 
-            // los clavos: dos hileras en la cara y una tercera asomando por el
-            // canto, que es lo que le da al perfil ese mordiente de sierra
+            // los clavos: dos hileras en la cara y una asomando por el canto
             for (let i = 0; i < 8; i++) {
                 const t = 0.46 + i * 0.068;
                 for (const o of [-3.2, 0.4, 3.6]) {
@@ -173,11 +158,9 @@ const ACEROS = (function () {
         },
 
         nodachi(g, c) {
-            // El espadón de campo. Frente a la katana no basta con alargarle
-            // la hoja: lo que lo delata es el puño, largo para las dos manos y
-            // envuelto en cordón cruzado, la guarda mayor y el temple ondulado
-            // que le corre por el filo. Va en rojo donde la katana va en azul,
-            // para distinguirlos de un vistazo en el panel.
+            // El espadón de campo: lo que lo distingue de la katana es el puño
+            // largo con cordón cruzado, la guarda mayor y el temple ondulado.
+            // Va en rojo donde la katana va en azul.
             g.lineCap = 'round';
 
             // ---- el puño, que es media arma ----
@@ -216,8 +199,8 @@ const ACEROS = (function () {
             g.beginPath(); g.moveTo(c + 1, c + 0.4);
             g.quadraticCurveTo(c + 11, c - 3.6, c + 22, c - 10.2); g.stroke();
 
-            // el temple: la onda que deja el barro al templar. Es el detalle
-            // que hace que una hoja grande no se lea como una barra de acero
+            // el temple: la onda que deja el barro al templar, lo que impide
+            // que una hoja grande se lea como una barra de acero
             g.strokeStyle = 'rgba(255, 255, 255, .5)'; g.lineWidth = 0.9;
             g.beginPath();
             for (let i = 0; i <= 22; i++) {
@@ -226,8 +209,7 @@ const ACEROS = (function () {
                 const [x2, y2] = enHoja(Math.min(1, t + 0.02));
                 const ang = Math.atan2(y2 - y, x2 - x);   // de través a la hoja
                 const d = 1.15 + Math.sin(t * 17) * 0.45;  // el vaivén del temple
-                // (-sen, cos) es la perpendicular: así la onda cae siempre
-                // hacia el filo, siga la hoja la curva que siga
+                // (-sen, cos) es la perpendicular: la onda cae siempre al filo
                 const hx = x - Math.sin(ang) * d, hy = y + Math.cos(ang) * d;
                 if (i === 0) g.moveTo(hx, hy); else g.lineTo(hx, hy);
             }
@@ -248,8 +230,8 @@ const ACEROS = (function () {
             g.beginPath(); g.moveTo(c + 3, c - 1); g.quadraticCurveTo(c + 14, c - 9, c + 9, c - 15); g.stroke();
             g.strokeStyle = '#ffffff'; g.lineWidth = 1;                              // filo interior
             g.beginPath(); g.moveTo(c + 4, c - 2.4); g.quadraticCurveTo(c + 12, c - 8.5, c + 9, c - 13.2); g.stroke();
-            // la cadena se recoge: con el paso largo de antes, ella y el
-            // contrapeso caían fuera del cuadro y no se llegaban a ver
+            // la cadena se recoge: con el paso largo, ella y el contrapeso
+            // caían fuera del cuadro
             g.strokeStyle = '#8a8a98'; g.lineWidth = 1.1;                            // cadena, eslabón a eslabón
             for (let i = 0, px = c + 3, py = c + 1; i < 6; i++) {
                 const nx = px + 3.2, ny = py + 2.6;
@@ -262,10 +244,9 @@ const ACEROS = (function () {
     };
 
     // ---------- La lámina del panel ----------
-    // Devuelve un lienzo con el arma encajada en el hueco que se le pida.
-    // El recorte no está escrito a mano: se dibuja en grande, se mira qué
-    // píxeles quedaron pintados y se ajusta a esa caja. Así un boceto que
-    // se retoque -o uno nuevo- se encuadra solo, sin medidas que actualizar.
+    // Devuelve un lienzo con el arma encajada en el hueco pedido. El recorte
+    // no está escrito a mano: se dibuja en grande, se mira qué píxeles quedaron
+    // pintados y se ajusta a esa caja, así un boceto retocado se encuadra solo.
     function limites(g, lado) {
         const datos = g.getImageData(0, 0, lado, lado).data;
         let x1 = lado, y1 = lado, x2 = -1, y2 = -1;
@@ -304,8 +285,7 @@ const ACEROS = (function () {
         lienzo.style.height = alto + 'px';
 
         const g = lienzo.getContext('2d');
-        // el 0.92 es el aire que se le deja alrededor, para que no vaya
-        // rozando los bordes de su hueco
+        // el 0.92 es el aire que se le deja alrededor
         const escala = Math.min(lienzo.width / caja.w, lienzo.height / caja.h) * 0.92;
         const w = caja.w * escala, h = caja.h * escala;
         g.drawImage(bruto, caja.x, caja.y, caja.w, caja.h,

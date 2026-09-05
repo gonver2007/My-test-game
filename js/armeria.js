@@ -1,13 +1,9 @@
-/* ============================================================
-armeria.js - el arsenal: qué arma se lleva y cuánto está afilada
-Lo usan dos pantallas: prev.html para escoger y forjar, y la
-partida para arrancar con el acero elegido. Todo se guarda en el
-navegador, así que la elección sobrevive de una noche a otra.
+/* armeria.js - el arsenal: qué arma se lleva y cuánto está afilada. Lo usan
+   prev.html para escoger y forjar, y la partida para arrancar con lo elegido.
    ============================================================ */
 'use strict';
 
-// El tantō viene con el héroe; la katana hay que comprarla en jade
-// antes de poder empuñarla o forjarla.
+// El tantō viene con el héroe; lo demás se compra en jade.
 const ARMAS = [
     {
         id: 'tanto',
@@ -57,8 +53,8 @@ const POR_NIVEL = { dano: 2, alcance: 0.05, cadencia: 0.93 };
 const CLAVE = 'sendas.forja';
 const INICIAL = { arma: 'tanto', niveles: {}, esquirlas: 0, compradas: ['tanto'] };
 
-// la esquirla dibujada a la manera del juego: dos caras planas de jade y el
-// contorno de tinta, sin degradados. La usan la armería y la lista de ranuras.
+// la esquirla a la manera del juego: dos caras planas de jade y contorno de
+// tinta. La usan la armería y la lista de ranuras.
 const ESQUIRLA_SVG = `
     <svg class="esquirla" viewBox="0 0 16 20" aria-hidden="true">
         <path d="M8 1 L14.5 6.5 L10 19 L3 14.5 Z" fill="#2f7a76"
@@ -68,9 +64,8 @@ const ESQUIRLA_SVG = `
 
 const Forja = {
 
-    // el arsenal es parte de la partida: vive dentro de la ranura elegida.
-    // Sin ranuras cargadas (o sin memoria del navegador) se recurre a una
-    // clave suelta, para que abrir game.html a pelo siga funcionando.
+    // el arsenal vive en la ranura elegida. Sin partidas cargadas se recurre a
+    // una clave suelta, para que abrir game.html a pelo siga funcionando.
     leer() {
         if (typeof Partidas !== 'undefined') {
             return Object.assign({}, INICIAL, Partidas.actual());
@@ -109,7 +104,7 @@ const Forja = {
     },
 
     // se sale siempre con algo en la mano: si la guardada no está comprada,
-    // se recurre a la primera de la lista, que es la que se trae de casa
+    // se recurre a la primera de la lista
     equipada() {
         const estado = this.leer();
         return this.ficha(this.tiene(estado.arma) ? estado.arma : ARMAS[0].id);
@@ -117,10 +112,8 @@ const Forja = {
 
     tiene(id) { return (this.leer().compradas || []).indexOf(id) >= 0; },
 
-    // El arsenal se recorre en orden: para comprar un arma hay que tener
-    // desbloqueada la que va justo delante en la lista. Basta con tenerla;
-    // no se le pide estar forjada. Devuelve la que falta, o null si no debe
-    // nada -la primera de la lista no tiene delante a nadie-.
+    // El arsenal se abre en orden: para comprar un arma hay que tener la que
+    // va justo delante (basta con tenerla, no forjada). Devuelve la que falta.
     requisito(id) {
         const i = ARMAS.findIndex(a => a.id === id);
         if (i <= 0) return null;
@@ -186,9 +179,8 @@ const Forja = {
 
         let sello = '', pie;
         if (!propia) {
-            // el arsenal se abre en orden: mientras falte la anterior no se
-            // enseña el precio, sino de quién depende. De nada sirve saber lo
-            // que cuesta algo que todavía no está a la venta
+            // mientras falte la anterior no se enseña el precio, sino de quién
+            // depende: no sirve saber lo que cuesta algo que no está a la venta
             const falta = Forja.requisito(arma.id);
             const alcanza = !falta && estado.esquirlas >= arma.precio;
             sello = falta
@@ -229,10 +221,8 @@ const Forja = {
         </div>`;
     }
 
-    // El retrato de cada arma se dibuja una vez y se guarda. El panel se
-    // repinta entero a cada compra, pero el boceto no cambia: lo que se hace
-    // en cada repintado es volver a colgar el mismo lienzo de su hueco -uno
-    // por arma, así que basta con mudarlo de sitio-.
+    // El retrato se dibuja una vez y se guarda: el panel se repinta entero a
+    // cada compra, pero el boceto no cambia y basta con mudar el lienzo de sitio.
     const RETRATO = { ancho: 196, alto: 62 };
     const retratos = {};
 
@@ -246,8 +236,7 @@ const Forja = {
     }
 
     function pintar() {
-        // comprar o forjar repinta la caja entera: sin esto, el renglón se
-        // olvidaría de dónde estabas y volvería siempre a la primera lámina
+        // el repintado olvidaría dónde estaba el renglón; se le devuelve
         const previas = caja.querySelector('.armas');
         const scroll = previas ? previas.scrollLeft : 0;
 
@@ -272,9 +261,8 @@ const Forja = {
         if (elegir) { Forja.equipar(elegir.dataset.arma); pintar(); }
     });
 
-    // abrir y cerrar es cosa de menu.js: él sabe de todos los paneles, los
-    // cierra entre sí y marca el body para que la pantalla esconda el rótulo.
-    // Sin él (una pantalla que solo traiga la armería) esto se abre igual
+    // abrir y cerrar es cosa de menu.js, que conoce todos los paneles; sin él
+    // (una pantalla que solo traiga la armería) esto se abre igual
     boton.addEventListener('click', () => {
         if (typeof alternar === 'function') alternar('armeria');
         else caja.hidden = !caja.hidden;

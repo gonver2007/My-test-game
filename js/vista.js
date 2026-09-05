@@ -1,14 +1,13 @@
 // ============================================================
-//  vista.js - dibujado, entrada y bucle principal (vista cenital)
-//  Estética de animación japonesa: contorno de tinta, sombreado
-//  plano de dos tonos, noche azul y farolillos que dan luz.
-//  La lógica de juego vive en mazmorra.js; aquí solo se pinta.
+//  vista.js - dibujado, entrada y bucle principal (vista cenital).
+//  Estética de animación japonesa: contorno de tinta, sombreado plano de dos
+//  tonos, noche azul y farolillos que dan luz. La lógica vive en mazmorra.js.
 // ============================================================
 const lienzo = document.getElementById('vista');
 const ctx = lienzo.getContext('2d');
-// Resolución fija del juego: se ve igual de grande en cualquier pantalla.
-// El tamaño real de ventana solo decide cómo se escala el lienzo (letterbox)
-// y cómo se acomoda el hud, que sí vive en píxeles de pantalla de verdad.
+// Resolución fija del juego: se ve igual de grande en cualquier pantalla. El
+// tamaño de ventana solo decide cómo se escala el lienzo (letterbox) y cómo se
+// acomoda el hud, que sí vive en píxeles de pantalla.
 const ANCHO_JUEGO = 1440, ALTO_JUEGO = 900;
 let AN = lienzo.width, AL = lienzo.height;
 
@@ -20,14 +19,13 @@ const OSCURIDAD = 0.82;       // la noche no llega a negra: es azul de tinta
 const MARGEN_SOMBRA = 14;     // sobra alrededor, para que el temblor no descubra bordes
 const SPR = 56;               // lado en que están dibujadas las figuras
 const LADO_SPR = 1.912;       // lo que ocupa una figura, medido en casillas
-// El tamaño en pantalla sale de la casilla, no de un número suelto: así el
-// héroe crece con el mundo cuando cambia TILE, y su hoja sigue midiendo lo
-// que dice su alcance en vez de quedarse corta
+// El tamaño en pantalla sale de la casilla y no de un número suelto: así el
+// héroe crece con el mundo cuando cambia TILE
 const ESCALA_SPR = LADO_SPR * TILE / SPR;
 
 // ============================================================
-//  Paleta: cada material lleva base, luz y sombra, los tres planos.
-//  El contorno es siempre el mismo violeta de tinta, nunca negro puro.
+//  Paleta: cada material lleva base, luz y sombra, los tres planos. El contorno
+//  es siempre el mismo violeta de tinta, nunca negro puro.
 // ============================================================
 const P = {
     tinta: '#17132b',
@@ -56,17 +54,13 @@ const P = {
     acero: '#dfe9ff', aceroSombra: '#8f9fc4',
     oro: '#e8b352', oroLuz: '#ffd784', oroSombra: '#9a6f2b',
 
-    // los adversarios se pintan en bestias.js y allí tienen sus colores: de
-    // aquí se fueron con ellos, que aquí ya no los miraba nadie
+    // los adversarios se pintan en bestias.js y allí tienen sus colores
 
     elixir: '#e04f7a', elixirLuz: '#ff9cba',
     sakura: '#f0a8c8', sakuraLuz: '#ffd3e4',
 
-    // ----------------------------------------------------------
-    //  Colores de sitio, no de material: son los que pisa cada bioma
-    //  con su propia paleta. Los de aquí son los de la mansión, que es
-    //  el aspecto que tenía el juego antes de haber comarcas.
-    // ----------------------------------------------------------
+    // Colores de sitio, no de material: los pisa cada bioma con su paleta. Los
+    // de aquí son los de la mansión, el aspecto del juego antes de las comarcas.
     fondoAlto: '#16274d', fondoBajo: '#101c3a',        // lo que hay más allá
     suelo: '#6f9a63', sueloLuz: '#82ad72', sueloSombra: '#4f7350',
     junta: 'rgba(28, 44, 34, 0.6)',                    // lo que separa una pieza de otra
@@ -77,14 +71,14 @@ const P = {
 };
 
 // ============================================================
-//  El tema de la senda: la paleta de arriba, pisada por la del bioma
-//  que toque. Los sprites siguen leyendo P -el héroe y los adversarios
-//  no cambian de color al mudar de comarca-; todo el decorado lee T.
+//  El tema de la senda: la paleta de arriba pisada por la del bioma. Los
+//  sprites siguen leyendo P -el héroe no cambia de color al mudar de comarca-;
+//  todo el decorado lee T.
 // ============================================================
 let BIOMA = null;                       // la ficha de biomas.js, tal cual
 let T = Object.assign({}, P);           // sus colores, ya fusionados
 
-// lo que se usa cuando se juega sin biomas.js cargado: la mansión de siempre
+// lo que se usa sin biomas.js cargado: la mansión de siempre
 const AIRE_BASE = { forma: 'petalo', cuantas: 34, color: P.sakuraLuz, vel: [14, 34],
                     luciernagas: 16, oscuridad: 0.82, velo: '14, 22, 54' };
 
@@ -110,10 +104,8 @@ function lienzoOculto(w, h) {
 }
 
 // ============================================================
-//  Piezas de cel-shading
-//  Todo lo dibujado a mano sigue el mismo patrón: primero la mancha
-//  de tinta que hace de contorno, luego el color plano, y encima dos
-//  manchas más -sombra y luz- recortadas a la propia silueta.
+//  Piezas de cel-shading: primero la mancha de tinta que hace de contorno,
+//  luego el color plano, y encima sombra y luz recortadas a la propia silueta.
 // ============================================================
 function pieza(g, cx, cy, rx, ry, base, luz, sombra, giro = 0, grosor = 2.4) {
     g.save();
@@ -151,9 +143,8 @@ let lienzoNivel = null;
 let adornos = [];             // farolillos, tinajas y demás detalle del interior
 let luces = [];               // focos fijos que iluminan la noche
 
-// Distancia en casillas de cada celda al suelo transitable más cercano. Sirve
-// para saber cuánto sitio hay fuera del recinto antes de plantar un árbol o
-// una casa, y para que nada invada el alero del tejado.
+// Distancia en casillas de cada celda al suelo transitable más cercano: dice
+// cuánto sitio hay fuera del recinto antes de plantar un árbol o una casa.
 function distanciasAlSuelo() {
     const d = new Int16Array(ANCHO * ALTO).fill(999);
     const cola = [];
@@ -172,10 +163,9 @@ function distanciasAlSuelo() {
     return d;
 }
 
-// Las afueras del recinto no son un fondo aparte: forman parte del mismo
-// lienzo del nivel, y por eso se mueven con él sin costura alguna. Cuánto
-// bosque hay que pintar de más depende de la ventana: lo justo para que su
-// borde nunca llegue a verse, ni siquiera en una pantalla muy ancha.
+// Las afueras no son un fondo aparte: van en el mismo lienzo del nivel, así que
+// se mueven con él sin costura. Cuánto bosque pintar de más depende de la
+// ventana: lo justo para que su borde no llegue a verse.
 let MARGEN = 0;               // casillas de afueras a cada lado
 let OFF = 0;                  // esas mismas casillas, en píxeles
 
@@ -185,9 +175,8 @@ function margenAfueras() {
     return Math.ceil((Math.max(sobraX, sobraY) + TILE * 2) / TILE);
 }
 
-// Todo borde entre suelo y muro, en un solo camino y a la escala que se pida.
-// Con él se entinta el recinto en la vista -a tamaño de casilla- y se perfila
-// la planta en el plano de la senda -a tamaño de píxel-.
+// Todo borde entre suelo y muro, en un camino y a la escala que se pida: con él
+// se entinta el recinto en la vista y se perfila la planta en el minimapa.
 function caminoDeBordes(paso) {
     const p = new Path2D();
     for (let y = 0; y < ALTO; y++)
@@ -203,8 +192,8 @@ function caminoDeBordes(paso) {
 }
 
 function construirLienzoNivel() {
-    // lo primero es saber en qué comarca se anda: de ahí salen los colores,
-    // el suelo, lo que corona los muros y lo que se ve más allá
+    // lo primero es saber en qué comarca se anda: de ahí salen los colores, el
+    // suelo, el remate de los muros y lo que se ve más allá
     aplicarTema();
 
     const W = ANCHO * TILE, H = ALTO * TILE;
@@ -214,15 +203,15 @@ function construirLienzoNivel() {
     const dist = distanciasAlSuelo();
 
     // 1) Silueta del recinto: el suelo tal cual, con el filo intacto. Estas
-    //    capas solo cubren el recinto; el margen es bosque y nada más
+    //    capas solo cubren el recinto; el margen es afueras y nada más
     const silueta = lienzoOculto(W, H), sg = silueta.getContext('2d');
     sg.fillStyle = '#fff';
     for (let y = 0; y < ALTO; y++)
         for (let x = 0; x < ANCHO; x++)
             if (J.mapa[y][x] === 0) sg.fillRect(x * TILE, y * TILE, TILE, TILE);
 
-    // 2) El camino que recorre todo borde entre suelo y muro: con él se trazan
-    //    el tejado de fuera, la tarima de dentro y la línea de tinta
+    // 2) El camino de todo borde suelo/muro: con él se trazan el remate de
+    //    fuera, el zócalo de dentro y la línea de tinta
     const bordes = caminoDeBordes(TILE);
 
     const nivel = lienzoOculto(WT, HT), ng = nivel.getContext('2d');
@@ -246,12 +235,10 @@ function construirLienzoNivel() {
 }
 
 // ============================================================
-//  Fuera del recinto: lo que se ve más allá de los muros. Cada comarca
-//  tiene lo suyo -roca maciza, cañaveral, jardín, pueblo, el vacío del
-//  foso o el mar de nubes del santuario- y todas se pintan sobre el
-//  mismo lienzo del nivel, así que se mueven con él sin costura alguna.
-//  Las casillas del recinto viven desplazadas OFF píxeles; todo lo que
-//  cae fuera de ellas es campo libre.
+//  Fuera del recinto: cada comarca tiene lo suyo -roca, cañaveral, jardín,
+//  pueblo, el vacío del foso o el mar de nubes del santuario- y todas se pintan
+//  sobre el mismo lienzo del nivel. Las casillas del recinto viven desplazadas
+//  OFF píxeles; todo lo que cae fuera es campo libre.
 // ============================================================
 function pintarExterior(g, W, H, dist) {
     const fondo = g.createLinearGradient(0, 0, W * 0.4, H);
@@ -264,14 +251,13 @@ function pintarExterior(g, W, H, dist) {
     const casillaX = px => Math.floor((px - OFF) / TILE);
     const casillaY = py => Math.floor((py - OFF) / TILE);
 
-    // fuera del recinto siempre hay sitio: allí no hay muros de los que
-    // guardar distancia, solo campo abierto
+    // fuera del recinto siempre hay sitio: allí no hay muros de los que guardar
+    // distancia
     const hueco = (cx, cy, min) =>
         cx < 0 || cy < 0 || cx >= ANCHO || cy >= ALTO || dist[cy * ANCHO + cx] >= min;
 
-    // el cuaderno que se pasan los pintores de afueras: el lienzo, el mapa de
-    // distancias y cuánto hay que multiplicar una cantidad pensada para el
-    // recinto para que cubra también el margen
+    // el cuaderno que se pasan los pintores de afueras: lienzo, mapa de
+    // distancias y cuánto multiplicar una cantidad pensada solo para el recinto
     const A = {
         g, W, H, dist, hueco,
         despejado: (px, py, min) => hueco(casillaX(px), casillaY(py), min),
@@ -291,11 +277,10 @@ function pintarExterior(g, W, H, dist) {
 
 // ---------- Herramientas que comparten todas las afueras ----------
 
-// Sembrar es lo que hacen todas las comarcas, y todas lo hacían escrito a mano:
-// se tantean tantos sitios como pida la densidad -que se ajusta sola al tamaño
-// del lienzo-, se descartan los que caen sobre el recinto o demasiado cerca, y
-// en los que quedan se llama al pintor con el lienzo guardado y devuelto luego
-// a su sitio. Lo único propio de cada comarca es ese pintor.
+// Sembrar es lo que hacen todas las comarcas: se tantean tantos sitios como
+// pida la densidad -ajustada al tamaño del lienzo-, se descartan los que caen
+// sobre el recinto o demasiado cerca, y en los que quedan se llama al pintor.
+// Lo único propio de cada comarca es ese pintor.
 function sembrar(A, densidad, holgura, pintar) {
     const veces = Math.round(densidad * A.escala);
     for (let i = 0; i < veces; i++) {
@@ -308,8 +293,8 @@ function sembrar(A, densidad, holgura, pintar) {
 }
 
 // Copas por todo el margen, más cerradas cuanto más lejos queda el recinto y
-// nunca sobre un solar ya tomado. El bosque y el jardín se diferencian solo en
-// lo tupido, lo grandes que son y lo deprisa que se cierra el monte.
+// nunca sobre un solar tomado. Bosque y jardín se diferencian solo en lo
+// tupido, el tamaño y lo deprisa que se cierra el monte.
 function arbolado(A, s, espesura, tamano, cierre) {
     for (let y = -MARGEN; y < ALTO + MARGEN; y++)
         for (let x = -MARGEN; x < ANCHO + MARGEN; x++) {
@@ -333,7 +318,7 @@ function manchones(A, densidad, color, rx, ry, alfa) {
     });
 }
 
-// Solares tomados: las claves se corren para que las casillas de las afueras,
+// Solares tomados. Las claves se corren para que las casillas de las afueras,
 // que son negativas, no se pisen con las de dentro
 function solares() {
     const clave = (cx, cy) => (cy + 2048) * 8192 + (cx + 2048);
@@ -347,8 +332,8 @@ function solares() {
     };
 }
 
-// Tejados sueltos donde el recinto deja sitio de sobra. Devuelve el registro
-// de solares para que quien siembre después no plante encima.
+// Tejados sueltos donde el recinto deja sitio de sobra. Devuelve el registro de
+// solares para que quien siembre después no plante encima.
 function sembrarCasas(A, intentos, separacion) {
     const s = solares();
     for (let i = 0; i < intentos; i++) {
@@ -387,16 +372,16 @@ function sotobosque(A, densidad) {
 // ---------- Bosque nocturno: pinos en masa y algún tejado de aldea ----------
 function afuerasArboleda(A) {
     manchones(A, 300, T.hoja, [30, 90], [20, 60], [0.05, 0.14]);
-    // copas apretadas, y más cerradas cuanto más lejos del recinto: en las
-    // afueras la distancia es la que hay hasta el borde, así que el monte
-    // acaba tapándolo todo según se aleja
+    // copas apretadas, más cerradas cuanto más lejos del recinto: en las
+    // afueras la distancia es la que hay hasta el borde, así que el monte acaba
+    // tapándolo todo según se aleja
     arbolado(A, sembrarCasas(A, 220, 4), 0.45, [0.6, 1.15], 7);
     sotobosque(A, 460);
 }
 
 // ---------- Roca maciza: no hay afueras, hay montaña ----------
-// Bajo tierra el recinto no da a ningún paisaje: lo que rodea los muros es
-// piedra sin excavar, y lo único que la rompe son sus propias vetas.
+// Bajo tierra lo que rodea los muros es piedra sin excavar; lo único que la
+// rompe son sus propias vetas.
 function afuerasRoca(A) {
     const { g, W, H } = A;
     manchones(A, 380, T.bordeSombra, [40, 110], [26, 70], [0.3, 0.7]);
@@ -442,10 +427,9 @@ function afuerasCanaveral(A) {
     sotobosque(A, 300);
 }
 
-// Un puñado de cañas vistas desde arriba: los cortes redondos del tronco y
-// las hojas largas saliendo en abanico.
-// Todo lo que varía sale del giro que se le pasa, no de un sorteo: así el
-// mismo mato sale idéntico cuadro tras cuadro cuando se dibuja en directo.
+// Un puñado de cañas vistas desde arriba: los cortes redondos del tronco y las
+// hojas en abanico. Todo lo que varía sale del giro que se le pasa y no de un
+// sorteo, así el mismo mato sale idéntico cuadro tras cuadro.
 function matoDeCanas(g, cx, cy, r, giro) {
     g.save();
     g.translate(cx, cy);
@@ -498,8 +482,8 @@ function afuerasJardin(A) {
         brillo(g, x - rx * 0.3, y - ry * 0.3, rx * 0.28, ry * 0.16, -0.5, 0.2);
     });
 
-    // setos y arbolillos: la vegetación cuidada del jardín, más suelta y más
-    // menuda que el monte cerrado de la arboleda
+    // setos y arbolillos: la vegetación cuidada del jardín, más suelta y menuda
+    // que el monte cerrado de la arboleda
     arbolado(A, sembrarCasas(A, 60, 5), 0.3, [0.5, 0.95], 8);
     sotobosque(A, 520);
 }
@@ -579,8 +563,8 @@ function afuerasNubes(A) {
 
 // ============================================================
 
-// Copa vista desde arriba: lóbulos de un mismo trazo, tinta debajo y una
-// media luna de luz arriba a la izquierda. Cel puro, sin degradados.
+// Copa vista desde arriba: lóbulos de un mismo trazo, tinta debajo y una media
+// luna de luz arriba a la izquierda. Cel puro, sin degradados.
 function copaDeArbol(g, cx, cy, r, lejos) {
     const lobulos = 6, giro = azar(0, 6.28);
     const camino = escala => {
@@ -616,8 +600,8 @@ function copaDeArbol(g, cx, cy, r, lejos) {
     g.restore();
 }
 
-// Casa de aldea a vuelo de pájaro: tejado a dos aguas, caballete claro y
-// aleros entintados, con su sombra sobre la maleza
+// Casa de aldea a vuelo de pájaro: tejado a dos aguas, caballete claro y aleros
+// entintados, con su sombra sobre la maleza
 function casaDeAldea(g, x, y, w, h) {
     g.save();
     g.fillStyle = 'rgba(9, 13, 32, 0.5)';
@@ -643,11 +627,10 @@ function casaDeAldea(g, x, y, w, h) {
 }
 
 // ============================================================
-//  Lo que corona los muros del recinto: una banda que corre por fuera
-//  de todos ellos y que cambia con la comarca -teja vidriada, roca
-//  viva, cañaveral, sillería, parapeto de puente, almenas o talud-.
-//  El gesto es siempre el mismo: cuatro trazos cada vez más finos
-//  siguiendo el borde, y encima el relieve que le toque.
+//  Lo que corona los muros del recinto: una banda que corre por fuera de todos
+//  ellos y cambia con la comarca -teja, roca viva, cañaveral, sillería,
+//  parapeto, almenas o talud-. El gesto es siempre el mismo: cuatro trazos cada
+//  vez más finos siguiendo el borde, y encima el relieve que le toque.
 // ============================================================
 function capaBorde(W, H, silueta, bordes) {
     const c = lienzoOculto(W, H), g = c.getContext('2d');
@@ -680,7 +663,7 @@ function capaBorde(W, H, silueta, bordes) {
 }
 
 // Los relieves se pintan en blanco y negro translúcido: así valen para
-// cualquier color de banda sin tener que repetir la paleta en cada uno.
+// cualquier color de banda sin repetir la paleta en cada uno.
 function tileRemate(remate) {
     switch (remate) {
         case 'roca':      return tileRoca();
@@ -711,9 +694,9 @@ function tileTeja() {
     return c;
 }
 
-// Manchas al azar por toda la baldosa: es como casi todas las texturas rompen
-// su propio color liso. El color se pasa como función porque casi siempre se
-// sortea entre dos, y los radios son tramos [de, a] para el ancho y el alto.
+// Manchas al azar por toda la baldosa, que es como casi todas las texturas
+// rompen su color liso. El color se pasa como función porque casi siempre se
+// sortea entre dos; los radios son tramos [de, a] para el ancho y el alto.
 function motas(g, L, cuantas, alfa, color, ancho, alto) {
     for (let i = 0; i < cuantas; i++) {
         g.globalAlpha = azar(alfa[0], alfa[1]);
@@ -725,9 +708,8 @@ function motas(g, L, cuantas, alfa, color, ancho, alto) {
     }
 }
 
-// Y grietas: rayas cortas y sueltas, la otra manera de gastar una baldosa. Si
-// se le pasa un tramo de alfa, cada raya se apaga por su cuenta; si no, todas
-// van con la opacidad que traiga puesta el lienzo.
+// Y grietas: rayas cortas y sueltas, la otra manera de gastar una baldosa. Con
+// un tramo de alfa cada raya se apaga por su cuenta.
 function grietas(g, L, cuantas, largo, alfa) {
     g.lineCap = 'round';
     for (let i = 0; i < cuantas; i++) {
@@ -849,8 +831,8 @@ function tileTalud() {
 }
 
 // ============================================================
-//  Dentro: el piso de la comarca, el zócalo pegado a los muros y la
-//  sombra dura que el muro echa sobre el suelo
+//  Dentro: el piso de la comarca, el zócalo pegado a los muros y la sombra dura
+//  que el muro echa sobre el suelo
 // ============================================================
 function capaSuelo(W, H, silueta, bordes) {
     const c = lienzoOculto(W, H), g = c.getContext('2d');
@@ -858,9 +840,8 @@ function capaSuelo(W, H, silueta, bordes) {
     g.fillStyle = g.createPattern(tileSuelo(), 'repeat');
     g.fillRect(0, 0, W, H);
 
-    // zócalo perimetral: en la mansión es la tarima; en la muralla, el
-    // bordillo de piedra; en el bosque, el canto de tierra. Cambia el
-    // color, nunca el gesto.
+    // zócalo perimetral: tarima en la mansión, bordillo en la muralla, canto de
+    // tierra en el bosque. Cambia el color, nunca el gesto.
     g.lineCap = 'butt'; g.lineJoin = 'miter';
     g.strokeStyle = T.zocalo;    g.lineWidth = TILE * 1.05; g.stroke(bordes);
     g.strokeStyle = T.zocaloLuz; g.lineWidth = TILE * 0.2;
@@ -868,8 +849,8 @@ function capaSuelo(W, H, silueta, bordes) {
     g.strokeStyle = T.zocaloSombra; g.lineWidth = 3;
     g.save(); g.translate(0, TILE * 0.52); g.stroke(bordes); g.restore();
 
-    // sombra del muro, corrida hacia dentro: el recurso de cel para levantarlo
-    // sin recurrir a un solo degradado
+    // sombra del muro corrida hacia dentro: el recurso de cel para levantarlo
+    // sin un solo degradado
     g.strokeStyle = 'rgba(20, 26, 60, 0.4)';
     g.lineWidth = TILE * 0.55;
     g.save(); g.translate(4, 7); g.stroke(bordes); g.restore();
@@ -879,8 +860,8 @@ function capaSuelo(W, H, silueta, bordes) {
     return c;
 }
 
-// Cada comarca pisa lo suyo, pero todos los pisos se pintan igual: una
-// baldosa que encaja consigo misma y se repite por todo el recinto.
+// Cada comarca pisa lo suyo, pero todos los pisos se pintan igual: una baldosa
+// que encaja consigo misma y se repite por todo el recinto.
 function tileSuelo() {
     switch ((BIOMA && BIOMA.piso) || 'tatami') {
         case 'losa':      return tileBloques(TILE * 1.0, TILE * 1.0, 0.5);
@@ -896,10 +877,9 @@ function tileSuelo() {
     }
 }
 
-// Piezas rectangulares trabadas: losa, ladrillo, adoquín y sillería salen
-// todas de aquí, y solo se diferencian en la medida de la pieza.
-// La que asoma por la derecha vuelve a entrar por la izquierda, que es lo
-// que hace que la baldosa encaje consigo misma.
+// Piezas rectangulares trabadas -losa, ladrillo, adoquín, sillería-, que solo
+// se diferencian en la medida. Lo que asoma por la derecha vuelve a entrar por
+// la izquierda, que es lo que hace que la baldosa encaje consigo misma.
 function tileBloques(w, h, desfase) {
     const cols = 3, filas = 4;
     const L = Math.max(6, Math.round(w * cols));
@@ -927,8 +907,8 @@ function tileBloques(w, h, desfase) {
     return c;
 }
 
-// Franjas tendidas: tablas de tarima, peldaños de escalera o las tablas
-// doradas del santuario, según cómo se rematen
+// Franjas tendidas: tablas de tarima, peldaños de escalera o las tablas doradas
+// del santuario, según cómo se rematen
 function tileFranjas(paso, escalon, dorado) {
     const p = Math.max(5, Math.round(paso));
     const L = Math.round(TILE * 2), A = p * 4;
@@ -971,8 +951,8 @@ function tileFranjas(paso, escalon, dorado) {
     return c;
 }
 
-// Grava rastrillada del jardín seco: el fondo, el menudo y las ondas que
-// deja el rastrillo. Las ondas van en periodo entero para que cierren solas.
+// Grava rastrillada del jardín seco: fondo, menudo y las ondas del rastrillo,
+// que van en periodo entero para que cierren solas.
 function tileGrava() {
     const L = Math.round(TILE * 3);
     const c = lienzoOculto(L, L), g = c.getContext('2d');
@@ -1009,8 +989,8 @@ function tileTierra() {
     return c;
 }
 
-// Esteras cruzadas, a la manera de las salas de té: dos tendidas arriba,
-// dos de canto abajo, y el patrón encaja consigo mismo al repetirse
+// Esteras cruzadas a la manera de las salas de té: dos tendidas arriba, dos de
+// canto abajo, y el patrón encaja consigo mismo al repetirse
 function tileTatami() {
     const M = TILE * 2, L = M * 2;
     const c = lienzoOculto(L, L), g = c.getContext('2d');
@@ -1045,8 +1025,8 @@ function tileTatami() {
 }
 
 // ============================================================
-//  Adornos del interior: se colocan pegados a los muros, donde no
-//  estorban el paso. Los que llevan llama se apuntan como focos.
+//  Adornos del interior: se colocan pegados a los muros, donde no estorban el
+//  paso. Los que llevan llama se apuntan además como focos.
 // ============================================================
 function sembrarAdornos() {
     adornos = [];
@@ -1056,7 +1036,7 @@ function sembrarAdornos() {
     if (!tabla.length) return;
 
     // cada clase de adorno guarda su propia separación: que haya una rocalla al
-    // lado no debe impedir colgar un farolillo, y al revés tampoco
+    // lado no debe impedir colgar un farolillo, ni al revés
     const puestos = {};
     const lejosDe = (x, y, d, tipo) =>
         (puestos[tipo] || []).every(p => Math.hypot(p.x - x, p.y - y) > d);
@@ -1079,9 +1059,9 @@ function sembrarAdornos() {
             if (esMuro(x, y - 1)) oy = -0.22; else if (esMuro(x, y + 1)) oy = 0.22;
             if (esMuro(x - 1, y)) ox = -0.22; else if (esMuro(x + 1, y)) ox = 0.22;
 
-            // se echa un dado y se mira en qué franja de la tabla del bioma
-            // cae: la primera que lo recoge es la que se planta, si es que
-            // hay sitio y si el adorno admite ese rincón
+            // se echa un dado y se mira en qué franja de la tabla del bioma cae:
+            // la primera que lo recoge es la que se planta, si hay sitio y si el
+            // adorno admite ese rincón
             const r = Math.random();
             let acumulado = 0, ficha = null;
             for (const f of tabla) {
@@ -1105,8 +1085,8 @@ function sembrarAdornos() {
         }
 }
 
-// Los adornos que van a ras de suelo no echan sombra: no hay nada levantado
-// que la proyecte, y ponérsela los haría flotar
+// Los adornos a ras de suelo no echan sombra: no hay nada levantado que la
+// proyecte, y ponérsela los haría flotar
 const ADORNOS_RASOS = new Set(['rejilla', 'musgo', 'estanque', 'cadena',
                                'huesos', 'shimenawa', 'banderola', 'nicho']);
 
@@ -1119,10 +1099,9 @@ function craneo(px, py, r) {
 }
 
 // ============================================================
-//  El repertorio de adornos. Ninguno sortea nada al dibujarse: todo lo
-//  que varía sale del giro y la fase que se le apuntaron al sembrarlo,
-//  o del reloj de la partida. Si aquí se llamase a azar(), el adorno
-//  temblaría en cada fotograma.
+//  El repertorio de adornos. Ninguno sortea nada al dibujarse: todo lo que varía
+//  sale del giro y la fase que se le apuntaron al sembrarlo, o del reloj de la
+//  partida. Con un azar() aquí, el adorno temblaría en cada fotograma.
 // ============================================================
 const ADORNO = {
 
@@ -1533,9 +1512,9 @@ function dibujarAdornos() {
 }
 
 // ============================================================
-//  Trampas: el hierro que sube del suelo. La boca se ve siempre, para
-//  que se pueda esquivar; lo que cambia es cuánto asoma el diente, y
-//  eso lo lleva la propia trampa en mazmorra.js.
+//  Trampas: el hierro que sube del suelo. La boca se ve siempre, para que se
+//  pueda esquivar; lo que cambia es cuánto asoma el diente, y eso lo lleva la
+//  propia trampa en mazmorra.js.
 // ============================================================
 
 // Cuánto sobresale el hierro, de 0 a 1, según la vuelta que lleve dada
@@ -1620,54 +1599,6 @@ function nuevoSprite(pintar) {
     return c;
 }
 
-// Lo mismo, pero para las figuras que vienen de un archivo. El lienzo se
-// devuelve hecho y vacío, y se pinta solo en cuanto la lámina llega: así el
-// resto del guion no tiene que enterarse de que esta figura tarda, y
-// dibujarSprite le da el mismo trato que a las de aquí. Con un png del propio
-// disco la espera no se llega a ver.
-// El lienzo se hace del tamaño con que la figura va a verse, y eso incluye su
-// talla: al que se dibuja al doble hay que hornearlo al doble. Horneándolo
-// todo a la medida de la casa, el grande salía de un lienzo de 85px estirado a
-// 170 y se le veían los píxeles uno a uno, por muchos que trajera su archivo.
-function spriteDeLamina(url, talla = 1) {
-    const lado = Math.ceil(SPR * ESCALA_SPR * talla);
-    const c = lienzoOculto(lado, lado);
-    const lamina = new Image();
-    lamina.onload = () => c.getContext('2d').drawImage(lamina, 0, 0, lado, lado);
-    lamina.src = url;
-    return c;
-}
-
-// Todas las láminas de una bestia, colgadas de una vez al arrancar -las poses
-// sueltas y la tira del paso-: dibujar es después solo elegir cuál toca, sin
-// pedir nada a mitad de partida.
-function laminasDeBestia(id) {
-    const talla = (BESTIAS.ficha(id) || {}).talla || 1;
-    const juego = { andar: BESTIAS.andares(id).map(u => spriteDeLamina(u, talla)) };
-    for (const pose of BESTIAS.POSES)
-        juego[pose] = spriteDeLamina(BESTIAS.lamina(id, pose), talla);
-    return juego;
-}
-
-// Lo que anda entre cuadro y cuadro del paso, en partes de lo que abulta el
-// bicho. Va atado a su tamaño y no a un número suelto porque la zancada de una
-// rata no es la de un ciempiés: el grande da el paso más largo y mueve las suyas
-// más despacio aunque los dos anden a la misma velocidad.
-//
-// Y se cuenta por camino andado, no por tiempo: así las patas van al paso que
-// va el bicho, y quien se queda atascado contra un muro no patina en el sitio.
-const ZANCADA = 1.6;
-
-// Manda lo recibido sobre lo dado, y lo dado sobre andar: si le entra un tajo
-// mientras descarga, lo que hay que ver es que le has acertado.
-function poseDeBestia(e) {
-    const juego = sprites[e.tipo];
-    if (e.herido > 0) return juego.dano;
-    if (e.golpe > 0) return juego.ataque;
-    if (!e.andando || !juego.andar.length) return juego.quieto;
-    return juego.andar[Math.floor(e.andado / (e.r * ZANCADA)) % juego.andar.length];
-}
-
 function prepararSprites() {
     sprites = {
         // Todas las figuras miran a la derecha; se rotan al dibujarlas.
@@ -1725,10 +1656,110 @@ function prepararSprites() {
         })
     };
 
-    // Y detrás las bestias, que no se dibujan aquí: cada una entra con sus
-    // tres poses y sale de la lista de fichas, no de dos líneas escritas a
-    // mano. Añadir una es añadirla allí y dejar sus láminas en asset/.
-    for (const f of BESTIAS.fichas) sprites[f.id] = laminasDeBestia(f.id);
+    // Las bestias no se preparan aquí: se dibujan a código en cada cuadro y su
+    // trazo vive en su ficha, junto a sus cifras. Añadir una es añadirla allí y
+    // ya sale al paso.
+}
+
+// ============================================================
+//  Las bestias
+// ============================================================
+// No vienen de ningún archivo: se dibujan a código, y el trazo de cada una
+// está en su ficha de bestias.js -que es donde vive todo lo suyo- junto a sus
+// cifras. Aquí solo se dice cuándo y dónde.
+//
+// Se pintan en un lienzo aparte y no directamente sobre la senda por dos
+// cosas: el blanqueo del golpe recibido tiene que recortarse a la figura ya
+// hecha, y así lo que mira el bicho se gira una vez para todo el conjunto.
+
+// Un lienzo por tamaño -uno por talla, en realidad-, que se reaprovechan en
+// cada cuadro y para todas las bestias. Uno nuevo por bicho y por cuadro sería
+// tirar lienzos a puñados.
+const talleres = {};
+function tallerDe(lado) {
+    if (!talleres[lado]) talleres[lado] = lienzoOculto(lado, lado);
+    return talleres[lado];
+}
+
+// Lo que anda entre paso y paso, en partes de lo que abulta el bicho. Va atado
+// a su tamaño y no a un número suelto porque la zancada de una rata no es la
+// de un ciempiés: el grande da el paso más largo y mueve las suyas más despacio
+// aunque los dos anden a la misma velocidad.
+//
+// Y se cuenta por camino andado, no por tiempo: así las patas van al paso que
+// va el bicho, y quien se queda atascado contra un muro no patina en el sitio.
+const ZANCADA = 1.6;
+const PASOS_POR_VUELTA = 4;
+
+// Manda lo recibido sobre lo dado, y lo dado sobre andar: si le entra un tajo
+// mientras descarga, lo que hay que ver es que le has acertado.
+function poseDeBestia(e) {
+    if (e.herido > 0) return 'dano';
+    if (e.golpe > 0) return 'ataque';
+    return e.andando ? 'andar' : 'quieto';
+}
+
+// en qué punto del ciclo va el paso: una vuelta entera cada cuatro zancadas
+function faseDeBestia(e) {
+    return e.andado / (e.r * ZANCADA * PASOS_POR_VUELTA) * 6.2832;
+}
+
+// Y en qué punto va el golpe, de cero a uno. Las figuras que barren algo -la
+// hoja del esqueleto- lo necesitan: la pose dice que está pegando, pero no
+// cuánto le queda.
+function avanceDeGolpe(e) {
+    return Math.min(1, Math.max(0, 1 - e.golpe / GOLPE_ENEMIGO));
+}
+
+// La sangre se le va de golpe al recibir. Una mano de blanco recortada a lo ya
+// pintado: recortada, que si se echara encima del lienzo entero se le pintaría
+// también el aire de alrededor.
+function blanquearFigura(g, lado, cuanto) {
+    g.save();
+    g.globalCompositeOperation = 'source-atop';
+    g.fillStyle = 'rgba(255, 255, 255, ' + cuanto + ')';
+    g.fillRect(0, 0, lado, lado);
+    g.restore();
+}
+
+// el arco pálido del golpe, el mismo que lleva el héroe
+function estelaGolpe(g, cx, cy, r, desde, hasta, grosor, alfa) {
+    g.save();
+    g.globalAlpha = alfa;
+    g.strokeStyle = '#ffffff'; g.lineWidth = grosor; g.lineCap = 'round';
+    g.beginPath(); g.arc(cx, cy, r, desde, hasta); g.stroke();
+    g.restore();
+}
+
+function dibujarBestia(e, px, py) {
+    const talla = e.talla || 1;
+    const lado = Math.ceil(SPR * ESCALA_SPR * talla);
+    const taller = tallerDe(lado);
+    const g = taller.getContext('2d');
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.clearRect(0, 0, lado, lado);
+
+    const pose = poseDeBestia(e);
+    // la fase que se le pasa: andando es por dónde va el paso, y pegando por
+    // dónde va el golpe, que es lo que hace que la hoja barra
+    const fase = pose === 'ataque' ? avanceDeGolpe(e)
+               : pose === 'andar' ? faseDeBestia(e) : 0;
+    if (!BESTIAS.pintar(g, lado, e.tipo, pose, fase)) return;
+
+    if (pose === 'dano') blanquearFigura(g, lado, 0.34);
+    if (pose === 'ataque')
+        estelaGolpe(g, lado / 2 - lado * 0.06, lado / 2, lado * 0.42,
+                    -0.6, 0.6, lado * 0.018, 0.45);
+
+    // ya hecha, se planta girada a lo que mira. El tamaño en pantalla es el de
+    // siempre -SPR por la escala-, no el del lienzo, que va redondeado hacia
+    // arriba al píxel entero.
+    const s = SPR * ESCALA_SPR * talla;
+    ctx.save();
+    ctx.translate(px, py);
+    if (e.mira) ctx.rotate(e.mira);
+    ctx.drawImage(taller, -s / 2, -s / 2, s, s);
+    ctx.restore();
 }
 
 // ============================================================
@@ -2603,9 +2634,7 @@ function pintar() {
         const px = aPantallaX(e.x), py = aPantallaY(e.y);
         ctx.globalAlpha = v;
         sombra(px, py, e.r);
-        // el golpe recibido tuvo un filtro de brillo encima de la figura de
-        // siempre; ahora cada estado trae su lámina y no hay nada que aclarar
-        dibujarSprite(poseDeBestia(e), px, py, e.mira, e.talla);
+        dibujarBestia(e, px, py);
         barraEnemigo(e, px, py);
         ctx.globalAlpha = 1;
     }
@@ -3757,7 +3786,8 @@ const ORO_MINI = '232, 180, 79';    // el oro viejo del marcador, para teñirlo 
 // de la laca. La forma es la misma para todos -el rombo pequeño-, así que el
 // color es lo único que los separa, y por eso tiene que ser el suyo. El de red
 // es la brasa: un tipo nuevo sin ficha sigue leyéndose como lo que es, peligro.
-const TINTA_ENEMIGO = { rata: '#c39a92', ciempies: '#d94b33', otro: '#d94b33' };
+const TINTA_ENEMIGO = { rata: '#c39a92', esqueleto: '#e2dccb', ciempies: '#d94b33',
+                        otro: '#d94b33' };
 
 const mini = document.getElementById('minimapa');
 const mctx = mini.getContext('2d');

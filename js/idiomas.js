@@ -1,21 +1,9 @@
-/* ============================================================
-idiomas.js - lo que dice el juego, en cada lengua
-
-Un diccionario y poco más. Las claves se leen solas -pantalla.cosa-
-y quien las usa lo hace de dos maneras:
-
-  - el HTML, poniendo data-t="clave" en la etiqueta. Al cargar, y
-    cada vez que se cambia de lengua, se repasan todas y se les
-    escribe el texto que toque.
-  - el guion, llamando a TR('clave') donde antes había un literal.
-
-Lo que NO se traduce, a propósito: los nombres de las armas -una
-katana es una katana en todas partes-, los de los enemigos y la
-consola entera, que va pegada a unas órdenes que se escriben tal cual.
-
-La lengua se guarda con el resto de los ajustes, pero se lee de la
-memoria directamente y no a través de Ajustes: así este archivo no
-depende de que aquel esté cargado, y puede ir el primero de todos.
+/* idiomas.js - lo que dice el juego, en cada lengua. Las claves se leen solas
+   (pantalla.cosa) y se usan de dos maneras: data-t="clave" en el HTML, que se
+   reescribe al cargar y al cambiar de lengua, y TR('clave') en el guion.
+   No se traducen, a propósito: los nombres de armas y bichos, y la consola.
+   La lengua se lee de la memoria directamente y no por Ajustes, para que este
+   archivo pueda ir el primero de todos.
    ============================================================ */
 'use strict';
 
@@ -91,8 +79,10 @@ es: {
     'bestiario.caidos': 'Eliminados',
     'bestiario.caidas': 'Te ha eliminado',
     'bestiario.hueco': 'Sin descubrir',
+    'bestiario.comarca': 'Aparece en',
     'bestiario.nota': 'Pulsa una bestia para abrir su hoja.',
     'bestia.rata.pie': 'Bicho de alcantarilla, flaca y rápida, con la piel a jirones de tanto pelearse por lo que hay. Muerde y se aparta, y rara vez viene sola.',
+    'bestia.esqueleto.pie': 'Lo que quedó de un centinela al que nadie relevó: el hueso pelado, sin una hilacha encima, y una hoja mellada que todavía sabe lo suyo. Alcanza desde más lejos que nada de aquí abajo, y no tiene ninguna prisa.',
     'bestia.ciempies.pie': 'Una ristra de anillos acorazados sobre cien patas. Va pegado al suelo, encaja lo que le eches y se cuela por donde no cabe nada; lo primero que te alcanza son las pinzas.',
 
     // ---------- armería ----------
@@ -273,8 +263,10 @@ en: {
     'bestiario.caidos': 'Slain',
     'bestiario.caidas': 'Has slain you',
     'bestiario.hueco': 'Undiscovered',
+    'bestiario.comarca': 'Found in',
     'bestiario.nota': 'Click a beast to open its sheet.',
     'bestia.rata.pie': 'A sewer creature, lean and quick, its hide in tatters from fighting over what little there is. It bites and backs away, and it rarely comes alone.',
+    'bestia.esqueleto.pie': 'What is left of a sentry nobody ever came to relieve: bare bone, not a thread left on it, and a notched blade that still knows its trade. It reaches further than anything else down here, and it is in no hurry.',
     'bestia.ciempies.pie': 'A string of armoured rings on a hundred legs. It hugs the ground, soaks up whatever you throw and slips through gaps that fit nothing; the first thing to reach you is its pincers.',
 
     'armeria.titulo': 'ARMOURY',
@@ -392,8 +384,7 @@ en: {
 
 const Idioma = {
 
-    // Se lee de la memoria a pelo y no de Ajustes: así este archivo puede ir
-    // el primero de la lista y no depende de que nadie esté cargado todavía.
+    // se lee de la memoria a pelo: así este archivo no depende de nadie
     actual() {
         try {
             const a = JSON.parse(localStorage.getItem('sendas.ajustes'));
@@ -402,10 +393,8 @@ const Idioma = {
         return 'es';
     },
 
-    // El texto de una clave, con los %s rellenados por orden. Si la clave no
-    // está traducida se cae al español, y si no está en ninguna parte se
-    // devuelve la propia clave: así un olvido se ve en pantalla en vez de
-    // dejar un hueco en blanco que nadie sabría de dónde viene.
+    // El texto de una clave, con los %s rellenados por orden. Sin traducir cae
+    // al español, y sin existir devuelve la propia clave: un olvido se ve.
     t(clave, ...trozos) {
         const libro = TEXTOS[this.actual()] || TEXTOS.es;
         let texto = libro[clave];
@@ -417,9 +406,8 @@ const Idioma = {
 
     lista() { return IDIOMAS; },
 
-    // Repasa la pantalla y escribe cada texto donde toca. data-t pone el
-    // contenido; data-t-attr, un atributo suelto -el title de un botón, por
-    // ejemplo-, con la forma "atributo:clave".
+    // Repasa la pantalla: data-t pone el contenido y data-t-attr un atributo
+    // suelto, con la forma "atributo:clave".
     aplicar(raiz) {
         const donde = raiz || document;
         for (const nodo of donde.querySelectorAll('[data-t]'))
@@ -428,16 +416,13 @@ const Idioma = {
             const [attr, clave] = nodo.dataset.tAttr.split(':');
             nodo.setAttribute(attr, this.t(clave));
         }
-        // el idioma declarado importa para los lectores de pantalla y para
-        // cómo parte el navegador las palabras al final del renglón
+        // el idioma declarado importa para lectores de pantalla y guionado
         document.documentElement.lang = this.actual();
     }
 };
 
-// Atajo, que se escribe mil veces. Se llama TR y no T porque vista.js ya
-// tiene una T suya -la paleta del bioma-, y dos const con el mismo nombre en
-// el ámbito global no son un aviso: son un error de sintaxis que tumba el
-// archivo entero y deja el juego en negro sin decir por qué.
+// Atajo. Se llama TR y no T porque vista.js ya tiene una T suya (la paleta del
+// bioma), y dos const con el mismo nombre en el ámbito global tumban el archivo.
 const TR = (clave, ...trozos) => Idioma.t(clave, ...trozos);
 
 // se aplica en cuanto la pantalla existe, sin esperar a nadie más

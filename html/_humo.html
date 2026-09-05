@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Path to the Sanctuary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@700;800&amp;family=Zen+Kaku+Gothic+New:wght@500;700;900&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../css/estilos.css">
+</head>
+<body class="menu santuario zaguan" data-siguiente="game.html" data-anterior="ranura.html" data-musica="si">
+
+<!-- el mismo ocaso de las otras pantallas, aquí sin torii: el zaguán deja
+    el cielo despejado. Es decorado y nada más -->
+<div id="escenario" aria-hidden="true">
+    <div class="halo"></div>
+    <div class="sol"></div>
+
+    <div class="nube alta"></div>
+    <div class="nube media"></div>
+    <div class="nube baja"></div>
+
+    <div class="sierra lejos"></div>
+    <div class="sierra honda"></div>
+    <div class="sierra cerca"></div>
+
+    <div class="tronco t1"></div>
+    <div class="tronco t2"></div>
+    <div class="tronco t3"></div>
+    <div class="tronco t4"></div>
+
+    <div class="petalos"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div class="brasas"><i></i><i></i><i></i><i></i></div>
+
+    <div class="vineta"></div>
+</div>
+
+<div id="portada">
+    <div class="rotulo"><span>支度の間</span></div>
+    <h1 data-t="prev.t1">ANTES</h1>
+    <div class="enlace"><span data-t="prev.t2">DE</span></div>
+    <h1 data-t="prev.t3">PARTIR</h1>
+    <p class="lema" data-t="prev.lema">El farolillo está encendido. Cruza cuando quieras.</p>
+
+    <nav id="botones">
+        <button id="btJugar" type="button" class="boton principal" data-t="prev.entrar">ENTRAR A LA SENDA</button>
+        <div class="fila">
+            <button id="btArmeria" type="button" class="boton" data-t="prev.armeria">ARMERÍA</button>
+            <button id="btPersonaje" type="button" class="boton" data-t="prev.personaje">PERSONAJE</button>
+            <button id="btHabilidades" type="button" class="boton" data-t="prev.habilidades">HABILIDADES</button>
+        </div>
+        <div class="fila">
+            <button id="btPergaminos" type="button" class="boton" data-t="prev.pergaminos">PERGAMINOS</button>
+            <button id="btBestiario" type="button" class="boton" data-t="prev.bestiario">BESTIARIO</button>
+            <button id="btAmuletos" type="button" class="boton" data-t="prev.amuletos">AMULETOS</button>
+        </div>
+        <!-- la salida se descuelga de su renglón y baja sola, con la misma
+             medida que tenía y a un dedo por debajo: no es un destino más
+             del zaguán, es la puerta por la que se vuelve -->
+        <div class="fila salida">
+            <button id="btVolver" type="button" class="boton" data-t="comun.volver">VOLVER</button>
+        </div>
+    </nav>
+
+    <!-- los rellenan armeria.js, personaje.js y bestias.js al abrirlos, para
+         que el saldo -y las cuentas del bestiario- sean siempre los del momento -->
+    <div id="armeria" class="panel armeria" hidden></div>
+    <div id="personaje" class="panel armeria" hidden></div>
+    <div id="bestiario" class="panel armeria bestiario" hidden></div>
+
+    <!-- estos tres no tienen guion propio todavía: el hueco queda hecho, y se
+         abren y cierran como los demás -->
+    <div id="habilidades" class="panel armeria vacio" hidden>
+        <h2 data-t="prev.habilidades">HABILIDADES</h2>
+        <p class="nota" data-t="prev.notaHabilidades"></p>
+    </div>
+
+    <div id="pergaminos" class="panel armeria vacio" hidden>
+        <h2 data-t="prev.pergaminos">PERGAMINOS</h2>
+        <p class="nota" data-t="prev.notaPergaminos"></p>
+    </div>
+
+    <div id="amuletos" class="panel armeria vacio" hidden>
+        <h2 data-t="prev.amuletos">AMULETOS</h2>
+        <p class="nota" data-t="prev.notaAmuletos"></p>
+    </div>
+
+    <!-- con algo abierto los botones se van, así que la salida del panel es
+         este: menu.js lo ata a cerrarPaneles -->
+    <button id="btCerrarPanel" type="button" class="boton" data-t="comun.cerrar">CERRAR</button>
+</div>
+
+<script src="../js/idiomas.js"></script>
+<!-- solo por su lista de comarcas: es de donde el bestiario saca las diez
+     columnas de la pestaña de jefes. No dibuja ni juega nada, así que aquí
+     dentro del zaguán no desentona -->
+<script src="../js/biomas.js"></script>
+<script src="../js/aceros.js"></script>
+<script src="../js/bestias.js"></script>
+<script src="../js/armeria.js"></script>
+<script src="../js/personaje.js"></script>
+<script src="../js/partidas.js"></script>
+<script src="../js/ajustes.js"></script>
+<script src="../js/menu.js"></script>
+<script>
+window.addEventListener('error', e => { document.title = 'ERROR: ' + e.message; });
+(function () {
+  const p = { arma:'tanto', compradas:['tanto'], niveles:{}, dones:{}, esquirlas:0, orbes:0,
+              god:false, cheat:false, hondo:12, completado:false, creada:Date.now(), jugada:Date.now(),
+              bestiario:{ rata:{caidos:5,caidas:1}, esqueleto:{caidos:3,caidas:2}, ciempies:{caidos:2,caidas:0} } };
+  const lista = [p, null, null, null, null];
+  localStorage.setItem('sendas.partidas', JSON.stringify(lista));
+  localStorage.setItem('sendas.ranura', '0');
+})();
+addEventListener('load', () => setTimeout(() => {
+  for (const el of document.querySelectorAll('.panel, #menu, .menu-pausa')) {}
+  document.getElementById('btBestiario').click();
+  setTimeout(() => {
+     const b = document.querySelector('#bestiario [data-bestia="esqueleto"]');
+     if (b) b.click();
+  }, 150);
+}, 300));
+</script>
+</body>
+</html>

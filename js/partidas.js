@@ -1,8 +1,5 @@
-/* ============================================================
-partidas.js - las cinco ranuras de guardado
-Cada ranura recuerda por dónde iba la partida y con qué acero:
-senda alcanzada, arma en mano, forja y esquirlas. Se escribe sola
-cada vez que pasa algo que merezca la pena recordar.
+/* partidas.js - las cinco ranuras de guardado: senda alcanzada, arma en mano,
+   forja y esquirlas. Se escriben solas cuando pasa algo que recordar.
    ============================================================ */
 'use strict';
 
@@ -10,8 +7,8 @@ const RANURAS = 5;
 const CLAVE_PARTIDAS = 'sendas.partidas';
 const CLAVE_ACTIVA = 'sendas.ranura';
 
-// La ranura no recuerda por dónde ibas: cada visita al santuario empieza en el
-// primera senda. Lo que se conserva es el acero y lo que se ha juntado.
+// La ranura no recuerda por dónde ibas: cada visita empieza en la primera
+// senda. Se conserva el acero y lo que se ha juntado.
 function partidaNueva() {
     return {
         arma: 'tanto',
@@ -91,8 +88,7 @@ const Partidas = {
         this.escribir(lista);
     },
 
-    // escribir en una ranura cualquiera, sin tener que hacerla la elegida:
-    // lo usa la consola para repartir entre varias de una vez
+    // escribir en una ranura cualquiera sin hacerla la elegida: lo usa la consola
     guardarEn(i, cambios) {
         if (!(i >= 0 && i < RANURAS)) return false;
         const lista = this.todas();
@@ -104,16 +100,14 @@ const Partidas = {
 };
 
 // ---------- La lista de ranuras ----------
-// Tiene pantalla propia, ranura.html; las demás cargan este archivo solo por
-// el almacén, y al no encontrar la caja no montan nada.
+// Solo la monta ranura.html; las demás cargan este archivo por el almacén.
 (function montarRanuras() {
     const caja = document.getElementById('ranuras');
     if (!caja) return;
 
     let porBorrar = -1;         // la ranura que espera el segundo clic de confirmación
 
-    // la fecha se escribe como se escriba en la lengua elegida: en español
-    // «31 ago 2026» y en inglés «31 Aug 2026», que el orden no es el mismo
+    // la fecha se escribe según la lengua: «31 ago 2026» / «31 Aug 2026»
     const fecha = ms => new Date(ms).toLocaleDateString(
         Idioma.actual() === 'en' ? 'en-GB' : 'es-ES',
         { day: '2-digit', month: 'short', year: 'numeric' });
@@ -136,9 +130,8 @@ const Partidas = {
             </div>`;
 
         const confirmando = porBorrar === i;
-        // lo que la consola ha dejado encendido se anuncia con su sello, para
-        // que no haya que entrar en la partida para saber quién lo lleva: la
-        // inmortalidad en rojo a la derecha, la consola en jade a la izquierda
+        // lo encendido por la consola se anuncia con su sello: inmortalidad en
+        // rojo a la derecha, consola en jade a la izquierda
         const sello =
             (p.cheat ? `<span class="sello consola" title="${TR('ranura.selloConsola')}">令</span>` : '') +
             (p.god ? `<span class="sello" title="${TR('ranura.selloDios')}">神</span>` : '');
@@ -166,9 +159,8 @@ const Partidas = {
         if (!Partidas.ranura(i)) Partidas.crear(i);
         else Partidas.activar(i);
         const destino = document.body.dataset.siguiente || 'game.html';
-        // irA lo pone menu.js, que se carga después de este archivo pero mucho
-        // antes de que nadie pulse. Es quien sabe sacar el marco a pantalla
-        // completa si el destino resulta ser la partida
+        // irA lo pone menu.js, que carga después pero mucho antes de que nadie
+        // pulse; es quien saca el marco a pantalla completa si toca
         if (typeof irA === 'function') irA(destino);
         else location.href = destino;
     }

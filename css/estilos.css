@@ -2116,10 +2116,11 @@ body.santuario .bestiario .retrato {
    Va suelta y no como hijo del flex a posta: colgada del hueco, el 100% se
    mide contra una caja que después de colocar el hueco se sabe siempre, y no
    contra un alto de flex que según el navegador cuenta o no cuenta. */
-body.santuario .bestiario .retrato img {
+/* La figura ya no es un archivo sino un lienzo que se pinta a mano, pero el
+   hueco la trata igual: se estira a todo el marco y se centra dentro. */
+body.santuario .bestiario .retrato canvas {
     position: absolute; inset: 0;
     width: 100%; height: 100%;
-    object-fit: contain;
 }
 
 /* el sitio que espera bestia: se ve el hueco, no lo que va a ocuparlo */
@@ -2145,12 +2146,46 @@ body.santuario .bestiario .incognita {
 /* ---------- La hoja ---------- */
 /* el retrato en grande a un lado y todo lo que se sabe al otro */
 body.santuario .bestiario .hoja {
-    display: flex; gap: 20px; align-items: flex-start;
+    display: flex; gap: 20px; align-items: stretch;
     margin: 6px 0 16px;
     text-align: left;
 }
-body.santuario .bestiario .retrato.grande { flex: 0 0 286px; height: 200px; }
-body.santuario .bestiario .hoja .cuerpo { flex: 1; min-width: 0; }
+/* Las dos columnas miden lo mismo de alto y cuelgan del suelo su último
+   renglón -la comarca a un lado, las cuentas al otro-, que es lo que los deja
+   a la misma altura por larga o corta que sea la descripción de la bestia.
+   Por eso las dos son cajas flexibles en columna. */
+body.santuario .bestiario .hoja .lamina {
+    flex: 0 0 286px;
+    display: flex; flex-direction: column;
+}
+body.santuario .bestiario .hoja .cuerpo {
+    flex: 1; min-width: 0;
+    display: flex; flex-direction: column;
+}
+body.santuario .bestiario .retrato.grande { height: 200px; }
+/* el hueco mínimo entre la foto y la comarca; si no hay comarca, tampoco hay
+   hueco que dejar */
+body.santuario .bestiario .retrato.grande:not(:only-child) { margin-bottom: 14px; }
+
+/* Dónde sale este bicho, debajo de su retrato y a la altura de las cuentas de
+   al lado: una cifra más de esa fila, con el mismo rótulo en oro pequeño y el
+   mismo cuerpo debajo. Las medidas son las de dt y dd a posta -10px con
+   interlínea 1.35 arriba, 3px de separación, y el cuerpo sin interlínea
+   propia, que hereda la misma-: siendo los dos bloques igual de altos,
+   colgarlos del suelo los alinea también por arriba. */
+body.santuario .bestiario .hoja .comarca {
+    margin: auto 0 0;
+    text-align: center;
+    font-size: 19px; font-weight: bold;
+    color: var(--hueso);
+}
+body.santuario .bestiario .hoja .comarca span {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 10px; font-weight: normal;
+    letter-spacing: .08em; line-height: 1.35;
+    color: var(--oroViejo);
+}
 body.santuario .bestiario .hoja h3 {
     margin: 0 0 10px;
     font-family: "Shippori Mincho B1", "Yu Mincho", serif;
@@ -2172,9 +2207,12 @@ body.santuario .bestiario .fichas {
 }
 body.santuario .bestiario .fichas.cuenta {
     grid-template-columns: repeat(2, 1fr);
-    margin-top: 14px; padding-top: 14px;
+    /* pegada al fondo, para que case con la comarca de la otra columna: el
+       hueco mínimo sobre el filete lo pone ahora la lista de arriba */
+    margin-top: auto; padding-top: 14px;
     border-top: 1px solid rgba(232, 180, 79, .18);
 }
+body.santuario .bestiario .fichas:not(.cuenta) { margin-bottom: 14px; }
 body.santuario .bestiario .fichas dt {
     font-size: 10px; letter-spacing: .08em; line-height: 1.35;
     color: var(--oroViejo);
@@ -2184,6 +2222,12 @@ body.santuario .bestiario .fichas dd {
     font-size: 19px; font-weight: bold;
     color: var(--hueso);
 }
+
+/* Con una hoja abierta el marco se ciñe por abajo: el aire que hace falta lo
+   pone ya el margen de la hoja, y el relleno del panel se sumaba encima. La
+   clase la pone bestias.js al pintar, y solo mientras hay una hoja delante:
+   la rejilla lo sigue necesitando para su barra de desplazamiento. */
+body.santuario .panel.bestiario.enHoja { padding-bottom: 0; }
 
 /* ---------- Los huecos todavía sin guion ---------- */
 /* habilidades, pergaminos y amuletos: el marco está hecho y vestido, para
